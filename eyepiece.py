@@ -39,7 +39,8 @@ def GetKoi(koi):
 
 def GetTPFData(koi, long_cadence = True, clobber = False, 
                bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17],
-               aperture = 'optimal', quarters = range(18), dir = ''):
+               aperture = 'optimal', quarters = range(18), dir = '',
+               quiet = False):
   '''
   
   '''
@@ -47,10 +48,12 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   if not clobber:
     try:
       data = np.load(os.path.join(dir, str(koi), 'data_raw.npz'))['data']
+      if not quiet: print("Loading saved TPF data...")
       return data
     except:
       pass
   
+  if not quiet: print("Downloading TPF data...")
   star = GetKoi(koi)
   data = EmptyData(quarters)
   tpf = star.get_target_pixel_files(short_cadence = not long_cadence)
@@ -319,29 +322,20 @@ def Inspector(koi = 17.01, long_cadence = True, clobber = False,
               bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17],
               aperture = 'optimal', quarters = range(18), min_sz = 300,
               dt_tol = 0.5, split_cads = [4472, 6717], dir = '',
-              input = None):
+              quiet = False):
   '''
   
   '''
 
-  # Is there an input file?
-  if input is not None:
-    koi = input.koi
-    long_cadence = input.long_cadence
-    clobber = input.clobber
-    bad_bits = input.bad_bits
-    aperture = input.aperture  
-    dt_tol = input.dt_tol 
-    split_cads = input.split_cads
-    min_sz = input.min_sz 
-    dir = input.dir
-
   # Grab the data
+  if not quiet: print("Retrieving target data...")
   data = GetTPFData(koi, long_cadence = long_cadence, clobber = clobber, dir = dir,
-                    bad_bits = bad_bits, aperture = aperture, quarters = quarters)
+                    bad_bits = bad_bits, aperture = aperture, quarters = quarters,
+                    quiet = quiet)
   data_new = EmptyData(quarters)
   
   # Loop over all quarters
+  if not quiet: print("Plotting...")
   uo = [[] for q in quarters]
   uj = [[] for q in quarters]
   q = quarters[0]
