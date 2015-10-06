@@ -1,2 +1,2 @@
 # eyepiece
-Graphical utility for downloading and inspecting Kepler data
+A graphical utility for downloading and inspecting Kepler data
