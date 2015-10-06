@@ -318,11 +318,11 @@ class Interactor(object):
   def jumps(self):
     return np.array(sorted(self._jumps), dtype = int)
   
-def Inspector(koi = 17.01, long_cadence = True, clobber = False,
-              bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17],
-              aperture = 'optimal', quarters = range(18), min_sz = 300,
-              dt_tol = 0.5, split_cads = [4472, 6717], dir = '',
-              quiet = False):
+def View(koi = 17.01, long_cadence = True, clobber = False,
+         bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17],
+         aperture = 'optimal', quarters = range(18), min_sz = 300,
+         dt_tol = 0.5, split_cads = [4472, 6717], dir = '',
+         quiet = False):
   '''
   
   '''
@@ -396,4 +396,4 @@ def Inspector(koi = 17.01, long_cadence = True, clobber = False,
   return
 
 if __name__ == '__main__':
-  Inspector()
+  View()
