@@ -519,6 +519,8 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
                         bad_bits = bad_bits, aperture = aperture, quarters = quarters,
                         quiet = quiet, pad = pad, ttvs = ttvs)
   data_new = EmptyData(quarters)
+  data_trn = EmptyData(quarters)
+  data_bkg = EmptyData(quarters)
   
   # Loop over all quarters
   if not quiet: print("Plotting...")
@@ -567,6 +569,27 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
       for a, b in zip(j[:-1], j[1:]):
         data_new[q][arr].append(np.array(x[a:b]))
 
+    # Get transits-only and background-only versions of the data
+    inds = [i for i in range(len(data[q]['time'])) if i not in sel.outliers]
+    tidx = [i for i in inds if i in sel.transits]
+    bidx = [i for i in inds if i not in sel.transits]
+    
+    # If there's a jump across a transit, throw the transit out.
+    bad = list(set(sel.jumps).intersection(tidx))
+    
+    # Median number of cadences per transit
+    cpt = int(np.ceil(2 * tdur / np.median(data[q]['time'][1:] - data[q]['time'][:-1])))
+    
+    # Here are all the compromised transit indices
+    for b in bad:
+      for i in range(b - cpt, b + cpt):
+        if i in tidx:
+          tidx.remove(i)
+    
+    for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
+      data_trn[q][arr] = np.array(data[q][arr][tidx])
+      data_bkg[q][arr] = np.array(data[q][arr][bidx])
+      
     # What shall we do next?
     if sel.info == "next":
       dq = 1
@@ -578,9 +601,15 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
     q += dq
   
   # Save the data
-  np.savez(os.path.join(dir, str(koi), 'data_split.npz'), data = data_new)
+  np.savez(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new)
+  np.savez(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn)
+  np.savez(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg)
     
   return
 
 if __name__ == '__main__':
-  View(koi = 254.01)
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-k", "--koi", default='254.01')
+  args = parser.parse_args()
+  View(koi = float(args.koi))
