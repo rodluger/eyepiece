@@ -10,12 +10,27 @@ Download and visually inspect, split, and correct Kepler lightcurves.
 
 import config
 import matplotlib.pyplot as pl
+from matplotlib.widgets import RectangleSelector
 import numpy as np
 import kplr
 import os
 
 KEPLONGEXP =              (1765.5/86400.)
 KEPSHRTEXP =              (58.89/86400.)
+
+# Disable keyboard shortcuts
+pl.rcParams['keymap.all_axes'] = ''
+pl.rcParams['keymap.back'] = ''
+pl.rcParams['keymap.forward'] = ''
+pl.rcParams['keymap.fullscreen'] = ''
+pl.rcParams['keymap.grid'] = ''
+pl.rcParams['keymap.home'] = ''
+pl.rcParams['keymap.pan'] = ''
+pl.rcParams['keymap.quit'] = ''
+pl.rcParams['keymap.save'] = ''
+pl.rcParams['keymap.xscale'] = ''
+pl.rcParams['keymap.yscale'] = ''
+pl.rcParams['keymap.zoom'] = ''
 
 def EmptyData(quarters):
   '''
@@ -163,162 +178,273 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   np.savez(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur)
     
   return data, tN, per, tdur
-
-def AddVLine(ax, t):
+  
+class Selector(object):
   '''
   
   '''
-  return ax.axvline(t, color = 'k', ls = ':', alpha = 1.0)
-
-class Interactor(object):
-  '''
   
-  '''
-  def __init__(self, fig, ax, t, x, y, p, tN, per, tdur, split_cads = [], 
+  def __init__(self, fig, ax, cad, time, fsum, fpix, tN, tdur, split_cads = [], 
                cad_tol = 10, min_sz = 300, title = ''):
     self.fig = fig
     self.ax = ax
-    self.t = np.array(t)
-    self.x = np.array(x)
-    self.y = np.array(y)
-    self.p = np.array(p)
-    self.tN = np.array(tN)
-    self.per = per
+    self.cad = cad
+    self.time = time
+    self.fsum = fsum
+    self.fpix = fpix
+    self.tN = tN
     self.tdur = tdur
-    self.fig.canvas.mpl_connect('key_press_event', self.on_key_press) 
-    self.state = 'fsum'
-    self._jumps = []
-    self._outliers = np.array([], dtype = int)
-    self.info = ""
     self.title = title
+    
+    # Initialize arrays
+    self._outliers = []
+    self._transits = []
+    self._jumps = []
+    self._plots = []
+    self.info = ""
+    self.state = "fsum"
     
     # Add user-defined split locations
     for s in split_cads:
     
       # What if a split happens in a gap? Shift rightward up to 10 cadences
       for ds in range(10):
-        foo = np.where(self.x == s + ds)[0]
+        foo = np.where(self.cad == s + ds)[0]
         if len(foo):
           self._jumps.append(foo[0])
           break
-
+    
     # Add cadence gap splits
-    cut = np.where(self.x[1:] - self.x[:-1] > cad_tol)[0] + 1
-    cut = np.concatenate([[0], cut, [len(self.x) - 1]])                               # Add first and last points
+    cut = np.where(self.cad[1:] - self.cad[:-1] > cad_tol)[0] + 1
+    cut = np.concatenate([[0], cut, [len(self.cad) - 1]])                             # Add first and last points
     repeat = True
     while repeat == True:                                                             # If chunks are too small, merge them
       repeat = False
       for a, b in zip(cut[:-1], cut[1:]):
         if (b - a) < min_sz:
           if a > 0:
-            at = self.x[a] - self.x[a - 1]
+            at = self.cad[a] - self.cad[a - 1]
           else:
             at = np.inf
-          if b < len(self.x) - 1:
-            bt = self.x[b + 1] - self.x[b]
+          if b < len(self.cad) - 1:
+            bt = self.cad[b + 1] - self.cad[b]
           else:
             bt = np.inf
           if at < bt:
             cut = np.delete(cut, np.where(cut == a))                                  # Merge with the closest chunk
           elif not np.isinf(bt):
             cut = np.delete(cut, np.where(cut == b))
+          else:
+            break
           repeat = True
           break
     self._jumps.extend(list(cut))
-    self._jumps = np.array(list(set(self._jumps) - set([0, len(self.x) - 1])), dtype = int)
+    self._jumps = list(set(self._jumps) - set([0, len(self.cad) - 1]))
     
     # Figure out the transit indices
-    self._tinds = []
     for ti in self.tN:
-      i = np.where(np.abs(self.t - ti) <= self.tdur)[0]
-      self._tinds.extend(i)    
-    self._tinds = np.array(self._tinds, dtype = int)
+      i = np.where(np.abs(self.time - ti) <= self.tdur)[0]
+      self._transits.extend(i)
     
+    # Initialize our selectors
+    self.Transits = RectangleSelector(ax, self.tselect,
+                                      rectprops = dict(facecolor='green', 
+                                                       edgecolor = 'black',
+                                                       alpha=0.1, fill=True))
+    self.Transits.set_active(False)
+    self.Outliers = RectangleSelector(ax, self.oselect,
+                                      rectprops = dict(facecolor='red', 
+                                                       edgecolor = 'black',
+                                                       alpha=0.1, fill=True))
+    self.Outliers.set_active(False)  
+    pl.connect('key_press_event', self.toggle)                                                 
     self.redraw(preserve_lims = False)
   
   def redraw(self, preserve_lims = True):
   
-    # Redraw the figure
+    # Reset the figure
+    for p in self._plots:
+      if len(p): p.pop(0).remove()
+    self._plots = [p for p in self._plots if len(p)]
+    self.ax.set_color_cycle(None)
     xlim = self.ax.get_xlim()
     ylim = self.ax.get_ylim()
-    pl.cla()
-    self.ax.set_color_cycle(None)
-      
-    ssi = [0] + sorted(self._jumps) + [len(self.x) - 1]
-
-    # Plot the SAP flux
+    ssi = [0] + sorted(self._jumps) + [len(self.cad) - 1]
+    
     if self.state == 'fsum':
     
+      # Replot stuff
       for a, b in zip(ssi[:-1], ssi[1:]):
-        
-        # Plot the data
-        plot, = self.ax.plot(self.x[a:b], self.y[a:b], '.')
-        
-        # Plot the transits
-        x = []; y = []
-        for ti in self._tinds:
-          if a <= ti and ti <= b:
-            x.append(self.x[ti])
-            y.append(self.y[ti])
-        self.ax.plot(x, y, '.', markersize = 15, color = plot.get_color(), zorder = -1, alpha = 0.25)
-       
-      for s in self._jumps:
-        line = AddVLine(self.ax, (self.x[s] + self.x[s - 1]) / 2.)
-
-      for o in self._outliers:
-        odot = self.ax.plot(self.x[o], self.y[o], 'ro')
+        p = self.ax.plot(self.cad[a:b], self.fsum[a:b], '.')
+        self._plots.append(p)
+        color = p[0].get_color()
     
-    # Plot the pixel fluxes
+        # Transits
+        x = []; y = []
+        for ti in self.transits:
+          if a <= ti and ti <= b:
+            x.append(self.cad[ti])
+            y.append(self.fsum[ti])
+        p = self.ax.plot(x, y, '.', markersize = 15, color = color, zorder = -1, alpha = 0.25)
+        self._plots.append(p)
+    
+      # Outliers
+      o = self.outliers
+      p = self.ax.plot(self.cad[o], self.fsum[o], 'ro')
+      self._plots.append(p)
+    
     elif self.state == 'fpix':
     
       for a, b in zip(ssi[:-1], ssi[1:]):
-        for p in np.transpose(self.p):
-          plot, = self.ax.plot(self.x[a:b], p[a:b], '.')
-          
-          # Plot the transits
-          x = []; y = []
-          for ti in self._tinds:
-            if a <= ti and ti <= b:
-              x.append(self.x[ti])
-              y.append(p[ti])
-          self.ax.plot(x, y, '.', markersize = 15, color = plot.get_color(), zorder = -1, alpha = 0.25)
-       
-      for s in self._jumps:
-        line = AddVLine(self.ax, (self.x[s] + self.x[s - 1]) / 2.)
-
-      for o in self._outliers:
-        for p in np.transpose(self.p):
-          odot = self.ax.plot(self.x[o], p[o], 'ro')
-            
-    self.ax.set_title(self.title, fontsize = 24)
-    self.ax.set_xlabel('Cadence Number', fontsize = 22)
-    self.ax.set_ylabel('Flux', fontsize = 22)
+        for py in np.transpose(self.fpix):
+          p = self.ax.plot(self.cad[a:b], py[a:b], '.')
+          self._plots.append(p)
+          color = p[0].get_color()
     
+          # Transits
+          x = []; y = []
+          for ti in self.transits:
+            if a <= ti and ti <= b:
+              x.append(self.cad[ti])
+              y.append(py[ti])
+          p = self.ax.plot(x, y, '.', markersize = 15, color = color, zorder = -1, alpha = 0.25)
+          self._plots.append(p)
+    
+          # Outliers
+          o = self.outliers
+          p = self.ax.plot(self.cad[o], py[o], 'ro')
+          self._plots.append(p)
+    
+    # Splits
+    for s in self._jumps:
+      p = [self.ax.axvline((self.cad[s] + self.cad[s - 1]) / 2., color = 'k', 
+                           ls = ':', alpha = 1.0)]
+      self._plots.append(p)
+    
+    # Plot limits
     if preserve_lims:
       self.ax.set_xlim(xlim)
       self.ax.set_ylim(ylim)
     else:
-      self.ax.margins(0.01,0.1)
     
+      # X
+      xmin = min(self.cad)
+      xmax = max(self.cad)
+      
+      # Y
+      if self.state == 'fpix':
+        ymin = min([x for py in np.transpose(self.fpix) for x in py])
+        ymax = max([x for py in np.transpose(self.fpix) for x in py])
+      elif self.state == 'fsum':
+        ymin = min(self.fsum)
+        ymax = max(self.fsum)
+      
+      # Give it some margins 
+      dx = (xmax - xmin) / 50.
+      dy = (ymax - ymin) / 10.
+      self.ax.set_xlim(xmin - dx, xmax + dx)    
+      self.ax.set_ylim(ymin - dy, ymax + dy)
+    
+    # Labels
+    self.ax.set_title(self.title, fontsize = 24)
+    self.ax.set_xlabel('Cadence Number', fontsize = 22)
+    self.ax.set_ylabel('Flux', fontsize = 22)
+    
+    # Refresh
     self.fig.canvas.draw()
-    
-  def on_key_press(self, event):
   
-    # Split the lightcurve
-    if event.key == 'x':
+  def get_inds(self, eclick, erelease):
+    '''
+    
+    '''
+        
+    # Get coordinates
+    x1 = min(eclick.xdata, erelease.xdata)
+    x2 = max(eclick.xdata, erelease.xdata)
+    y1 = min(eclick.ydata, erelease.ydata)
+    y2 = max(eclick.ydata, erelease.ydata)
+    
+    if (x1 == x2) and (y1 == y2):   
+      # User clicked 
+      if self.state == 'fsum':
+        d = ((self.cad - x1)/(max(self.cad) - min(self.cad))) ** 2 + ((self.fsum - y1)/(max(self.fsum) - min(self.fsum))) ** 2
+        return [np.argmin(d)]
+      elif self.state == 'fpix':
+        da = [np.inf for i in range(self.fpix.shape[1])]
+        ia = [0 for i in range(self.fpix.shape[1])]
+        for i, p in enumerate(np.transpose(self.fpix)):
+          d = ((self.cad - x1)/(max(self.cad) - min(self.cad))) ** 2 + ((p - y1)/(max(p) - min(p))) ** 2
+          ia[i] = np.argmin(d)
+          da[i] = d[ia[i]]
+        return [min(zip(da, ia))[1]]
+        
+    else:
+      # User selected
+      if self.state == 'fsum':
+        xy = zip(self.cad, self.fsum)
+        return [i for i, pt in enumerate(xy) if x1<=pt[0]<=x2 and y1<=pt[1]<=y2] 
+      elif self.state == 'fpix':
+        inds = []
+        for i, p in enumerate(np.transpose(self.fpix)):
+          for i, xy in enumerate(zip(self.cad, p)):
+            if (x1 <= xy[0] <= x2) and (y1 <= xy[1] <= y2):
+              if i not in inds: 
+                inds.append(i)
+        return inds
+
+  def tselect(self, eclick, erelease):
+    '''
+    
+    '''
+    
+    inds = self.get_inds(eclick, erelease)
+    for i in inds:
+      if i in self._transits:
+        self._transits.remove(i)
+      else:
+        self._transits.append(i)
+    self.redraw()
+
+  def oselect(self, eclick, erelease):
+    '''
+    
+    '''
+    
+    inds = self.get_inds(eclick, erelease)
+    for i in inds:
+      if i in self._outliers:
+        self._outliers.remove(i)
+      else:
+        self._outliers.append(i)   
+    self.redraw()
+    
+  def toggle(self, event):
+    
+    # Transits
+    if event.key == 't':
+      self.Outliers.set_active(False)
+      self.Transits.set_active(not self.Transits.active)
+    
+    # Outliers
+    elif event.key == 'o':
+      self.Transits.set_active(False)
+      self.Outliers.set_active(not self.Outliers.active)
+      
+    # Splits
+    elif event.key == 's':
       if event.inaxes is not None:
-        s = np.argmax(self.x == int(np.ceil(event.xdata)))
+        s = np.argmax(self.cad == int(np.ceil(event.xdata)))
         
         # Are we in a gap?
-        if self.x[s] != int(np.ceil(event.xdata)):
-          s1 = np.argmin(np.abs(self.x - event.xdata))
+        if self.cad[s] != int(np.ceil(event.xdata)):
+          s1 = np.argmin(np.abs(self.cad - event.xdata))
           
           # Don't split at the end
-          if s1 == len(self.x) - 1:
+          if s1 == len(self.cad) - 1:
             return
           
           s2 = s1 + 1
-          if self.x[s2] - self.x[s1] > 1:
+          if self.cad[s2] - self.cad[s1] > 1:
             s = s2
           else:
             s = s1
@@ -329,54 +455,12 @@ class Interactor(object):
         
         # Add
         if s not in self._jumps:
-          self._jumps = np.append(self._jumps, s)
+          self._jumps.append(s)
           
         # Delete
         else:
-          i = np.argmin(np.abs(self.x[self._jumps] - event.xdata))
-          self._jumps = np.delete(self._jumps, i)
-        
-        self.redraw()
-    
-    # Toggle outliers
-    if event.key == 'o':
-      if event.inaxes is not None:
-        x = event.xdata
-        y = event.ydata
-        
-        if self.state == 'fsum':
-          s = np.argmin((x - self.x) ** 2 + (y - self.y) ** 2)
-        elif self.state == 'fpix':
-          s = np.argmin((x - self.x) ** 2)
-        
-        # Add
-        if s not in self._outliers:
-          self._outliers = np.append(self._outliers, s)
-        
-        # Delete
-        else:
-          self._outliers = np.delete(self._outliers, np.argmax(self._outliers == s))
-        
-        self.redraw()
-    
-    # Toggle transit indices
-    if event.key == 't':
-      if event.inaxes is not None:
-        x = event.xdata
-        y = event.ydata
-        
-        if self.state == 'fsum':
-          s = np.argmin((x - self.x) ** 2 + (y - self.y) ** 2)
-        elif self.state == 'fpix':
-          s = np.argmin((x - self.x) ** 2)
-        
-        # Add
-        if s not in self._tinds:
-          self._tinds = np.append(self._tinds, s)
-        
-        # Delete
-        else:
-          self._tinds = np.delete(self._tinds, np.argmax(self._tinds == s))
+          i = np.argmin(np.abs(self.cad[self._jumps] - event.xdata))
+          self._jumps.pop(i)
         
         self.redraw()
     
@@ -385,13 +469,14 @@ class Interactor(object):
       if self.state == 'fsum': self.state = 'fpix'
       elif self.state == 'fpix': self.state = 'fsum'
       self.redraw(preserve_lims = False)
-    
+      
     # Reset
-    if event.key == 'r':
-     self._jumps = np.array([], dtype = int)
-     self._outliers = np.array([], dtype = int)
+    elif event.key == 'r':
+     self._jumps = []
+     self._outliers = []
+     self._transits = []
      self.redraw()
-        
+
     # Next
     elif event.key == ' ' or event.key == 'enter' or event.key == 'right':
       self.info = "next"
@@ -410,14 +495,14 @@ class Interactor(object):
   @property
   def outliers(self):
     return np.array(sorted(self._outliers), dtype = int)
+
+  @property
+  def transits(self):
+    return np.array(sorted(self._transits), dtype = int)
   
   @property
   def jumps(self):
     return np.array(sorted(self._jumps), dtype = int)
-  
-  @property
-  def tinds(self):
-    return np.array(sorted(self._tinds), dtype = int)
   
 def View(koi = 17.01, long_cadence = True, clobber = False,
          bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 4.0,
@@ -452,30 +537,30 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
     cad_tol = dt_tol / np.median(data[q]['time'][1:] - data[q]['time'][:-1])
     
     # Set up the plot
-    fig, ax = pl.subplots(1, 1, figsize = (16, 6))
-    itr = Interactor(fig, ax, data[q]['time'], data[q]['cad'], data[q]['fsum'], 
-                     data[q]['fpix'], tN, per, tdur,
-                     min_sz = min_sz, split_cads = split_cads, cad_tol = cad_tol,
-                     title = 'KOI %.2f: Quarter %02d' % (koi, q))
+    fig, ax = pl.subplots(1, 1, figsize = (16, 6))    
+    sel = Selector(fig, ax, data[q]['cad'], data[q]['time'], data[q]['fsum'], 
+                   data[q]['fpix'], tN, tdur, split_cads = split_cads, 
+                   cad_tol = cad_tol, min_sz = min_sz, 
+                   title = 'KOI %.2f: Quarter %02d' % (koi, q))
     
     # If user is re-visiting this quarter, update with their selections 
     if len(uj[q]): 
-      itr._jumps = uj[q]
-      itr.redraw()
+      sel._jumps = uj[q]
+      sel.redraw()
     if len(uo[q]): 
-      itr._outliers = uo[q]
-      itr.redraw()
+      sel._outliers = uo[q]
+      sel.redraw()
     
     pl.show()
     pl.close()
     
     # Store the user-defined outliers and jumps
-    uo[q] = itr.outliers
-    uj[q] = itr.jumps
+    uo[q] = sel.outliers
+    uj[q] = sel.jumps
     
     # Remove outliers and split the data
-    j = np.concatenate([[0], itr.jumps, [len(data[q]['time']) - 1]])
-    o = itr.outliers
+    j = np.concatenate([[0], sel.jumps, [len(data[q]['time']) - 1]])
+    o = sel.outliers
     for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
       x = np.array(data[q][arr])
       x = np.delete(x, o, 0)
@@ -483,11 +568,11 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
         data_new[q][arr].append(np.array(x[a:b]))
 
     # What shall we do next?
-    if itr.info == "next":
+    if sel.info == "next":
       dq = 1
-    elif itr.info == "prev":
+    elif sel.info == "prev":
       dq = -1
-    elif itr.info == "quit":
+    elif sel.info == "quit":
       return
   
     q += dq
