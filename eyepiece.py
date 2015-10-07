@@ -170,12 +170,12 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   
   if not os.path.exists(os.path.join(dir, str(koi))):
     os.makedirs(os.path.join(dir, str(koi)))
-  np.savez(os.path.join(dir, str(koi), 'data_raw.npz'), data = data)
+  np.savez_compressed(os.path.join(dir, str(koi), 'data_raw.npz'), data = data)
   
   # Now get the transit info
   tN, per, tdur = GetTransitTimes(koi, tstart, tend, pad = pad, ttvs = ttvs, 
                                   long_cadence = long_cadence)
-  np.savez(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur)
+  np.savez_compressed(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur)
     
   return data, tN, per, tdur
   
@@ -586,6 +586,10 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
         if i in tidx:
           tidx.remove(i)
     
+    #
+    # TODO: Split the data below!
+    #
+    
     for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
       data_trn[q][arr] = np.array(data[q][arr][tidx])
       data_bkg[q][arr] = np.array(data[q][arr][bidx])
@@ -601,9 +605,9 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
     q += dq
   
   # Save the data
-  np.savez(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new)
-  np.savez(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn)
-  np.savez(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg)
+  np.savez_compressed(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new)
+  np.savez_compressed(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn)
+  np.savez_compressed(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg)
     
   return
 
