@@ -228,21 +228,23 @@ class Interactor(object):
     self._jumps = np.array(list(set(self._jumps) - set([0, len(self.x) - 1])), dtype = int)
     
     # Figure out the transit indices
-    self.tcads = []
+    self._tinds = []
     for ti in self.tN:
-      i = np.where(np.abs(self.t - ti) <= self.tdur)
-      self.tcads.extend(self.x[i])
-    self.tcads = np.array(self.tcads, dtype = int)
+      i = np.where(np.abs(self.t - ti) <= self.tdur)[0]
+      self._tinds.extend(i)    
+    self._tinds = np.array(self._tinds, dtype = int)
     
-    self.redraw()
+    self.redraw(preserve_lims = False)
   
-  def redraw(self):
+  def redraw(self, preserve_lims = True):
   
     # Redraw the figure
+    xlim = self.ax.get_xlim()
+    ylim = self.ax.get_ylim()
     pl.cla()
     self.ax.set_color_cycle(None)
       
-    ssi = [0] + sorted(self._jumps) + [-1]
+    ssi = [0] + sorted(self._jumps) + [len(self.x) - 1]
 
     # Plot the SAP flux
     if self.state == 'fsum':
@@ -254,10 +256,10 @@ class Interactor(object):
         
         # Plot the transits
         x = []; y = []
-        for tc in self.tcads:
-          if self.x[a] <= tc and tc <= self.x[b]:
-            x.append(tc)
-            y.append(self.y[np.argmax(self.x == tc)])
+        for ti in self._tinds:
+          if a <= ti and ti <= b:
+            x.append(self.x[ti])
+            y.append(self.y[ti])
         self.ax.plot(x, y, '.', markersize = 15, color = plot.get_color(), zorder = -1, alpha = 0.25)
        
       for s in self._jumps:
@@ -275,10 +277,10 @@ class Interactor(object):
           
           # Plot the transits
           x = []; y = []
-          for tc in self.tcads:
-            if self.x[a] <= tc and tc <= self.x[b]:
-              x.append(tc)
-              y.append(p[np.argmax(self.x == tc)])
+          for ti in self._tinds:
+            if a <= ti and ti <= b:
+              x.append(self.x[ti])
+              y.append(p[ti])
           self.ax.plot(x, y, '.', markersize = 15, color = plot.get_color(), zorder = -1, alpha = 0.25)
        
       for s in self._jumps:
@@ -288,10 +290,15 @@ class Interactor(object):
         for p in np.transpose(self.p):
           odot = self.ax.plot(self.x[o], p[o], 'ro')
             
-    self.ax.margins(0.01,0.1)
     self.ax.set_title(self.title, fontsize = 24)
     self.ax.set_xlabel('Cadence Number', fontsize = 22)
     self.ax.set_ylabel('Flux', fontsize = 22)
+    
+    if preserve_lims:
+      self.ax.set_xlim(xlim)
+      self.ax.set_ylim(ylim)
+    else:
+      self.ax.margins(0.01,0.1)
     
     self.fig.canvas.draw()
     
@@ -352,11 +359,32 @@ class Interactor(object):
         
         self.redraw()
     
+    # Toggle transit indices
+    if event.key == 't':
+      if event.inaxes is not None:
+        x = event.xdata
+        y = event.ydata
+        
+        if self.state == 'fsum':
+          s = np.argmin((x - self.x) ** 2 + (y - self.y) ** 2)
+        elif self.state == 'fpix':
+          s = np.argmin((x - self.x) ** 2)
+        
+        # Add
+        if s not in self._tinds:
+          self._tinds = np.append(self._tinds, s)
+        
+        # Delete
+        else:
+          self._tinds = np.delete(self._tinds, np.argmax(self._tinds == s))
+        
+        self.redraw()
+    
     # Toggle pixels
     if event.key == 'p':
       if self.state == 'fsum': self.state = 'fpix'
       elif self.state == 'fpix': self.state = 'fsum'
-      self.redraw()
+      self.redraw(preserve_lims = False)
     
     # Reset
     if event.key == 'r':
@@ -386,6 +414,10 @@ class Interactor(object):
   @property
   def jumps(self):
     return np.array(sorted(self._jumps), dtype = int)
+  
+  @property
+  def tinds(self):
+    return np.array(sorted(self._tinds), dtype = int)
   
 def View(koi = 17.01, long_cadence = True, clobber = False,
          bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 4.0,
