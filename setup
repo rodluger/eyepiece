@@ -1,0 +1,49 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
+import os
+
+str_config = \
+"""#!/usr/bin/python
+# -*- coding: utf-8 -*-
+'''
+config.py
+---------
+
+Config file for :py:mod:``eyepiece.py``. Set default values here.
+
+'''
+
+dir =                 '%s'
+ttvpath =             '%s'"""
+
+def prompt(msg, string, default = ''):
+  if msg != "":
+    print(msg)
+  x = raw_input("\x1b[35m> %s [%s]: \x1b[39;49;00m" % (string, default))
+  print("")
+  return x
+
+if __name__ == '__main__':
+  
+  print("\x1b[01m%s\x1b[39;49;00m" % "Welcome to the Eyepiece setup utility.")
+  print("")
+  print("Please enter values for the following settings (just press Enter to")
+  print("accept a default value, if one is given in brackets).")
+  print("")
+  
+  dir = os.path.abspath(prompt("Where should the lightcurves be stored?", 
+                               "Path to lightcurves", "."))
+  if not os.path.exists(dir):
+    os.makedirs(dir)
+  
+  ttvpath = os.path.abspath(prompt("If you have a folder containing the transit times of all KOIs,\nplease provide its path here.", 
+                                   "Path to transit times", ""))
+  
+  config = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.py')  
+  with open(config, 'w') as f:
+    print(str_config % (dir, ttvpath), file = f)
+  
+  print("All done! These options were stored in the file \x1b[01mconfig.py\x1b[39;49;00m.")
+  print("")
