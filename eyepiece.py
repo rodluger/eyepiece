@@ -472,10 +472,8 @@ class Selector(object):
       
     # Reset
     elif event.key == 'r':
-     self._jumps = []
-     self._outliers = []
-     self._transits = []
-     self.redraw()
+     self.info = "reset"
+      pl.close()
 
     # Next
     elif event.key == ' ' or event.key == 'enter' or event.key == 'right':
@@ -526,6 +524,7 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
   if not quiet: print("Plotting...")
   uo = [[] for q in quarters]
   uj = [[] for q in quarters]
+  ut = [[] for q in quarters]
   q = quarters[0]
   dq = 1
   while q in quarters:
@@ -552,22 +551,30 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
     if len(uo[q]): 
       sel._outliers = uo[q]
       sel.redraw()
+    if len(ut[q]): 
+      sel._transits = ut[q]
+      sel.redraw()
     
     pl.show()
     pl.close()
     
-    # Store the user-defined outliers and jumps
+    # What will we do next time?
+    if sel.info == "next":
+      dq = 1
+    elif sel.info == "prev":
+      dq = -1
+    elif sel.info == "reset":
+      continue
+    elif sel.info == "quit":
+      return
+    else:
+      return
+    
+    # Store the user-defined outliers, jumps, and transits
     uo[q] = sel.outliers
     uj[q] = sel.jumps
+    ut[q] = sel.transits
     
-    # Remove outliers and split the data
-    j = np.concatenate([[0], sel.jumps, [len(data[q]['time']) - 1]])
-    o = sel.outliers
-    for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
-      x = np.array(data[q][arr])
-      x = np.delete(x, o, 0)
-      for a, b in zip(j[:-1], j[1:]):
-        data_new[q][arr].append(np.array(x[a:b]))
 
     # Get transits-only and background-only versions of the data
     inds = [i for i in range(len(data[q]['time'])) if i not in sel.outliers]
@@ -590,18 +597,24 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
     # TODO: Split the data below!
     #
     
+    
+    # Remove outliers and split the data
+    j = np.concatenate([[0], sel.jumps, [len(data[q]['time']) - 1]])
+    o = sel.outliers
+    for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
+      x = np.array(data[q][arr])
+      x = np.delete(x, o, 0)
+      for a, b in zip(j[:-1], j[1:]):
+        data_new[q][arr].append(np.array(x[a:b]))
+    
+    
+    # ???
+    
     for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
       data_trn[q][arr] = np.array(data[q][arr][tidx])
       data_bkg[q][arr] = np.array(data[q][arr][bidx])
       
-    # What shall we do next?
-    if sel.info == "next":
-      dq = 1
-    elif sel.info == "prev":
-      dq = -1
-    elif sel.info == "quit":
-      return
-  
+    # Increment and loop
     q += dq
   
   # Save the data
