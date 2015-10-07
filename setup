@@ -3,6 +3,8 @@
 
 from __future__ import print_function
 import os
+import sys
+import subprocess
 
 str_config = \
 """#!/usr/bin/python
@@ -21,7 +23,10 @@ ttvpath =             '%s'"""
 def prompt(msg, string, default = ''):
   if msg != "":
     print(msg)
-  x = raw_input("\x1b[35m> %s [%s]: \x1b[39;49;00m" % (string, default))
+  if default != "":
+    x = raw_input("\x1b[35m> %s [%s]: \x1b[39;49;00m" % (string, default))
+  else:
+    x = raw_input("\x1b[35m> %s: \x1b[39;49;00m" % (string))
   print("")
   return x
 
@@ -29,21 +34,42 @@ if __name__ == '__main__':
   
   print("\x1b[01m%s\x1b[39;49;00m" % "Welcome to the Eyepiece setup utility.")
   print("")
+  
+  # Install kplr?
+  print("First, let's check if you have \x1b[01mkplr\x1b[39;49;00m installed.")
+  print("")
+  try:
+    subprocess.call(["python", "-c", "import kplr"])
+    print("Looks like \x1b[01mkplr\x1b[39;49;00m is already installed!\n")
+  except ImportError:
+    print("Uh-oh, doesn't look like you have it. I'm going to try to install\nit for you using \x1b[01mpip install\x1b[39;49;00m. If you'd rather do it manually,\nhit \x1b[01mCtrl+C\x1b[39;49;00m to get out of here, and run this utility again later.\n")
+    prompt("", "Press Enter to continue", "")
+    try:
+      subprocess.call(["pip", "install", "kplr"])
+    except:
+      print("Error installing \x1b[01mkplr\x1b[39;49;00m. Please do it manually and run this utility again.\n")
+      sys.exit(1)
+    print("")  
+    
+  # Options
   print("Please enter values for the following settings (just press Enter to")
   print("accept a default value, if one is given in brackets).")
   print("")
   
+  # Get lightcurve directory
   dir = os.path.abspath(prompt("Where should the lightcurves be stored?", 
                                "Path to lightcurves", "."))
   if not os.path.exists(dir):
     os.makedirs(dir)
   
+  # Get TTV path
   ttvpath = os.path.abspath(prompt("If you have a folder containing the transit times of all KOIs,\nplease provide its path here.", 
                                    "Path to transit times", ""))
   
+  # Save the options
   config = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.py')  
   with open(config, 'w') as f:
     print(str_config % (dir, ttvpath), file = f)
-  
+
   print("All done! These options were stored in the file \x1b[01mconfig.py\x1b[39;49;00m.")
   print("")
