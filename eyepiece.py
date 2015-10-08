@@ -48,6 +48,9 @@ pl.rcParams['keymap.xscale'] = ''
 pl.rcParams['keymap.yscale'] = ''
 pl.rcParams['keymap.zoom'] = ''
 
+def bold(string):
+  return ("\x1b[01m%s\x1b[39;49;00m" % string)
+
 def RowCol(N):
   '''
   Given an integer ``N``, returns the ideal number of columns and rows 
@@ -224,8 +227,8 @@ class Selector(object):
   
   '''
   
-  def __init__(self, fig, ax, data, tN, tdur, pad = 2.0, split_cads = [], 
-               cad_tol = 10, min_sz = 300, title = ''):
+  def __init__(self, koi, quarter, fig, ax, data, tN, tdur, pad = 2.0, split_cads = [], 
+               cad_tol = 10, min_sz = 300, dir = config.dir):
     self.fig = fig
     self.ax = ax
     self.cad = data['cad']
@@ -234,7 +237,10 @@ class Selector(object):
     self.fpix = data['fpix']
     self.tN = tN
     self.tdur = pad * tdur
-    self.title = title
+    self.koi = koi
+    self.dir = dir
+    self.quarter = quarter
+    self.title = 'KOI %.2f: Quarter %02d' % (self.koi, self.quarter)
     
     # Initialize arrays
     self._outliers = []
@@ -244,6 +250,7 @@ class Selector(object):
     self.info = ""
     self.state = "fsum"
     self.alt = False
+    self.hide = False
     
     # Add user-defined split locations
     for s in split_cads:
@@ -307,6 +314,28 @@ class Selector(object):
     pl.connect('key_release_event', self.on_key_release)                                                 
     self.redraw(preserve_lims = False)
   
+  def ShowHelp(self):
+    print("")
+    print(bold("Eyepiece v0.0.1 Help"))
+    print("")
+    commands = {'h': 'Display this ' + bold('h') + 'elp message',
+                'z': 'Toggle ' + bold('z') + 'ooming',
+                'b': bold('B') + 'ack to original view',
+                'p': 'Toggle ' + bold('p') + 'ixel view',
+                't': 'Toggle ' + bold('t') + 'ransit selection tool',
+                'o': 'Toggle ' + bold('o') + 'utlier selection tool',
+                'x': 'Toggle transits and outliers on/off',
+                's': 'Toggle lightcurve ' + bold('s') + 'plitting tool',
+                '←': 'Go to previous quarter',
+                '→': 'Go to next quarter',
+                'r': bold('R') + 'eset all selections',
+                'Esc': 'Quit',
+                'Ctrl+s': bold('S') + 'ave image'
+                }
+    for key, descr in sorted(commands.items()):
+      print('%s:\t%s' % (bold(key), descr))
+    print("")
+  
   def redraw(self, preserve_lims = True):
   
     # Reset the figure
@@ -322,45 +351,58 @@ class Selector(object):
     
       # Replot stuff
       for a, b in zip(ssi[:-1], ssi[1:]):
-        p = self.ax.plot(self.cad[a:b], self.fsum[a:b], '.')
+        
+        # Non-transit, non-outlier inds
+        inds = [i for i, c in enumerate(self.cad) if (c >= self.cad[a]) and (c < self.cad[b]) and (i not in self.transits) and (i not in self.outliers)]
+        p = self.ax.plot(self.cad[inds], self.fsum[inds], '.')
         self._plots.append(p)
         color = p[0].get_color()
     
-        # Transits
-        x = []; y = []
-        for ti in self.transits:
-          if a <= ti and ti <= b:
-            x.append(self.cad[ti])
-            y.append(self.fsum[ti])
-        p = self.ax.plot(x, y, '.', markersize = 15, color = color, zorder = -1, alpha = 0.25)
-        self._plots.append(p)
-    
-      # Outliers
-      o = self.outliers
-      p = self.ax.plot(self.cad[o], self.fsum[o], 'ro')
-      self._plots.append(p)
-    
-    elif self.state == 'fpix':
-    
-      for a, b in zip(ssi[:-1], ssi[1:]):
-        for py in np.transpose(self.fpix):
-          p = self.ax.plot(self.cad[a:b], py[a:b], '.')
-          self._plots.append(p)
-          color = p[0].get_color()
-    
+        if not self.hide:
           # Transits
           x = []; y = []
           for ti in self.transits:
             if a <= ti and ti <= b:
               x.append(self.cad[ti])
-              y.append(py[ti])
+              y.append(self.fsum[ti])
+          p = self.ax.plot(x, y, '.', color = color)    
+          self._plots.append(p)
           p = self.ax.plot(x, y, '.', markersize = 15, color = color, zorder = -1, alpha = 0.25)
           self._plots.append(p)
     
-          # Outliers
-          o = self.outliers
-          p = self.ax.plot(self.cad[o], py[o], 'ro')
+      if not self.hide:
+        # Outliers
+        o = self.outliers
+        p = self.ax.plot(self.cad[o], self.fsum[o], 'ro')
+        self._plots.append(p)
+    
+    elif self.state == 'fpix':
+    
+      for a, b in zip(ssi[:-1], ssi[1:]):
+        for py in np.transpose(self.fpix):
+          # Non-transit, non-outlier inds
+          inds = [i for i, c in enumerate(self.cad) if (c >= self.cad[a]) and (c < self.cad[b]) and (i not in self.transits) and (i not in self.outliers)]
+          p = self.ax.plot(self.cad[inds], py[inds], '.')
           self._plots.append(p)
+          color = p[0].get_color()
+    
+          if not self.hide:
+            # Transits
+            x = []; y = []
+            for ti in self.transits:
+              if a <= ti and ti <= b:
+                x.append(self.cad[ti])
+                y.append(py[ti])
+            p = self.ax.plot(x, y, '.', color = color)
+            self._plots.append(p)
+            p = self.ax.plot(x, y, '.', markersize = 15, color = color, zorder = -1, alpha = 0.25)
+            self._plots.append(p)
+    
+          if not self.hide:
+            # Outliers
+            o = self.outliers
+            p = self.ax.plot(self.cad[o], py[o], 'ro')
+            self._plots.append(p)
     
     # Splits
     for s in self._jumps:
@@ -393,7 +435,7 @@ class Selector(object):
       self.ax.set_ylim(ymin - dy, ymax + dy)
     
     # Labels
-    self.ax.set_title(self.title, fontsize = 24)
+    self.ax.set_title(self.title, fontsize = 24, y = 1.01)
     self.ax.set_xlabel('Cadence Number', fontsize = 22)
     self.ax.set_ylabel('Flux', fontsize = 22)
     
@@ -502,20 +544,37 @@ class Selector(object):
     self.redraw()
   
   def on_key_release(self, event):
+    
+    # Alt
     if event.key == 'alt':
       self.alt = False
       self.redraw()
-  
+    
+    # Super (command)
+    if event.key == 'super+s':
+      figname = os.path.join(self.dir, str(self.koi), "Q%02d_%s.png" % (self.quarter, self.state))
+      print("Saving to file %s..." % figname)
+      self.fig.savefig(figname, bbox_inches = 'tight')
+    
   def on_key_press(self, event):
   
-    # Shift
+    # Alt
     if event.key == 'alt':
       self.alt = True
       self.redraw()
     
-    # Home
-    if event.key == 'h':
+    # Home (back)
+    if event.key == 'b':
       self.redraw(preserve_lims = False)
+    
+    # Help
+    if event.key == 'h':
+      self.ShowHelp()
+    
+    # Hide/Show
+    if event.key == 'x':
+      self.hide = not self.hide
+      self.redraw()
     
     # Zoom
     if event.key == 'z':
@@ -648,10 +707,9 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
         # Set up the plot
         fig, ax = pl.subplots(1, 1, figsize = (16, 6))
         fig.subplots_adjust(top=0.9, bottom=0.15, left = 0.075, right = 0.95)   
-        sel = Selector(fig, ax, data[q], tN, tdur, pad = padbkg, 
+        sel = Selector(koi, q, fig, ax, data[q], tN, tdur, pad = padbkg, 
                        split_cads = split_cads, 
-                       cad_tol = cad_tol, min_sz = min_sz, 
-                       title = 'KOI %.2f: Quarter %02d' % (koi, q))
+                       cad_tol = cad_tol, min_sz = min_sz)
     
         # If user is re-visiting this quarter, update with their selections 
         if len(uj[q]): 
@@ -664,6 +722,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           sel._transits = ut[q]
           sel.redraw()
     
+        fig.canvas.set_window_title('Eyepiece')       
         pl.show()
         pl.close()
     
