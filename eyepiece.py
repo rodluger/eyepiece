@@ -6,6 +6,13 @@ eyepiece.py
 
 Download and visually inspect, split, and correct Kepler lightcurves.
 
+.. todo::
+   - Errorbars
+   - Just pass ``data[q]`` to ``Selector``
+   - Option to skip visual inspection
+   - Show transit numbers
+   - Show quarters in transit plot
+
 '''
 
 import config
@@ -14,7 +21,15 @@ from matplotlib.widgets import RectangleSelector
 import numpy as np
 import kplr
 import os
+import itertools
 
+# Info
+__all__ = ["Inspect"]
+__version__ = "0.0.1"
+__author__ = "Rodrigo Luger (rodluger@uw.edu)"
+__copyright__ = "Copyright 2015 Rodrigo Luger"
+
+# Kepler cadences
 KEPLONGEXP =              (1765.5/86400.)
 KEPSHRTEXP =              (58.89/86400.)
 
@@ -31,6 +46,30 @@ pl.rcParams['keymap.save'] = ''
 pl.rcParams['keymap.xscale'] = ''
 pl.rcParams['keymap.yscale'] = ''
 pl.rcParams['keymap.zoom'] = ''
+
+def RowCol(N):
+  '''
+  Given an integer ``N``, returns the ideal number of columns and rows 
+  to arrange ``N`` subplots on a grid.
+  
+  :param int N: The number of subplots
+  
+  :returns: **``(cols, rows)``**, the most aesthetically pleasing number of columns \
+  and rows needed to display ``N`` subplots on a grid.
+  
+  '''
+  rows = np.floor(np.sqrt(N)).astype(int)
+  while(N % rows != 0):
+    rows = rows - 1
+  cols = N/rows
+  while cols/rows > 2:
+    cols = np.ceil(cols/2.).astype(int)
+    rows *= 2
+  if cols > rows:
+    tmp = cols
+    cols = rows
+    rows = tmp
+  return cols, rows
 
 def EmptyData(quarters):
   '''
@@ -502,114 +541,169 @@ class Selector(object):
   def jumps(self):
     return np.array(sorted(self._jumps), dtype = int)
   
-def View(koi = 17.01, long_cadence = True, clobber = False,
-         bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 4.0,
-         aperture = 'optimal', quarters = range(18), min_sz = 300,
-         dt_tol = 0.5, split_cads = [4472, 6717], dir = config.dir, ttvs = False,
-         quiet = False):
-  '''
+def Inspect(koi = 17.01, long_cadence = True, clobber = False,
+            bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 4.0,
+            aperture = 'optimal', quarters = range(18), min_sz = 300,
+            dt_tol = 0.5, split_cads = [4472, 6717], dir = config.dir, ttvs = False,
+            quiet = False):
+      '''
   
-  '''
+      '''
 
-  # Grab the data
-  if not quiet: print("Retrieving target data...")
-  data, tN, per, tdur = GetTPFData(koi, long_cadence = long_cadence, clobber = clobber, dir = dir,
-                        bad_bits = bad_bits, aperture = aperture, quarters = quarters,
-                        quiet = quiet, pad = pad, ttvs = ttvs)
-  data_new = EmptyData(quarters)
-  data_trn = EmptyData(quarters)
-  data_bkg = EmptyData(quarters)
+      # Grab the data
+      if not quiet: print("Retrieving target data...")
+      data, tN, per, tdur = GetTPFData(koi, long_cadence = long_cadence, clobber = clobber, dir = dir,
+                            bad_bits = bad_bits, aperture = aperture, quarters = quarters,
+                            quiet = quiet, pad = pad, ttvs = ttvs)
+      data_new = EmptyData(quarters)
+      data_trn = EmptyData(quarters)
+      data_bkg = EmptyData(quarters)
   
-  # Loop over all quarters
-  if not quiet: print("Plotting...")
-  uo = [[] for q in quarters]
-  uj = [[] for q in quarters]
-  ut = [[] for q in quarters]
-  q = quarters[0]
-  dq = 1
-  while q in quarters:
-  
-    # Empty quarter?
-    if data[q]['time'] == []:
-      q += dq
-      continue
-      
-    # Gap tolerance in cadences  
-    cad_tol = dt_tol / np.median(data[q]['time'][1:] - data[q]['time'][:-1])
-    
-    # Set up the plot
-    fig, ax = pl.subplots(1, 1, figsize = (16, 6))    
-    sel = Selector(fig, ax, data[q]['cad'], data[q]['time'], data[q]['fsum'], 
-                   data[q]['fpix'], tN, tdur, split_cads = split_cads, 
-                   cad_tol = cad_tol, min_sz = min_sz, 
-                   title = 'KOI %.2f: Quarter %02d' % (koi, q))
-    
-    # If user is re-visiting this quarter, update with their selections 
-    if len(uj[q]): 
-      sel._jumps = uj[q]
-      sel.redraw()
-    if len(uo[q]): 
-      sel._outliers = uo[q]
-      sel.redraw()
-    if len(ut[q]): 
-      sel._transits = ut[q]
-      sel.redraw()
-    
-    pl.show()
-    pl.close()
-    
-    # What will we do next time?
-    if sel.info == "next":
+      # Loop over all quarters
+      if not quiet: print("Plotting...")
+      uo = [[] for q in quarters]
+      uj = [[] for q in quarters]
+      ut = [[] for q in quarters]
+      q = quarters[0]
       dq = 1
-    elif sel.info == "prev":
-      dq = -1
-    elif sel.info == "reset":
-      continue
-    elif sel.info == "quit":
-      return
-    else:
-      return
-    
-    # Store the user-defined outliers, jumps, and transits
-    uo[q] = sel.outliers
-    uj[q] = sel.jumps
-    ut[q] = sel.transits
+      while q in quarters:
   
-    # Split the data
-    j = np.concatenate([[0], sel.jumps, [len(data[q]['time']) - 1]])
-    for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
+        # Empty quarter?
+        if data[q]['time'] == []:
+          q += dq
+          continue
       
-      # All data and background data
-      for a, b in zip(j[:-1], j[1:]):
+        # Gap tolerance in cadences  
+        cad_tol = dt_tol / np.median(data[q]['time'][1:] - data[q]['time'][:-1])
+    
+        # Set up the plot
+        fig, ax = pl.subplots(1, 1, figsize = (16, 6))    
+        sel = Selector(fig, ax, data[q]['cad'], data[q]['time'], data[q]['fsum'], 
+                       data[q]['fpix'], tN, tdur, split_cads = split_cads, 
+                       cad_tol = cad_tol, min_sz = min_sz, 
+                       title = 'KOI %.2f: Quarter %02d' % (koi, q))
+    
+        # If user is re-visiting this quarter, update with their selections 
+        if len(uj[q]): 
+          sel._jumps = uj[q]
+          sel.redraw()
+        if len(uo[q]): 
+          sel._outliers = uo[q]
+          sel.redraw()
+        if len(ut[q]): 
+          sel._transits = ut[q]
+          sel.redraw()
+    
+        pl.show()
+        pl.close()
+    
+        # What will we do next time?
+        if sel.info == "next":
+          dq = 1
+        elif sel.info == "prev":
+          dq = -1
+        elif sel.info == "reset":
+          continue
+        elif sel.info == "quit":
+          return
+        else:
+          return
+    
+        # Store the user-defined outliers, jumps, and transits
+        uo[q] = sel.outliers
+        uj[q] = sel.jumps
+        ut[q] = sel.transits
+  
+        # Split the data
+        j = np.concatenate([[0], sel.jumps, [len(data[q]['time']) - 1]])
+        for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
       
-        ai = [i for i in range(a, b) if i not in sel.outliers]
-        bi = [i for i in range(a, b) if i not in np.append(sel.outliers, sel.transits)]
+          # All data and background data
+          for a, b in zip(j[:-1], j[1:]):
       
-        data_new[q][arr].append(np.array(data[q][arr][ai]))
-        data_bkg[q][arr].append(np.array(data[q][arr][bi]))
+            ai = [i for i in range(a, b) if i not in sel.outliers]
+            bi = [i for i in range(a, b) if i not in np.append(sel.outliers, sel.transits)]
       
-      # Transit data
-      for t in tN:
-        ti = list( np.where( np.abs(data[q]['time'] - t) < tdur/2. )[0] )
-        ti = [i for i in ti if i not in sel.outliers]
+            data_new[q][arr].append(np.array(data[q][arr][ai]))
+            data_bkg[q][arr].append(np.array(data[q][arr][bi]))
+      
+          # Transit data
+          for t in tN:
+            ti = list( np.where( np.abs(data[q]['time'] - t) < tdur/2. )[0] )
+            ti = [i for i in ti if i not in sel.outliers]
         
-        # If there's a jump across this transit, throw it out.
-        if len(list(set(sel.jumps).intersection(ti))) == 0 and len(ti) > 0:
-          data_trn[q][arr].append(np.array(data[q][arr][ti]))
-    
-    # Increment and loop
-    q += dq
+            # If there's a jump across this transit, throw it out.
+            if len(list(set(sel.jumps).intersection(ti))) == 0 and len(ti) > 0:
+              data_trn[q][arr].append(data[q][arr][ti])
+          
+        # Increment and loop
+        q += dq
   
-  # Save the data
-  np.savez_compressed(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new)
-  np.savez_compressed(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn)
-  np.savez_compressed(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg)
+      # Save the data
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new)
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn)
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg)
+
+      return
+
+def PlotTransits(koi = 17.01, quarters = range(18), dir = config.dir, ttvs = False):
+  '''
+  
+  '''
+  time = []
+  flux = []
+  
+  try:
+    data = np.load(os.path.join(dir, str(koi), 'data_trn.npz'))['data']
+    foo = np.load(os.path.join(dir, str(koi), 'transits.npz'))
+    tN = foo['tN']
+    per = foo['per']
+    tdur = foo['tdur']
+  except IOError:
+    raise Exception("You must download and process the data first! Try using ``Inspect()``.")
+  
+  for q in quarters:
+    for t, f in zip(data[q]['time'], data[q]['fsum']):
+      time.append(t)
+      flux.append(f)
     
-  return
+  COLS, ROWS = RowCol(len(time))
+  grid = list(itertools.product(*[np.arange(COLS), np.arange(ROWS)]))  
+  fig, axes = pl.subplots(COLS, ROWS, figsize = (2.5*ROWS,2.5*COLS))
+  fig.subplots_adjust(wspace=0.05, hspace=0.05)
+  if (COLS*ROWS) > len(time):
+    for g in grid[len(time):]:
+      axes[g].set_visible(False)
+  for i, _ in enumerate(time):
+  
+    # What transit number is this?
+    tnum = np.argmin(np.abs(tN - time[i][0]))
+    tNi = tN[tnum]
+
+    if (COLS > 1):
+      ax = axes[grid[i]]
+    else:
+      ax = axes[grid[i][1]]
+
+    ax.plot(time[i], flux[i], 'b.')
+    ax.plot(time[i], flux[i], 'b-', alpha = 0.25)
+    ax.annotate("%03d" % tnum,
+            xy=(0.8, 0.05), xycoords='axes fraction',
+            xytext=(0, 0), textcoords='offset points')
+    ax.axvline(tNi, color = 'r', ls = '-', alpha = 0.75)
+    ax.set_xlim(tNi - tdur / 2., tNi + tdur / 2.)
+    ax.get_xaxis().set_ticks([])
+    ax.get_yaxis().set_ticks([])
+  
+  fig.savefig(os.path.join(dir, str(koi), "transits.png"), bbox_inches = 'tight')
+  pl.close()
 
 if __name__ == '__main__':
+
+  PlotTransits(17.01); quit()
+
   import argparse
   parser = argparse.ArgumentParser()
-  parser.add_argument("-k", "--koi", default='254.01')
+  parser.add_argument("-k", "--koi", default='17.01')
   args = parser.parse_args()
-  View(koi = float(args.koi))
+  Inspect(koi = float(args.koi))
