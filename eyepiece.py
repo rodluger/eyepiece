@@ -8,7 +8,6 @@ Download and visually inspect, split, and correct Kepler lightcurves.
 
 .. todo::
    - Errorbars
-   - Just pass ``data[q]`` to ``Selector``
    - Option to skip visual inspection
    - Show transit numbers
    - Show quarters in transit plot
@@ -16,8 +15,9 @@ Download and visually inspect, split, and correct Kepler lightcurves.
 '''
 
 import config
+import matplotlib; matplotlib.use('TkAgg')
 import matplotlib.pyplot as pl
-from matplotlib.widgets import RectangleSelector
+from matplotlib.widgets import RectangleSelector, Cursor
 import numpy as np
 import kplr
 import os
@@ -34,6 +34,7 @@ KEPLONGEXP =              (1765.5/86400.)
 KEPSHRTEXP =              (58.89/86400.)
 
 # Disable keyboard shortcuts
+pl.rcParams['toolbar'] = 'None'
 pl.rcParams['keymap.all_axes'] = ''
 pl.rcParams['keymap.back'] = ''
 pl.rcParams['keymap.forward'] = ''
@@ -95,7 +96,7 @@ def GetKoi(koi):
     raise ValueError("No KOI found with the number: '{0}'".format(koi))
   return kois[0]
 
-def GetTransitTimes(koi, tstart, tend, pad = 4.0, ttvs = False, long_cadence = True):
+def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = True):
   '''
   
   '''
@@ -103,7 +104,7 @@ def GetTransitTimes(koi, tstart, tend, pad = 4.0, ttvs = False, long_cadence = T
   planet = GetKoi(koi)
   per = planet.koi_period
   t0 = planet.koi_time0bk
-  tdur = pad * planet.koi_duration/24.
+  tdur = planet.koi_duration/24.
   
   if ttvs:
     # Get transit times (courtesy Ethan Kruse)
@@ -131,14 +132,14 @@ def GetTransitTimes(koi, tstart, tend, pad = 4.0, ttvs = False, long_cadence = T
   
   else:
     n, r = divmod(tstart - t0, per)
-    if r < tdur/2.: t0 = t0 + n*per
+    if r < (pad * tdur)/2.: t0 = t0 + n*per
     else: t0 = t0 + (n + 1)*per
     tN = np.arange(t0, tend + per, per)
 
   return tN, per, tdur
 
 def GetTPFData(koi, long_cadence = True, clobber = False, 
-               bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 4.0,
+               bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 2.0,
                aperture = 'optimal', quarters = range(18), dir = config.dir,
                ttvs = False, quiet = False):
   '''
@@ -223,16 +224,16 @@ class Selector(object):
   
   '''
   
-  def __init__(self, fig, ax, cad, time, fsum, fpix, tN, tdur, split_cads = [], 
+  def __init__(self, fig, ax, data, tN, tdur, pad = 2.0, split_cads = [], 
                cad_tol = 10, min_sz = 300, title = ''):
     self.fig = fig
     self.ax = ax
-    self.cad = cad
-    self.time = time
-    self.fsum = fsum
-    self.fpix = fpix
+    self.cad = data['cad']
+    self.time = data['time']
+    self.fsum = data['fsum']
+    self.fpix = data['fpix']
     self.tN = tN
-    self.tdur = tdur
+    self.tdur = pad * tdur
     self.title = title
     
     # Initialize arrays
@@ -242,6 +243,7 @@ class Selector(object):
     self._plots = []
     self.info = ""
     self.state = "fsum"
+    self.alt = False
     
     # Add user-defined split locations
     for s in split_cads:
@@ -295,8 +297,14 @@ class Selector(object):
                                       rectprops = dict(facecolor='red', 
                                                        edgecolor = 'black',
                                                        alpha=0.1, fill=True))
-    self.Outliers.set_active(False)  
-    pl.connect('key_press_event', self.toggle)                                                 
+    self.Outliers.set_active(False)
+    self.Zoom = RectangleSelector(ax, self.zselect,
+                                  rectprops = dict(edgecolor = 'black', linestyle = 'dashed',
+                                                   fill=False))
+    self.Zoom.set_active(False) 
+      
+    pl.connect('key_press_event', self.on_key_press)
+    pl.connect('key_release_event', self.on_key_release)                                                 
     self.redraw(preserve_lims = False)
   
   def redraw(self, preserve_lims = True):
@@ -389,6 +397,28 @@ class Selector(object):
     self.ax.set_xlabel('Cadence Number', fontsize = 22)
     self.ax.set_ylabel('Flux', fontsize = 22)
     
+    # Operations
+    label = None
+    if self.Zoom.active:
+      label = 'zoom'
+    elif self.Transits.active:
+      if self.alt:
+        label = 'transits (-)'
+      else:
+        label = 'transits (+)'
+    elif self.Outliers.active:
+      if self.alt:
+        label = 'outliers (-)'
+      else:
+        label = 'outliers (+)'
+    elif False:
+      # TODO
+      label = 'split'
+    
+    if label is not None:
+      a = self.ax.text(0.005, 0.96, label, fontsize=12, transform=self.ax.transAxes, color = 'r', alpha = 0.75)
+      self._plots.append([a])
+      
     # Refresh
     self.fig.canvas.draw()
   
@@ -431,6 +461,16 @@ class Selector(object):
                 inds.append(i)
         return inds
 
+  def zselect(self, eclick, erelease):
+    '''
+    
+    '''
+    
+    if not (eclick.xdata == erelease.xdata and eclick.ydata == erelease.ydata):
+      self.ax.set_xlim(min(eclick.xdata, erelease.xdata), max(eclick.xdata, erelease.xdata))
+      self.ax.set_ylim(min(eclick.ydata, erelease.ydata), max(eclick.ydata, erelease.ydata))
+      self.redraw()
+
   def tselect(self, eclick, erelease):
     '''
     
@@ -438,10 +478,12 @@ class Selector(object):
     
     inds = self.get_inds(eclick, erelease)
     for i in inds:
-      if i in self._transits:
-        self._transits.remove(i)
+      if self.alt:
+        if i in self._transits:
+          self._transits.remove(i)
       else:
-        self._transits.append(i)
+        if i not in self._transits:
+          self._transits.append(i)
     self.redraw()
 
   def oselect(self, eclick, erelease):
@@ -451,23 +493,50 @@ class Selector(object):
     
     inds = self.get_inds(eclick, erelease)
     for i in inds:
-      if i in self._outliers:
-        self._outliers.remove(i)
+      if self.alt:
+        if i in self._outliers:
+          self._outliers.remove(i)
       else:
-        self._outliers.append(i)   
+        if i not in self._outliers:
+          self._outliers.append(i)   
     self.redraw()
+  
+  def on_key_release(self, event):
+    if event.key == 'alt':
+      self.alt = False
+      self.redraw()
+  
+  def on_key_press(self, event):
+  
+    # Shift
+    if event.key == 'alt':
+      self.alt = True
+      self.redraw()
     
-  def toggle(self, event):
+    # Home
+    if event.key == 'h':
+      self.redraw(preserve_lims = False)
+    
+    # Zoom
+    if event.key == 'z':
+      self.Outliers.set_active(False)
+      self.Transits.set_active(False)
+      self.Zoom.set_active(not self.Zoom.active)
+      self.redraw()
     
     # Transits
     if event.key == 't':
       self.Outliers.set_active(False)
+      self.Zoom.set_active(False)
       self.Transits.set_active(not self.Transits.active)
+      self.redraw()
     
     # Outliers
     elif event.key == 'o':
       self.Transits.set_active(False)
+      self.Zoom.set_active(False)
       self.Outliers.set_active(not self.Outliers.active)
+      self.redraw()
       
     # Splits
     elif event.key == 's':
@@ -542,8 +611,8 @@ class Selector(object):
     return np.array(sorted(self._jumps), dtype = int)
   
 def Inspect(koi = 17.01, long_cadence = True, clobber = False,
-            bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 4.0,
-            aperture = 'optimal', quarters = range(18), min_sz = 300,
+            bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], padbkg = 2.0,
+            padtrn = 5.0, aperture = 'optimal', quarters = range(18), min_sz = 300,
             dt_tol = 0.5, split_cads = [4472, 6717], dir = config.dir, ttvs = False,
             quiet = False):
       '''
@@ -554,7 +623,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
       if not quiet: print("Retrieving target data...")
       data, tN, per, tdur = GetTPFData(koi, long_cadence = long_cadence, clobber = clobber, dir = dir,
                             bad_bits = bad_bits, aperture = aperture, quarters = quarters,
-                            quiet = quiet, pad = pad, ttvs = ttvs)
+                            quiet = quiet, pad = padbkg, ttvs = ttvs)
       data_new = EmptyData(quarters)
       data_trn = EmptyData(quarters)
       data_bkg = EmptyData(quarters)
@@ -577,9 +646,10 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
         cad_tol = dt_tol / np.median(data[q]['time'][1:] - data[q]['time'][:-1])
     
         # Set up the plot
-        fig, ax = pl.subplots(1, 1, figsize = (16, 6))    
-        sel = Selector(fig, ax, data[q]['cad'], data[q]['time'], data[q]['fsum'], 
-                       data[q]['fpix'], tN, tdur, split_cads = split_cads, 
+        fig, ax = pl.subplots(1, 1, figsize = (16, 6))
+        fig.subplots_adjust(top=0.9, bottom=0.15, left = 0.075, right = 0.95)   
+        sel = Selector(fig, ax, data[q], tN, tdur, pad = padbkg, 
+                       split_cads = split_cads, 
                        cad_tol = cad_tol, min_sz = min_sz, 
                        title = 'KOI %.2f: Quarter %02d' % (koi, q))
     
@@ -629,7 +699,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
       
           # Transit data
           for t in tN:
-            ti = list( np.where( np.abs(data[q]['time'] - t) < tdur/2. )[0] )
+            ti = list( np.where( np.abs(data[q]['time'] - t) < (padtrn * tdur) / 2. )[0] )
             ti = [i for i in ti if i not in sel.outliers]
         
             # If there's a jump across this transit, throw it out.
