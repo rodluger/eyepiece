@@ -243,7 +243,7 @@ class Selector(object):
     
     # Figure out the transit indices
     for ti in self.tN:
-      i = np.where(np.abs(self.time - ti) <= self.tdur)[0]
+      i = np.where(np.abs(self.time - ti) <= self.tdur / 2.)[0]
       self._transits.extend(i)
     
     # Initialize our selectors
@@ -472,7 +472,7 @@ class Selector(object):
       
     # Reset
     elif event.key == 'r':
-     self.info = "reset"
+      self.info = "reset"
       pl.close()
 
     # Next
@@ -574,46 +574,29 @@ def View(koi = 17.01, long_cadence = True, clobber = False,
     uo[q] = sel.outliers
     uj[q] = sel.jumps
     ut[q] = sel.transits
-    
-
-    # Get transits-only and background-only versions of the data
-    inds = [i for i in range(len(data[q]['time'])) if i not in sel.outliers]
-    tidx = [i for i in inds if i in sel.transits]
-    bidx = [i for i in inds if i not in sel.transits]
-    
-    # If there's a jump across a transit, throw the transit out.
-    bad = list(set(sel.jumps).intersection(tidx))
-    
-    # Median number of cadences per transit
-    cpt = int(np.ceil(2 * tdur / np.median(data[q]['time'][1:] - data[q]['time'][:-1])))
-    
-    # Here are all the compromised transit indices
-    for b in bad:
-      for i in range(b - cpt, b + cpt):
-        if i in tidx:
-          tidx.remove(i)
-    
-    #
-    # TODO: Split the data below!
-    #
-    
-    
-    # Remove outliers and split the data
+  
+    # Split the data
     j = np.concatenate([[0], sel.jumps, [len(data[q]['time']) - 1]])
-    o = sel.outliers
     for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
-      x = np.array(data[q][arr])
-      x = np.delete(x, o, 0)
-      for a, b in zip(j[:-1], j[1:]):
-        data_new[q][arr].append(np.array(x[a:b]))
-    
-    
-    # ???
-    
-    for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
-      data_trn[q][arr] = np.array(data[q][arr][tidx])
-      data_bkg[q][arr] = np.array(data[q][arr][bidx])
       
+      # All data and background data
+      for a, b in zip(j[:-1], j[1:]):
+      
+        ai = [i for i in range(a, b) if i not in sel.outliers]
+        bi = [i for i in range(a, b) if i not in np.append(sel.outliers, sel.transits)]
+      
+        data_new[q][arr].append(np.array(data[q][arr][ai]))
+        data_bkg[q][arr].append(np.array(data[q][arr][bi]))
+      
+      # Transit data
+      for t in tN:
+        ti = list( np.where( np.abs(data[q]['time'] - t) < tdur/2. )[0] )
+        ti = [i for i in ti if i not in sel.outliers]
+        
+        # If there's a jump across this transit, throw it out.
+        if len(list(set(sel.jumps).intersection(ti))) == 0 and len(ti) > 0:
+          data_trn[q][arr].append(np.array(data[q][arr][ti]))
+    
     # Increment and loop
     q += dq
   
