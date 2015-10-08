@@ -7,8 +7,8 @@ eyepiece.py
 Download and visually inspect, split, and correct Kepler lightcurves.
 
 .. todo::
+   - Bring focus to plot
    - Errorbars
-   - Option to skip visual inspection
    - Show transit numbers
    - Show quarters in transit plot
 
@@ -49,6 +49,10 @@ pl.rcParams['keymap.yscale'] = ''
 pl.rcParams['keymap.zoom'] = ''
 
 def bold(string):
+  '''
+  
+  '''
+  
   return ("\x1b[01m%s\x1b[39;49;00m" % string)
 
 def RowCol(N):
@@ -79,8 +83,12 @@ def EmptyData(quarters):
   '''
   
   '''
-  return np.array([{'time': [], 'fsum': [], 'ferr': [], 'fpix': [], 
-                    'perr': [], 'cad': []} for q in quarters])
+  
+  foo = {}
+  for q in quarters:
+    foo.update({q: {'time': [], 'fsum': [], 'ferr': [], 'fpix': [], 
+                   'perr': [], 'cad': []}})
+  return foo
 
 def GetKoi(koi):
   '''
@@ -151,7 +159,7 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   
   if not clobber:
     try:
-      data = np.load(os.path.join(dir, str(koi), 'data_raw.npz'))['data']
+      data = np.load(os.path.join(dir, str(koi), 'data_raw.npz'))['data'][()]         # For some reason, numpy saved it as a 0-d array! See http://stackoverflow.com/questions/8361561/recover-dict-from-0-d-numpy-array
       foo = np.load(os.path.join(dir, str(koi), 'transits.npz'))
       tN = foo['tN']
       per = foo['per']
@@ -227,7 +235,7 @@ class Selector(object):
   
   '''
   
-  def __init__(self, koi, quarter, fig, ax, data, tN, tdur, pad = 2.0, split_cads = [], 
+  def __init__(self, koi, quarter, data, tN, tdur, fig = None, ax = None, pad = 2.0, split_cads = [], 
                cad_tol = 10, min_sz = 300, dir = config.dir):
     self.fig = fig
     self.ax = ax
@@ -294,6 +302,10 @@ class Selector(object):
       i = np.where(np.abs(self.time - ti) <= self.tdur / 2.)[0]
       self._transits.extend(i)
     
+    # Are we actually plotting stuff?
+    if fig is None or ax is None:
+      return
+    
     # Initialize our selectors
     self.Transits = RectangleSelector(ax, self.tselect,
                                       rectprops = dict(facecolor='green', 
@@ -315,6 +327,10 @@ class Selector(object):
     self.redraw(preserve_lims = False)
   
   def ShowHelp(self):
+    '''
+    
+    '''
+    
     print("")
     print(bold("Eyepiece v0.0.1 Help"))
     print("")
@@ -329,8 +345,8 @@ class Selector(object):
                 '←': 'Go to previous quarter',
                 '→': 'Go to next quarter',
                 'r': bold('R') + 'eset all selections',
-                'Esc': 'Quit',
-                'Ctrl+s': bold('S') + 'ave image'
+                'Esc': 'Quit (without saving)',
+                'Ctrl+s': bold('S') + 'ave current plot to disk'
                 }
     for key, descr in sorted(commands.items()):
       print('%s:\t%s' % (bold(key), descr))
@@ -673,7 +689,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], padbkg = 2.0,
             padtrn = 5.0, aperture = 'optimal', quarters = range(18), min_sz = 300,
             dt_tol = 0.5, split_cads = [4472, 6717], dir = config.dir, ttvs = False,
-            quiet = False):
+            quiet = False, blind = False):
       '''
   
       '''
@@ -688,13 +704,15 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
       data_bkg = EmptyData(quarters)
   
       # Loop over all quarters
-      if not quiet: print("Plotting...")
+      if not quiet: print("Inspecting...")
       uo = [[] for q in quarters]
       uj = [[] for q in quarters]
       ut = [[] for q in quarters]
       q = quarters[0]
       dq = 1
       while q in quarters:
+        
+        if not quiet: print("Quarter %d" % q)
   
         # Empty quarter?
         if data[q]['time'] == []:
@@ -704,40 +722,44 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
         # Gap tolerance in cadences  
         cad_tol = dt_tol / np.median(data[q]['time'][1:] - data[q]['time'][:-1])
     
-        # Set up the plot
-        fig, ax = pl.subplots(1, 1, figsize = (16, 6))
-        fig.subplots_adjust(top=0.9, bottom=0.15, left = 0.075, right = 0.95)   
-        sel = Selector(koi, q, fig, ax, data[q], tN, tdur, pad = padbkg, 
-                       split_cads = split_cads, 
-                       cad_tol = cad_tol, min_sz = min_sz)
+        if not blind:
+          # Set up the plot
+          fig, ax = pl.subplots(1, 1, figsize = (16, 6))
+          fig.subplots_adjust(top=0.9, bottom=0.15, left = 0.075, right = 0.95)   
+          sel = Selector(koi, q, data[q], tN, tdur, fig = fig, ax = ax, pad = padbkg, 
+                         split_cads = split_cads, cad_tol = cad_tol, min_sz = min_sz)
     
-        # If user is re-visiting this quarter, update with their selections 
-        if len(uj[q]): 
-          sel._jumps = uj[q]
-          sel.redraw()
-        if len(uo[q]): 
-          sel._outliers = uo[q]
-          sel.redraw()
-        if len(ut[q]): 
-          sel._transits = ut[q]
-          sel.redraw()
+          # If user is re-visiting this quarter, update with their selections 
+          if len(uj[q]): 
+            sel._jumps = uj[q]
+            sel.redraw()
+          if len(uo[q]): 
+            sel._outliers = uo[q]
+            sel.redraw()
+          if len(ut[q]): 
+            sel._transits = ut[q]
+            sel.redraw()
     
-        fig.canvas.set_window_title('Eyepiece')       
-        pl.show()
-        pl.close()
+          fig.canvas.set_window_title('Eyepiece')       
+          pl.show()
+          pl.close()
     
-        # What will we do next time?
-        if sel.info == "next":
-          dq = 1
-        elif sel.info == "prev":
-          dq = -1
-        elif sel.info == "reset":
-          continue
-        elif sel.info == "quit":
-          return
+          # What will we do next time?
+          if sel.info == "next":
+            dq = 1
+          elif sel.info == "prev":
+            dq = -1
+          elif sel.info == "reset":
+            continue
+          elif sel.info == "quit":
+            return
+          else:
+            return
+        
         else:
-          return
-    
+          sel = Selector(koi, q, data[q], tN, tdur, fig = None, ax = None, pad = padbkg, 
+                         split_cads = split_cads, cad_tol = cad_tol, min_sz = min_sz)
+        
         # Store the user-defined outliers, jumps, and transits
         uo[q] = sel.outliers
         uj[q] = sel.jumps
@@ -832,4 +854,4 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument("-k", "--koi", default='17.01')
   args = parser.parse_args()
-  Inspect(koi = float(args.koi))
+  Inspect(koi = float(args.koi), blind = False)
