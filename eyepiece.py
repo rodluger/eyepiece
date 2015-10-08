@@ -699,9 +699,6 @@ def PlotTransits(koi = 17.01, quarters = range(18), dir = config.dir, ttvs = Fal
   pl.close()
 
 if __name__ == '__main__':
-
-  PlotTransits(17.01); quit()
-
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument("-k", "--koi", default='17.01')

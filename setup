@@ -39,8 +39,11 @@ if __name__ == '__main__':
   print("First, let's check if you have \x1b[01mkplr\x1b[39;49;00m installed.")
   print("")
   try:
-    subprocess.call(["python", "-c", "import kplr"])
-    print("Looks like \x1b[01mkplr\x1b[39;49;00m is already installed!\n")
+    x = subprocess.call(["python", "-c", "import kplr"])
+    if x == 0:
+      print("Looks like \x1b[01mkplr\x1b[39;49;00m is already installed!\n")
+    else:
+      raise ImportError("")
   except ImportError:
     print("Uh-oh, doesn't look like you have it. I'm going to try to install\nit for you using \x1b[01mpip install\x1b[39;49;00m. If you'd rather do it manually,\nhit \x1b[01mCtrl+C\x1b[39;49;00m to get out of here, and run this utility again later.\n")
     prompt("", "Press Enter to continue", "")
