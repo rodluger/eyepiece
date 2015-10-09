@@ -7,6 +7,7 @@ eyepiece.py
 Download and visually inspect, split, and correct Kepler lightcurves.
 
 .. todo::
+   - Transit utility with outlier selection!
    - Bring focus to plot
    - Errorbars
    - Show transit numbers
@@ -22,6 +23,13 @@ import numpy as np
 import kplr
 import os
 import itertools
+import subprocess
+
+# Get current git commit hash
+try:
+  GITHASH = subprocess.check_output(['git', 'rev-parse', 'HEAD'])
+except:
+  GITHASH = ""
 
 # Info
 __all__ = ["Inspect"]
@@ -221,12 +229,12 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   
   if not os.path.exists(os.path.join(dir, str(koi))):
     os.makedirs(os.path.join(dir, str(koi)))
-  np.savez_compressed(os.path.join(dir, str(koi), 'data_raw.npz'), data = data)
+  np.savez_compressed(os.path.join(dir, str(koi), 'data_raw.npz'), data = data, hash = GITHASH)
   
   # Now get the transit info
   tN, per, tdur = GetTransitTimes(koi, tstart, tend, pad = pad, ttvs = ttvs, 
                                   long_cadence = long_cadence)
-  np.savez_compressed(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur)
+  np.savez_compressed(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur, hash = GITHASH)
     
   return data, tN, per, tdur
   
@@ -791,9 +799,9 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
         q += dq
   
       # Save the data
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new)
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn)
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg)
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new, hash = GITHASH)
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn, hash = GITHASH)
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GITHASH)
 
       return
 
