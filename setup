@@ -70,7 +70,7 @@ if __name__ == '__main__':
                                    "Path to transit times", ""))
   
   # Save the options
-  config = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.py')  
+  config = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eyepiece', 'config.py')  
   with open(config, 'w') as f:
     print(str_config % (dir, ttvpath), file = f)
 

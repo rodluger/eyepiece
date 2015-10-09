@@ -1,0 +1,13 @@
+#!/bin/sh
+#PBS -N pld
+#PBS -l nodes=1:ppn=12,feature=12core,mem=40gb,walltime=10:00:00
+#PBS -M rodluger@uw.edu
+#PBS -m abe
+#PBS -o /usr/lusers/rodluger/src/templar/templar/pld/stdout.txt
+#PBS -e /usr/lusers/rodluger/src/templar/templar/pld/stderr.txt
+
+# Run the job.
+cd /usr/lusers/rodluger/src/templar/templar
+
+#mpiexec -np $PBS_NP python pld.py &> pld/error.log
+python pld.py &> pld/error.log

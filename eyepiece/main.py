@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 '''
-eyepiece.py
------------
+main.py
+-------
 
 Download and visually inspect, split, and correct Kepler lightcurves.
 
@@ -27,12 +27,17 @@ import subprocess
 
 # Get current git commit hash
 try:
-  GITHASH = subprocess.check_output(['git', 'rev-parse', 'HEAD'])
+  wrktree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+  gitpath = os.path.join(wrktree, '.git')
+  GITHASH = subprocess.check_output(['git', '--git-dir=%s' % gitpath, 
+                                     '--work-tree=%s' % wrktree, 'rev-parse', 'HEAD'], 
+                                     stderr = subprocess.STDOUT)
+  if GITHASH.endswith('\n'): GITHASH = GITHASH[:-1]
 except:
   GITHASH = ""
 
 # Info
-__all__ = ["Inspect"]
+__all__ = ["Inspect", "GetData"]
 __version__ = "0.0.1"
 __author__ = "Rodrigo Luger (rodluger@uw.edu)"
 __copyright__ = "Copyright 2015 Rodrigo Luger"
@@ -856,6 +861,19 @@ def PlotTransits(koi = 17.01, quarters = range(18), dir = config.dir, ttvs = Fal
   
   fig.savefig(os.path.join(dir, str(koi), "transits.png"), bbox_inches = 'tight')
   pl.close()
+
+def GetData(koi, type = 'proc', blind = False):
+  '''
+  
+  '''
+  
+  try:
+    data = np.load(os.path.join(dir, str(koi), 'data_%s.npz' % type))['data']
+  except IOError:
+    Inspect(koi = koi, blind = blind)
+    data = np.load(os.path.join(dir, str(koi), 'data_split.npz'))['data']
+    
+  return data
 
 if __name__ == '__main__':
   import argparse
