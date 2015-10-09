@@ -10,7 +10,6 @@ An example of our PLD + GP decorrelation method for KOI 254.01.
 
 from eyepiece import GetData
 from eyepiece.config import dir
- 
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 import matplotlib.pyplot as pl

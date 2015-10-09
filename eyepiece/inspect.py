@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 '''
-main.py
--------
+inspect.py
+----------
 
 Download and visually inspect, split, and correct Kepler lightcurves.
 
@@ -15,240 +15,76 @@ Download and visually inspect, split, and correct Kepler lightcurves.
 
 '''
 
+from utils import Bold, RowCol, GitHash
+from download import GetTPFData, GetData, EmptyData
 import config
-import matplotlib; matplotlib.use('TkAgg')
 import matplotlib.pyplot as pl
 from matplotlib.widgets import RectangleSelector, Cursor
 import numpy as np
-import kplr
 import os
 import itertools
-import subprocess
 
-# Get current git commit hash
-try:
-  wrktree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-  gitpath = os.path.join(wrktree, '.git')
-  GITHASH = subprocess.check_output(['git', '--git-dir=%s' % gitpath, 
-                                     '--work-tree=%s' % wrktree, 'rev-parse', 'HEAD'], 
-                                     stderr = subprocess.STDOUT)
-  if GITHASH.endswith('\n'): GITHASH = GITHASH[:-1]
-except:
-  GITHASH = ""
+__all__ = ["Inspect", "PlotTransits"]
 
-# Info
-__all__ = ["Inspect", "GetData"]
-__version__ = "0.0.1"
-__author__ = "Rodrigo Luger (rodluger@uw.edu)"
-__copyright__ = "Copyright 2015 Rodrigo Luger"
-
-# Kepler cadences
-KEPLONGEXP =              (1765.5/86400.)
-KEPSHRTEXP =              (58.89/86400.)
-
-# Disable keyboard shortcuts
-pl.rcParams['toolbar'] = 'None'
-pl.rcParams['keymap.all_axes'] = ''
-pl.rcParams['keymap.back'] = ''
-pl.rcParams['keymap.forward'] = ''
-pl.rcParams['keymap.fullscreen'] = ''
-pl.rcParams['keymap.grid'] = ''
-pl.rcParams['keymap.home'] = ''
-pl.rcParams['keymap.pan'] = ''
-pl.rcParams['keymap.quit'] = ''
-pl.rcParams['keymap.save'] = ''
-pl.rcParams['keymap.xscale'] = ''
-pl.rcParams['keymap.yscale'] = ''
-pl.rcParams['keymap.zoom'] = ''
-
-def bold(string):
+def Process(time, cad, tN, tdur, pad = 2.0, cad_tol = 10, min_sz = 300, split_cads = []):
   '''
   
   '''
   
-  return ("\x1b[01m%s\x1b[39;49;00m" % string)
+  # Initialize
+  jumps = []
+  transits = []
+  
+  # Add user-defined split locations
+  for s in split_cads:
+  
+    # What if a split happens in a gap? Shift rightward up to 10 cadences
+    for ds in range(10):
+      foo = np.where(cad == s + ds)[0]
+      if len(foo):
+        jumps.append(foo[0])
+        break
+  
+  # Add cadence gap splits
+  cut = np.where(cad[1:] - cad[:-1] > cad_tol)[0] + 1
+  cut = np.concatenate([[0], cut, [len(cad) - 1]])                                    # Add first and last points
+  repeat = True
+  while repeat == True:                                                               # If chunks are too small, merge them
+    repeat = False
+    for a, b in zip(cut[:-1], cut[1:]):
+      if (b - a) < min_sz:
+        if a > 0:
+          at = cad[a] - cad[a - 1]
+        else:
+          at = np.inf
+        if b < len(cad) - 1:
+          bt = cad[b + 1] - cad[b]
+        else:
+          bt = np.inf
+        if at < bt:
+          cut = np.delete(cut, np.where(cut == a))                                    # Merge with the closest chunk
+        elif not np.isinf(bt):
+          cut = np.delete(cut, np.where(cut == b))
+        else:
+          break
+        repeat = True
+        break
+  jumps.extend(list(cut))
+  jumps = list(set(jumps) - set([0, len(cad) - 1]))
+  
+  # Figure out the transit indices
+  for ti in tN:
+    i = np.where(np.abs(time - ti) <= (pad * tdur) / 2.)[0]
+    transits.extend(i)
 
-def RowCol(N):
-  '''
-  Given an integer ``N``, returns the ideal number of columns and rows 
-  to arrange ``N`` subplots on a grid.
-  
-  :param int N: The number of subplots
-  
-  :returns: **``(cols, rows)``**, the most aesthetically pleasing number of columns \
-  and rows needed to display ``N`` subplots on a grid.
-  
-  '''
-  rows = np.floor(np.sqrt(N)).astype(int)
-  while(N % rows != 0):
-    rows = rows - 1
-  cols = N/rows
-  while cols/rows > 2:
-    cols = np.ceil(cols/2.).astype(int)
-    rows *= 2
-  if cols > rows:
-    tmp = cols
-    cols = rows
-    rows = tmp
-  return cols, rows
+  return jumps, transits
 
-def EmptyData(quarters):
-  '''
-  
-  '''
-  
-  foo = {}
-  for q in quarters:
-    foo.update({q: {'time': [], 'fsum': [], 'ferr': [], 'fpix': [], 
-                   'perr': [], 'cad': []}})
-  return foo
-
-def GetKoi(koi):
-  '''
-  A wrapper around :py:func:`kplr.API().koi`, with the additional command
-  `select=*` to query **all** columns in the Exoplanet database.
-
-  :param float koi_number: The full KOI number of the target (`XX.XX`)
-
-  :returns: A :py:mod:`kplr` `koi` object
-
-  '''
-  client = kplr.API()
-  kois = client.kois(where="kepoi_name+like+'K{0:08.2f}'"
-                     .format(float(koi)), select="*")
-  if not len(kois):
-    raise ValueError("No KOI found with the number: '{0}'".format(koi))
-  return kois[0]
-
-def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = True):
-  '''
-  
-  '''
-
-  planet = GetKoi(koi)
-  per = planet.koi_period
-  t0 = planet.koi_time0bk
-  tdur = planet.koi_duration/24.
-  
-  if ttvs:
-    # Get transit times (courtesy Ethan Kruse)
-    try:
-      with open(os.path.join(config.ttvpath, "KOI%.2f.ttv" % koi), "r") as f:
-        lines = [l for l in f.readlines() if ('#' not in l) and (len(l) > 1)]
-        tcads = np.array([int(l.split('\t')[1]) for l in lines], dtype = 'int32')
-    except IOError:
-      raise Exception("Unable to locate TTV file for the target.")
-  
-    # Ensure t0 is in fact the first transit
-    t0 -= per * divmod(t0 - tstart, per)[0]
-  
-    # Calculate transit times from cadences
-    if long_cadence:
-      tN = t0 + (tcads - tcads[0]) * KEPLONGEXP
-    else:
-      tN = t0 + (tcads - tcads[0]) * KEPSHRTEXP
-
-    # Ensure our transit times go all the way to the end, plus a bit
-    # (the extra per/2 is VERY generous; we're likely fitting for one
-    # or two more transits than we have data for.)
-    while tN[-1] < tend + per/2.:
-      tN = np.append(tN, tN[-1] + per)
-  
-  else:
-    n, r = divmod(tstart - t0, per)
-    if r < (pad * tdur)/2.: t0 = t0 + n*per
-    else: t0 = t0 + (n + 1)*per
-    tN = np.arange(t0, tend + per, per)
-
-  return tN, per, tdur
-
-def GetTPFData(koi, long_cadence = True, clobber = False, 
-               bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 2.0,
-               aperture = 'optimal', quarters = range(18), dir = config.dir,
-               ttvs = False, quiet = False):
-  '''
-  
-  '''
-  
-  if not clobber:
-    try:
-      data = np.load(os.path.join(dir, str(koi), 'data_raw.npz'))['data'][()]         # For some reason, numpy saved it as a 0-d array! See http://stackoverflow.com/questions/8361561/recover-dict-from-0-d-numpy-array
-      foo = np.load(os.path.join(dir, str(koi), 'transits.npz'))
-      tN = foo['tN']
-      per = foo['per']
-      tdur = foo['tdur']
-      if not quiet: print("Loading saved TPF data...")
-      return data, tN, per, tdur
-    except:
-      pass
-  
-  if not quiet: print("Downloading TPF data...")
-  planet = GetKoi(koi)  
-  data = EmptyData(quarters)
-  tpf = planet.get_target_pixel_files(short_cadence = not long_cadence)
-  if len(tpf) == 0:
-    raise Exception("No pixel files for selected object!")
-  tstart = np.inf
-  tend = -np.inf
-  for fnum in range(len(tpf)):
-    with tpf[fnum].open(clobber = clobber) as f:  
-      ap = f[2].data
-      if aperture == 'optimal':
-        idx = np.where(ap & 2)
-      elif aperture == 'full':
-        idx = np.where(ap & 1)
-      else:
-        raise Exception('ERROR: Invalid aperture setting `%s`.' % aperture)
-      qdata = f[1].data
-      quarter = f[0].header['QUARTER']
-      crowding = f[1].header['CROWDSAP']
-    time = np.array(qdata.field('TIME'), dtype='float64')
-    nan_inds = list(np.where(np.isnan(time))[0])                                      # Any NaNs will screw up the transit model calculation,
-    time = np.delete(time, nan_inds)                                                  # so we need to remove them now.
-    cad = np.array(qdata.field('CADENCENO'), dtype='int32')
-    cad = np.delete(cad, nan_inds)
-    flux = np.array(qdata.field('FLUX'), dtype='float64')
-    flux = np.delete(flux, nan_inds, 0)
-    fpix = np.array([f[idx] for f in flux], dtype='float64')
-    perr = np.array([f[idx] for f in qdata.field('FLUX_ERR')], dtype='float64')
-    perr = np.delete(perr, nan_inds, 0)
-    fsum = np.sum(fpix, axis = 1)
-    ferr = np.sum(perr**2, axis = 1)**0.5
-    quality = qdata.field('QUALITY')
-    quality = np.delete(quality, nan_inds)
-    qual_inds = []
-    for b in bad_bits:
-      qual_inds += list(np.where(quality & 2**(b-1))[0])
-    nan_inds = list(np.where(np.isnan(fsum))[0])
-    bad_inds = np.array(sorted(list(set(qual_inds + nan_inds))))
-    time = np.delete(time, bad_inds)
-    cad = np.delete(cad, bad_inds)
-    fsum = np.delete(fsum, bad_inds)
-    ferr = np.delete(ferr, bad_inds)
-    fpix = np.delete(fpix, bad_inds, 0)
-    perr = np.delete(perr, bad_inds, 0)
-    data[quarter].update({'time': time, 'fsum': fsum, 'ferr': ferr, 'fpix': fpix, 
-                          'perr': perr, 'cad': cad, 'crowding': crowding})
-    if time[0] < tstart: tstart = time[0]
-    if time[-1] > tend: tend = time[-1]
-  
-  if not os.path.exists(os.path.join(dir, str(koi))):
-    os.makedirs(os.path.join(dir, str(koi)))
-  np.savez_compressed(os.path.join(dir, str(koi), 'data_raw.npz'), data = data, hash = GITHASH)
-  
-  # Now get the transit info
-  tN, per, tdur = GetTransitTimes(koi, tstart, tend, pad = pad, ttvs = ttvs, 
-                                  long_cadence = long_cadence)
-  np.savez_compressed(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur, hash = GITHASH)
-    
-  return data, tN, per, tdur
-  
 class Selector(object):
   '''
   
   '''
   
-  def __init__(self, koi, quarter, data, tN, tdur, fig = None, ax = None, pad = 2.0, split_cads = [], 
+  def __init__(self, fig, ax, koi, quarter, data, tN, tdur, pad = 2.0, split_cads = [], 
                cad_tol = 10, min_sz = 300, dir = config.dir):
     self.fig = fig
     self.ax = ax
@@ -257,7 +93,6 @@ class Selector(object):
     self.fsum = data['fsum']
     self.fpix = data['fpix']
     self.tN = tN
-    self.tdur = pad * tdur
     self.koi = koi
     self.dir = dir
     self.quarter = quarter
@@ -273,52 +108,11 @@ class Selector(object):
     self.alt = False
     self.hide = False
     
-    # Add user-defined split locations
-    for s in split_cads:
-    
-      # What if a split happens in a gap? Shift rightward up to 10 cadences
-      for ds in range(10):
-        foo = np.where(self.cad == s + ds)[0]
-        if len(foo):
-          self._jumps.append(foo[0])
-          break
-    
-    # Add cadence gap splits
-    cut = np.where(self.cad[1:] - self.cad[:-1] > cad_tol)[0] + 1
-    cut = np.concatenate([[0], cut, [len(self.cad) - 1]])                             # Add first and last points
-    repeat = True
-    while repeat == True:                                                             # If chunks are too small, merge them
-      repeat = False
-      for a, b in zip(cut[:-1], cut[1:]):
-        if (b - a) < min_sz:
-          if a > 0:
-            at = self.cad[a] - self.cad[a - 1]
-          else:
-            at = np.inf
-          if b < len(self.cad) - 1:
-            bt = self.cad[b + 1] - self.cad[b]
-          else:
-            bt = np.inf
-          if at < bt:
-            cut = np.delete(cut, np.where(cut == a))                                  # Merge with the closest chunk
-          elif not np.isinf(bt):
-            cut = np.delete(cut, np.where(cut == b))
-          else:
-            break
-          repeat = True
-          break
-    self._jumps.extend(list(cut))
-    self._jumps = list(set(self._jumps) - set([0, len(self.cad) - 1]))
-    
-    # Figure out the transit indices
-    for ti in self.tN:
-      i = np.where(np.abs(self.time - ti) <= self.tdur / 2.)[0]
-      self._transits.extend(i)
-    
-    # Are we actually plotting stuff?
-    if fig is None or ax is None:
-      return
-    
+    # Process the data
+    self._jumps, self._transits = Process(self.time, self.cad, self.tN, tdur, 
+                                          pad = pad, cad_tol = cad_tol, 
+                                          min_sz = min_sz, split_cads = split_cads)
+  
     # Initialize our selectors
     self.Transits = RectangleSelector(ax, self.tselect,
                                       rectprops = dict(facecolor='green', 
@@ -345,24 +139,24 @@ class Selector(object):
     '''
     
     print("")
-    print(bold("Eyepiece v0.0.1 Help"))
+    print(Bold("Eyepiece v0.0.1 Help"))
     print("")
-    commands = {'h': 'Display this ' + bold('h') + 'elp message',
-                'z': 'Toggle ' + bold('z') + 'ooming',
-                'b': bold('B') + 'ack to original view',
-                'p': 'Toggle ' + bold('p') + 'ixel view',
-                't': 'Toggle ' + bold('t') + 'ransit selection tool',
-                'o': 'Toggle ' + bold('o') + 'utlier selection tool',
+    commands = {'h': 'Display this ' + Bold('h') + 'elp message',
+                'z': 'Toggle ' + Bold('z') + 'ooming',
+                'b': Bold('B') + 'ack to original view',
+                'p': 'Toggle ' + Bold('p') + 'ixel view',
+                't': 'Toggle ' + Bold('t') + 'ransit selection tool',
+                'o': 'Toggle ' + Bold('o') + 'utlier selection tool',
                 'x': 'Toggle transits and outliers on/off',
-                's': 'Toggle lightcurve ' + bold('s') + 'plitting tool',
+                's': 'Toggle lightcurve ' + Bold('s') + 'plitting tool',
                 '←': 'Go to previous quarter',
                 '→': 'Go to next quarter',
-                'r': bold('R') + 'eset all selections',
+                'r': Bold('R') + 'eset all selections',
                 'Esc': 'Quit (without saving)',
-                'Ctrl+s': bold('S') + 'ave current plot to disk'
+                'Ctrl+s': Bold('S') + 'ave current plot to disk'
                 }
     for key, descr in sorted(commands.items()):
-      print('%s:\t%s' % (bold(key), descr))
+      print('%s:\t%s' % (Bold(key), descr))
     print("")
   
   def redraw(self, preserve_lims = True):
@@ -578,14 +372,14 @@ class Selector(object):
     if event.key == 'alt':
       self.alt = False
       self.redraw()
-    
+      
+  def on_key_press(self, event):
+  
     # Super (command)
     if event.key == 'super+s':
       figname = os.path.join(self.dir, str(self.koi), "Q%02d_%s.png" % (self.quarter, self.state))
       print("Saving to file %s..." % figname)
       self.fig.savefig(figname, bbox_inches = 'tight')
-    
-  def on_key_press(self, event):
   
     # Alt
     if event.key == 'alt':
@@ -709,8 +503,9 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
 
       # Grab the data
       if not quiet: print("Retrieving target data...")
-      data, tN, per, tdur = GetTPFData(koi, long_cadence = long_cadence, clobber = clobber, dir = dir,
-                            bad_bits = bad_bits, aperture = aperture, quarters = quarters,
+      data, tN, per, tdur = GetTPFData(koi, long_cadence = long_cadence, 
+                            clobber = clobber, dir = dir, bad_bits = bad_bits, 
+                            aperture = aperture, quarters = quarters,
                             quiet = quiet, pad = padbkg, ttvs = ttvs)
       data_new = EmptyData(quarters)
       data_trn = EmptyData(quarters)
@@ -736,10 +531,11 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
         cad_tol = dt_tol / np.median(data[q]['time'][1:] - data[q]['time'][:-1])
     
         if not blind:
+        
           # Set up the plot
           fig, ax = pl.subplots(1, 1, figsize = (16, 6))
           fig.subplots_adjust(top=0.9, bottom=0.15, left = 0.075, right = 0.95)   
-          sel = Selector(koi, q, data[q], tN, tdur, fig = fig, ax = ax, pad = padbkg, 
+          sel = Selector(fig, ax, koi, q, data[q], tN, tdur, pad = padbkg, 
                          split_cads = split_cads, cad_tol = cad_tol, min_sz = min_sz)
     
           # If user is re-visiting this quarter, update with their selections 
@@ -768,25 +564,35 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             return
           else:
             return
+          
+          jumps = sel.jumps
+          transits = sel.transits
+          outliers = sel.outliers
         
         else:
-          sel = Selector(koi, q, data[q], tN, tdur, fig = None, ax = None, pad = padbkg, 
-                         split_cads = split_cads, cad_tol = cad_tol, min_sz = min_sz)
+          
+          # Just process the data
+          jumps, transits = Process(data[q]['time'], data[q]['cad'], tN, tdur, 
+                                    pad = padbkg, cad_tol = cad_tol, min_sz = min_sz, 
+                                    split_cads = split_cads)
+          jumps = np.array(jumps, dtype = int)
+          transits = np.array(transits, dtype = int)
+          outliers = np.array([], dtype = int)
         
         # Store the user-defined outliers, jumps, and transits
-        uo[q] = sel.outliers
-        uj[q] = sel.jumps
-        ut[q] = sel.transits
+        uo[q] = outliers
+        uj[q] = jumps
+        ut[q] = transits
   
         # Split the data
-        j = np.concatenate([[0], sel.jumps, [len(data[q]['time']) - 1]])
+        j = np.concatenate([[0], jumps, [len(data[q]['time']) - 1]])
         for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
       
           # All data and background data
           for a, b in zip(j[:-1], j[1:]):
       
-            ai = [i for i in range(a, b) if i not in sel.outliers]
-            bi = [i for i in range(a, b) if i not in np.append(sel.outliers, sel.transits)]
+            ai = [i for i in range(a, b) if i not in outliers]
+            bi = [i for i in range(a, b) if i not in np.append(outliers, transits)]
       
             data_new[q][arr].append(np.array(data[q][arr][ai]))
             data_bkg[q][arr].append(np.array(data[q][arr][bi]))
@@ -794,19 +600,20 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           # Transit data
           for t in tN:
             ti = list( np.where( np.abs(data[q]['time'] - t) < (padtrn * tdur) / 2. )[0] )
-            ti = [i for i in ti if i not in sel.outliers]
+            ti = [i for i in ti if i not in outliers]
         
             # If there's a jump across this transit, throw it out.
-            if len(list(set(sel.jumps).intersection(ti))) == 0 and len(ti) > 0:
+            if len(list(set(jumps).intersection(ti))) == 0 and len(ti) > 0:
               data_trn[q][arr].append(data[q][arr][ti])
           
         # Increment and loop
         q += dq
   
       # Save the data
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new, hash = GITHASH)
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn, hash = GITHASH)
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GITHASH)
+      if not quiet: print("Saving data to disk...")
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new, hash = GitHash())
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
+      np.savez_compressed(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
 
       return
 
@@ -861,23 +668,3 @@ def PlotTransits(koi = 17.01, quarters = range(18), dir = config.dir, ttvs = Fal
   
   fig.savefig(os.path.join(dir, str(koi), "transits.png"), bbox_inches = 'tight')
   pl.close()
-
-def GetData(koi, type = 'proc', blind = False):
-  '''
-  
-  '''
-  
-  try:
-    data = np.load(os.path.join(dir, str(koi), 'data_%s.npz' % type))['data']
-  except IOError:
-    Inspect(koi = koi, blind = blind)
-    data = np.load(os.path.join(dir, str(koi), 'data_split.npz'))['data']
-    
-  return data
-
-if __name__ == '__main__':
-  import argparse
-  parser = argparse.ArgumentParser()
-  parser.add_argument("-k", "--koi", default='17.01')
-  args = parser.parse_args()
-  Inspect(koi = float(args.koi), blind = False)
