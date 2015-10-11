@@ -613,9 +613,11 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           if len(ut[q]): 
             sel._transits = ut[q]
             sel.redraw()
-    
-          fig.canvas.set_window_title('Eyepiece')       
-          
+
+          fig.canvas.set_window_title('Eyepiece') 
+          mngr = pl.get_current_fig_manager()
+          mngr.window.wm_geometry("+50+100")      
+
           pl.show()
           pl.close()
     
