@@ -147,7 +147,7 @@ class Selector(object):
   '''
   
   def __init__(self, fig, ax, koi, quarter, data, tN, cptbkg, cpttrn, split_cads = [], 
-               cad_tol = 10, min_sz = 300, dir = config.dir):
+               cad_tol = 10, min_sz = 300, datadir = config.datadir):
     self.fig = fig
     self.ax = ax    
     self.cad = data['cad']
@@ -158,7 +158,7 @@ class Selector(object):
     self.fpix = data['fpix']
     self.tNc = self.cad[0] + (self.cad[-1] - self.cad[0])/(self.time[-1] - self.time[0]) * (tN - self.time[0])
     self.koi = koi
-    self.dir = dir
+    self.datadir = datadir
     self.quarter = quarter
     
     # Initialize arrays
@@ -446,7 +446,7 @@ class Selector(object):
   
     # Save
     if event.key == SAVE:
-      figname = os.path.join(self.dir, str(self.koi), "Q%02d_%s.png" % (self.quarter, self.state[0]))
+      figname = os.path.join(self.datadir, str(self.koi), "Q%02d_%s.png" % (self.quarter, self.state[0]))
       self.fig.savefig(figname, bbox_inches = 'tight')
       print("Saved to file %s." % figname)
   
@@ -643,7 +643,7 @@ class Selector(object):
 def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], padbkg = 2.0,
             padtrn = 5.0, aperture = 'optimal', quarters = range(18), min_sz = 300,
-            dt_tol = 0.5, split_cads = [4472, 6717], dir = config.dir, ttvs = False,
+            dt_tol = 0.5, split_cads = [4472, 6717], datadir = config.datadir, ttvs = False,
             quiet = False, blind = False):
       '''
   
@@ -652,7 +652,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
       # Grab the data
       if not quiet: print("Retrieving target data...")
       data, tN, per, tdur = GetTPFData(koi, long_cadence = long_cadence, 
-                            clobber = clobber, dir = dir, bad_bits = bad_bits, 
+                            clobber = clobber, datadir = datadir, bad_bits = bad_bits, 
                             aperture = aperture, quarters = quarters,
                             quiet = quiet, pad = padbkg, ttvs = ttvs)
       data_new = EmptyData(quarters)
@@ -835,13 +835,13 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
   
       # Save the data
       if not quiet: print("Saving data to disk...")
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_proc.npz'), data = data_new, hash = GitHash())
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
-      np.savez_compressed(os.path.join(dir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
+      np.savez_compressed(os.path.join(datadir, str(koi), 'data_proc.npz'), data = data_new, hash = GitHash())
+      np.savez_compressed(os.path.join(datadir, str(koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
+      np.savez_compressed(os.path.join(datadir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
 
       return
 
-def PlotTransits(koi = 17.01, quarters = range(18), dir = config.dir, ttvs = False):
+def PlotTransits(koi = 17.01, quarters = range(18), datadir = config.datadir, ttvs = False):
   '''
   
   '''
@@ -849,8 +849,8 @@ def PlotTransits(koi = 17.01, quarters = range(18), dir = config.dir, ttvs = Fal
   flux = []
   
   try:
-    data = np.load(os.path.join(dir, str(koi), 'data_trn.npz'))['data']
-    foo = np.load(os.path.join(dir, str(koi), 'transits.npz'))
+    data = np.load(os.path.join(datadir, str(koi), 'data_trn.npz'))['data']
+    foo = np.load(os.path.join(datadir, str(koi), 'transits.npz'))
     tN = foo['tN']
     per = foo['per']
     tdur = foo['tdur']
@@ -890,5 +890,5 @@ def PlotTransits(koi = 17.01, quarters = range(18), dir = config.dir, ttvs = Fal
     ax.get_xaxis().set_ticks([])
     ax.get_yaxis().set_ticks([])
   
-  fig.savefig(os.path.join(dir, str(koi), "transits.png"), bbox_inches = 'tight')
+  fig.savefig(os.path.join(datadir, str(koi), "transits.png"), bbox_inches = 'tight')
   pl.close()

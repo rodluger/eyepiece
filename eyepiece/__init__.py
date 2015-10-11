@@ -6,6 +6,7 @@ from __future__ import (division, print_function, absolute_import,
 import matplotlib; matplotlib.use('TkAgg')
 import matplotlib.pyplot as pl
 from .inspect import *
+from .transits import *
 
 # Info
 __version__ = "0.0.1"

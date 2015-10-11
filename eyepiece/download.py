@@ -86,7 +86,7 @@ def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = T
 
 def GetTPFData(koi, long_cadence = True, clobber = False, 
                bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 2.0,
-               aperture = 'optimal', quarters = range(18), dir = config.dir,
+               aperture = 'optimal', quarters = range(18), datadir = config.datadir,
                ttvs = False, quiet = False):
   '''
   
@@ -94,8 +94,8 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   
   if not clobber:
     try:
-      data = np.load(os.path.join(dir, str(koi), 'data_raw.npz'))['data'][()]         # For some reason, numpy saved it as a 0-d array! See http://stackoverflow.com/questions/8361561/recover-dict-from-0-d-numpy-array
-      foo = np.load(os.path.join(dir, str(koi), 'transits.npz'))
+      data = np.load(os.path.join(datadir, str(koi), 'data_raw.npz'))['data'][()]     # For some reason, numpy saved it as a 0-d array! See http://stackoverflow.com/questions/8361561/recover-dict-from-0-d-numpy-array
+      foo = np.load(os.path.join(datadir, str(koi), 'transits.npz'))
       tN = foo['tN']
       per = foo['per']
       tdur = foo['tdur']
@@ -154,26 +154,26 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
     if time[0] < tstart: tstart = time[0]
     if time[-1] > tend: tend = time[-1]
   
-  if not os.path.exists(os.path.join(dir, str(koi))):
-    os.makedirs(os.path.join(dir, str(koi)))
-  np.savez_compressed(os.path.join(dir, str(koi), 'data_raw.npz'), data = data, hash = GitHash())
+  if not os.path.exists(os.path.join(datadir, str(koi))):
+    os.makedirs(os.path.join(datadir, str(koi)))
+  np.savez_compressed(os.path.join(datadir, str(koi), 'data_raw.npz'), data = data, hash = GitHash())
   
   # Now get the transit info
   tN, per, tdur = GetTransitTimes(koi, tstart, tend, pad = pad, ttvs = ttvs, 
                                   long_cadence = long_cadence)
-  np.savez_compressed(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur, hash = GitHash())
+  np.savez_compressed(os.path.join(datadir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur, hash = GitHash())
     
   return data, tN, per, tdur
 
-def GetData(koi, type = 'proc', blind = False):
+def GetData(koi, data_type = 'proc', blind = False, datadir = config.datadir):
   '''
   
   '''
-  
+
   try:
-    data = np.load(os.path.join(dir, str(koi), 'data_%s.npz' % type))['data']
+    data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data']
   except IOError:
     Inspect(koi = koi, blind = blind)
-    data = np.load(os.path.join(dir, str(koi), 'data_split.npz'))['data']
+    data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data']
     
   return data
