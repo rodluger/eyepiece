@@ -7,13 +7,9 @@ inspect.py
 Download and visually inspect, split, and correct Kepler lightcurves.
 
 .. todo::
-   - Plot narrow and wide transits separately
-   - Save transits correctly
-   - Allow user to select ``tdur`` and ``pad``
    - Suppress this message: ``setCanCycle: is deprecated.  Please use setCollectionBehavior instead``
+   - Bring focus to plot on start
    - Transit utility with outlier selection!
-   - Bring focus to plot
-   - Errorbars
    - Show quarters in transit plot
 
 '''
@@ -31,6 +27,60 @@ import os
 import itertools
 
 __all__ = ["Inspect", "PlotTransits"]
+
+# Python 2/3 compatibility. TODO: Verify
+import sys
+if sys.version_info >= (3,0):
+	prompt = input
+else:
+  prompt = raw_input
+
+# Keyboard shortcuts
+ZOOM = 'z'
+SAVE = 'super+s'
+QUIT = 'escape'
+HOME = 'H'
+HELP = 'h'
+PIXL = 'p'
+RSET = 'r'
+SPLT = 's'
+TRAN = 't'
+OUTL = 'o'
+HIDE = 'x'
+PREV = 'left'
+NEXT = 'right'
+SUBT = 'alt'
+TPAD = 'w'
+ERRB = 'e'
+
+def ShowHelp():
+  '''
+  
+  '''
+  
+  print("")
+  print(Bold("Eyepiece v0.0.1 Help"))
+  print("")
+  commands = {HELP: 'Display this help message',
+              ZOOM: 'Toggle zooming',
+              HOME: 'Home view',
+              PIXL: 'Toggle pixel view',
+              TRAN: 'Toggle transit selection tool',
+              OUTL: 'Toggle outlier selection tool',
+              HIDE: 'Toggle transits and outliers on/off',
+              SPLT: 'Toggle lightcurve splitting tool',
+              PREV: 'Go to previous quarter',
+              NEXT: 'Go to next quarter',
+              RSET: 'Reset all selections',
+              QUIT: 'Quit (without saving)',
+              SAVE: 'Save current plot to disk',
+              TPAD: 'Adjust transit padding',
+              ERRB: 'Show/hide error bars'
+              }
+  for key, descr in sorted(commands.items()):
+    print('%s%s' % (Bold(key + ':').ljust(30), descr))
+  print("")
+  prompt("Press Enter to continue...")
 
 def GetJumps(time, cad, cad_tol = 10, min_sz = 300, split_cads = []):
   '''
@@ -99,10 +149,12 @@ class Selector(object):
   def __init__(self, fig, ax, koi, quarter, data, tN, cptbkg, cpttrn, split_cads = [], 
                cad_tol = 10, min_sz = 300, dir = config.dir):
     self.fig = fig
-    self.ax = ax
+    self.ax = ax    
     self.cad = data['cad']
     self.time = data['time']
     self.fsum = data['fsum']
+    self.ferr = data['ferr']
+    self.perr = data['perr']
     self.fpix = data['fpix']
     self.tNc = self.cad[0] + (self.cad[-1] - self.cad[0])/(self.time[-1] - self.time[0]) * (tN - self.time[0])
     self.koi = koi
@@ -117,8 +169,8 @@ class Selector(object):
     self._plots = []
     self._transit_lines = []
     self.info = ""
-    self.state = "fsum"
-    self.alt = False
+    self.state = ["fsum", "none"]
+    self.subt = False
     self.hide = False
     
     # Process the data
@@ -139,7 +191,7 @@ class Selector(object):
       i = np.where(np.abs(self.cad - tc) <= self.cpttrn / 2.)[0]
       self._transits_wide.extend(i) 
       self._transits_wide_tag.extend([j for k in i])
-  
+    
     # Initialize our selectors
     self.Outliers = RectangleSelector(ax, self.oselect,
                                       rectprops = dict(facecolor='red', 
@@ -162,32 +214,6 @@ class Selector(object):
     pl.connect('button_press_event', self.on_mouse_click)                                         
     self.redraw(preserve_lims = False)
   
-  def ShowHelp(self):
-    '''
-    
-    '''
-    
-    print("")
-    print(Bold("Eyepiece v0.0.1 Help"))
-    print("")
-    commands = {'h': 'Display this ' + Bold('h') + 'elp message',
-                'z': 'Toggle ' + Bold('z') + 'ooming',
-                'Shift+h': Bold('H') + 'ome view',
-                'p': 'Toggle ' + Bold('p') + 'ixel view',
-                't': 'Toggle ' + Bold('t') + 'ransit selection tool',
-                'o': 'Toggle ' + Bold('o') + 'utlier selection tool',
-                'x': 'Toggle transits and outliers on/off',
-                's': 'Toggle lightcurve ' + Bold('s') + 'plitting tool',
-                '←': 'Go to previous quarter',
-                '→': 'Go to next quarter',
-                'r': Bold('R') + 'eset all selections',
-                'Esc': 'Quit (without saving)',
-                'Ctrl+s': Bold('S') + 'ave current plot to disk'
-                }
-    for key, descr in sorted(commands.items()):
-      print('%s:\t%s' % (Bold(key), descr))
-    print("")
-  
   def redraw(self, preserve_lims = True):
   
     # Reset the figure
@@ -203,7 +229,7 @@ class Selector(object):
     ylim = self.ax.get_ylim()
     ssi = [0] + sorted(self._jumps) + [len(self.cad) - 1]
     
-    if self.state == 'fsum':
+    if self.state[0] == 'fsum':
     
       # Replot stuff
       for a, b in zip(ssi[:-1], ssi[1:]):
@@ -215,7 +241,7 @@ class Selector(object):
         color = p[0].get_color()
     
         if not self.hide:
-          # Transits
+          # Transits_narrow
           x = []; y = []
           for ti in self.transits_narrow:
             if a <= ti and ti <= b:
@@ -223,7 +249,16 @@ class Selector(object):
               y.append(self.fsum[ti])
           p = self.ax.plot(x, y, '.', color = color)    
           self._plots.append(p)
-          p = self.ax.plot(x, y, '.', markersize = 15, color = color, zorder = -1, alpha = 0.25)
+          p = self.ax.plot(x, y, 'o', markersize = 10, color = color, zorder = -1, alpha = 0.25)
+          self._plots.append(p)
+          
+          # Transits_wide
+          x = []; y = []
+          for ti in [foo for foo in self.transits_wide if foo not in self.transits_narrow]:
+            if a <= ti and ti <= b:
+              x.append(self.cad[ti])
+              y.append(self.fsum[ti])
+          p = self.ax.plot(x, y, 'o', markersize = 10, color = 'None', markeredgecolor = color, zorder = -1, alpha = 0.1)
           self._plots.append(p)
     
       if not self.hide:
@@ -232,10 +267,14 @@ class Selector(object):
         p = self.ax.plot(self.cad[o], self.fsum[o], 'ro')
         self._plots.append(p)
     
-    elif self.state == 'fpix':
+      if self.state[1] == 'errorbars':
+        p = self.ax.errorbar(self.cad, self.fsum, self.ferr, fmt='none', ecolor='k', capsize=0)
+        self._plots.append([p[2][0]])
+    
+    elif self.state[0] == 'fpix':
     
       for a, b in zip(ssi[:-1], ssi[1:]):
-        for py in np.transpose(self.fpix):
+        for py, pyerr in zip(np.transpose(self.fpix), np.transpose(self.perr)):
           # Non-transit, non-outlier inds
           inds = [i for i, c in enumerate(self.cad) if (c >= self.cad[a]) and (c < self.cad[b]) and (i not in self.transits_narrow) and (i not in self.outliers)]
           p = self.ax.plot(self.cad[inds], py[inds], '.')
@@ -260,6 +299,10 @@ class Selector(object):
             p = self.ax.plot(self.cad[o], py[o], 'ro')
             self._plots.append(p)        
     
+          if self.state[1] == 'errorbars':
+            p = self.ax.errorbar(self.cad, py, pyerr, fmt='none', ecolor='k', capsize=0)
+            self._plots.append([p[2][0]])  
+          
     # Splits
     for s in self._jumps:
       p = [self.ax.axvline((self.cad[s] + self.cad[s - 1]) / 2., color = 'k', 
@@ -277,10 +320,10 @@ class Selector(object):
       xmax = max(self.cad)
       
       # Y
-      if self.state == 'fpix':
+      if self.state[0] == 'fpix':
         ymin = min([x for py in np.transpose(self.fpix) for x in py])
         ymax = max([x for py in np.transpose(self.fpix) for x in py])
-      elif self.state == 'fsum':
+      elif self.state[0] == 'fsum':
         ymin = min(self.fsum)
         ymax = max(self.fsum)
       
@@ -312,7 +355,7 @@ class Selector(object):
     if self.Zoom.active:
       label = 'zoom'
     elif self.Outliers.active:
-      if self.alt:
+      if self.subt:
         label = 'outliers (-)'
       else:
         label = 'outliers (+)'
@@ -341,10 +384,10 @@ class Selector(object):
     
     if (x1 == x2) and (y1 == y2):   
       # User clicked 
-      if self.state == 'fsum':
+      if self.state[0] == 'fsum':
         d = ((self.cad - x1)/(max(self.cad) - min(self.cad))) ** 2 + ((self.fsum - y1)/(max(self.fsum) - min(self.fsum))) ** 2
         return [np.argmin(d)]
-      elif self.state == 'fpix':
+      elif self.state[0] == 'fpix':
         da = [np.inf for i in range(self.fpix.shape[1])]
         ia = [0 for i in range(self.fpix.shape[1])]
         for i, p in enumerate(np.transpose(self.fpix)):
@@ -355,10 +398,10 @@ class Selector(object):
         
     else:
       # User selected
-      if self.state == 'fsum':
+      if self.state[0] == 'fsum':
         xy = zip(self.cad, self.fsum)
         return [i for i, pt in enumerate(xy) if x1<=pt[0]<=x2 and y1<=pt[1]<=y2] 
-      elif self.state == 'fpix':
+      elif self.state[0] == 'fpix':
         inds = []
         for i, p in enumerate(np.transpose(self.fpix)):
           for i, xy in enumerate(zip(self.cad, p)):
@@ -384,7 +427,7 @@ class Selector(object):
     
     inds = self.get_inds(eclick, erelease)
     for i in inds:
-      if self.alt:
+      if self.subt:
         if i in self._outliers:
           self._outliers.remove(i)
       else:
@@ -395,38 +438,39 @@ class Selector(object):
   def on_key_release(self, event):
     
     # Alt
-    if event.key == 'alt':
-      self.alt = False
+    if event.key == SUBT:
+      self.subt = False
       self.redraw()
       
   def on_key_press(self, event):
   
     # Save
-    if event.key == 'super+s':
-      figname = os.path.join(self.dir, str(self.koi), "Q%02d_%s.png" % (self.quarter, self.state))
+    if event.key == SAVE:
+      figname = os.path.join(self.dir, str(self.koi), "Q%02d_%s.png" % (self.quarter, self.state[0]))
       self.fig.savefig(figname, bbox_inches = 'tight')
       print("Saved to file %s." % figname)
   
     # Alt
-    if event.key == 'alt':
-      self.alt = True
+    if event.key == SUBT:
+      self.subt = True
       self.redraw()
     
     # Home
-    if event.key == 'H':
+    if event.key == HOME:
       self.redraw(preserve_lims = False)
     
     # Help
-    if event.key == 'h':
-      self.ShowHelp()
+    if event.key == HELP:
+      self.info = "help"
+      pl.close()
     
     # Hide/Show
-    if event.key == 'x':
+    if event.key == HIDE:
       self.hide = not self.hide
       self.redraw()
     
     # Zoom
-    if event.key == 'z':
+    if event.key == ZOOM:
       self.Transits.set_active(False)
       self.Outliers.set_active(False)
       self.Split.set_active(False)
@@ -434,7 +478,7 @@ class Selector(object):
       self.redraw()
     
     # Transits
-    if event.key == 't':
+    if event.key == TRAN:
       self.Outliers.set_active(False)
       self.Zoom.set_active(False)
       self.Split.set_active(False)
@@ -442,7 +486,7 @@ class Selector(object):
       self.redraw()
 
     # Outliers
-    elif event.key == 'o':
+    elif event.key == OUTL:
       self.Transits.set_active(False)
       self.Zoom.set_active(False)
       self.Split.set_active(False)
@@ -450,7 +494,7 @@ class Selector(object):
       self.redraw()
       
     # Splits
-    elif event.key == 's':
+    elif event.key == SPLT:
       self.Transits.set_active(False)
       self.Zoom.set_active(False)
       self.Outliers.set_active(False)
@@ -458,29 +502,40 @@ class Selector(object):
       self.redraw()
     
     # Toggle pixels
-    if event.key == 'p':
-      if self.state == 'fsum': self.state = 'fpix'
-      elif self.state == 'fpix': self.state = 'fsum'
+    if event.key == PIXL:
+      if self.state[0] == 'fsum': self.state[0] = 'fpix'
+      elif self.state[0] == 'fpix': self.state[0] = 'fsum'
       self.redraw(preserve_lims = False)
+    
+    # Toggle errorbars
+    if event.key == ERRB:
+      if self.state[1] == 'none': self.state[1] = 'errorbars'
+      elif self.state[1] == 'errorbars': self.state[1] = 'none'
+      self.redraw()
       
     # Reset
-    elif event.key == 'r':
+    elif event.key == RSET:
       self.info = "reset"
       pl.close()
 
     # Next
-    elif event.key == ' ' or event.key == 'enter' or event.key == 'right':
+    elif event.key == NEXT:
       self.info = "next"
       pl.close()
     
     # Previous
-    elif event.key == 'left':
+    elif event.key == PREV:
       self.info = "prev"
       pl.close()
     
     # Quit
-    elif event.key == 'escape':
+    elif event.key == QUIT:
       self.info = "quit"
+      pl.close()
+    
+    # Padding
+    elif event.key == TPAD:
+      self.info = "tpad"
       pl.close()
   
   def on_mouse_release(self, event):
@@ -527,6 +582,14 @@ class Selector(object):
     i = np.argmin(np.abs(x - self.cad))
     j = np.argmin(np.abs(self.cad[i] - self.tNc))
     self.tNc[j] = x
+
+    # Update
+    self.UpdateTransits()
+  
+  def UpdateTransits(self):
+    '''
+    
+    '''
     
     # Remove these from the plot
     for l in self._transit_lines:
@@ -604,9 +667,12 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
       utw = [[] for q in quarters]
       q = quarters[0]
       dq = 1
+      cpttrn = None
+      cptbkg = None
+
       while q in quarters:
         
-        if not quiet: print("Quarter %d" % q)
+        if blind and not quiet: print("Quarter %d" % q)
   
         # Empty quarter?
         if data[q]['time'] == []:
@@ -618,35 +684,37 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
         cad_tol = dt_tol / tpc
         
         # Cadences per transit
-        cptbkg = tdur * padbkg / tpc
-        cpttrn = tdur * padtrn / tpc
+        if cptbkg is None:
+          cptbkg = tdur * padbkg / tpc
+        if cpttrn is None:
+          cpttrn = tdur * padtrn / tpc
         
         if not blind:
         
           # Set up the plot
           fig, ax = pl.subplots(1, 1, figsize = (16, 6))
-          fig.subplots_adjust(top=0.9, bottom=0.15, left = 0.075, right = 0.95)   
+          fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
           sel = Selector(fig, ax, koi, q, data[q], tN, cptbkg, cpttrn, 
                          split_cads = split_cads, cad_tol = cad_tol, min_sz = min_sz)
                     
           # If user is re-visiting this quarter, update with their selections 
           if len(uj[q]): 
             sel._jumps = uj[q]
-            sel.redraw()
           if len(uo[q]): 
             sel._outliers = uo[q]
-            sel.redraw()
           if len(utn[q]): 
             sel._transits_narrow = utn[q]
-            sel.redraw()
           if len(utw[q]): 
             sel._transits_wide = utw[q]
-            sel.redraw()
 
           fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (koi, q)) 
-          mngr = pl.get_current_fig_manager()
-          mngr.window.wm_geometry("+50+100")      
+          sel.UpdateTransits()
+          sel.redraw()
 
+          # Bring window to the front and fullscreen it
+          fig.canvas.manager.window.attributes('-topmost', 1)
+          fig.canvas.manager.window.attributes('-fullscreen', 1) 
+          
           pl.show()
           pl.close()
     
@@ -656,6 +724,43 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           elif sel.info == "prev":
             dq = -1
           elif sel.info == "reset":
+            continue
+          elif sel.info == "help":
+            ShowHelp()
+            # Save user selections
+            uo[q] = sel.outliers
+            uj[q] = sel.jumps
+            utn[q] = sel.transits_narrow
+            utw[q] = sel.transits_wide
+            tN = sel.tN
+            cptbkg = sel.cptbkg
+            cpttrn = sel.cpttrn
+            # Re-plot
+            continue
+          elif sel.info == "tpad":
+            try:
+              cptbkg = float(prompt("Cadences per transit (background) [%.2f]: " % sel.cptbkg))
+              if cptbkg <= 0:
+                raise Exception("")
+              sel.cptbkg = cptbkg
+            except:
+              pass
+            try:
+              cpttrn = float(prompt("Cadences per transit (transits) [%.2f]: " % sel.cpttrn))
+              if cpttrn <= 0:
+                raise Exception("")
+              sel.cpttrn = cpttrn
+            except:
+              pass
+            # Save user selections
+            uo[q] = sel.outliers
+            uj[q] = sel.jumps
+            utn[q] = sel.transits_narrow
+            utw[q] = sel.transits_wide
+            tN = sel.tN
+            cptbkg = sel.cptbkg
+            cpttrn = sel.cpttrn
+            # Re-plot
             continue
           elif sel.info == "quit":
             return
@@ -668,6 +773,8 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           transits_wide_tag = sel.transits_wide_tag
           outliers = sel.outliers
           tN = sel.tN
+          cptbkg = sel.cptbkg
+          cpttrn = sel.cpttrn
         
         else:
           
@@ -715,16 +822,13 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             data_new[q][arr].append(np.array(data[q][arr][ai]))
             data_bkg[q][arr].append(np.array(data[q][arr][bi]))
           
-          # Transit-only data
-          transits = [i for i in transits_wide if i not in outliers]
-          
-          # TODO:
-          # Use transits_wide_tag to split transits
-          # and remove transits that span two chunks.
-          ''' 
-          if len(list(set(jumps).intersection(ti))) == 0 and len(ti) > 0:
-            data_trn[q][arr].append(data[q][arr][ti])
-          '''
+          # Transit-only data        
+          for i in range(len(tN)):
+            ti = transits_wide[np.where(transits_wide_tag == i)]
+            ti = [foo for foo in ti if foo not in outliers]
+            # We're discarding transits that span two chunks
+            if len(list(set(jumps).intersection(ti))) == 0 and len(ti) > 0:
+              data_trn[q][arr].append(data[q][arr][ti])
           
         # Increment and loop
         q += dq
