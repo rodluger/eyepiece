@@ -6,9 +6,14 @@ pld.py
 
 An example of our PLD + GP decorrelation method for KOI 254.01.
 
+.. todo::
+   - We need a better initial guess for the coefficients.
+
 '''
 
-from eyepiece import GetData
+from __future__ import (division, print_function, absolute_import,
+                        unicode_literals)
+from .download import GetData
 from eyepiece.config import datadir
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
@@ -92,8 +97,8 @@ def Decorrelate(quarter, maxfun = 15000, approx_grad = False, debug = False):
   
   # Let's find the analytical solution, c_j = (A_jm)^-1 * B_m
   fpix = np.array([x for chunk in quarter['fpix'] for x in chunk])
-  fsum = np.array([x for chunk in quarter['fpix'] for x in chunk])
-  time = np.array([x for chunk in quarter['fpix'] for x in chunk])
+  fsum = np.array([x for chunk in quarter['fsum'] for x in chunk])
+  time = np.array([x for chunk in quarter['time'] for x in chunk])
 
   A = np.zeros((npix, npix))
   for j in range(npix):
@@ -153,7 +158,7 @@ def Decorrelate(quarter, maxfun = 15000, approx_grad = False, debug = False):
     # Correct error propagation
     T = np.ones_like(fsum)
     cerr = np.zeros_like(fsum)
-    for k in range(len(ferr)):
+    for k in range(len(fsum)):
       cerr[k] = np.sum(((1. / T[k]) + (pm[k] / fsum[k]) - (d / fsum[k])) ** 2 * perr[k] ** 2)
     
     # Detrend with GP
@@ -174,13 +179,13 @@ def Decorrelate(quarter, maxfun = 15000, approx_grad = False, debug = False):
   
   return time, fsum, pmod, gpmu, yerr, coeffs, lnlike, info
   
-def Run(koi = 254.01, quarters = range(18), debug = False):
+def Run(koi = 254.01, quarters = range(18), maxfun = 15000, debug = False):
   '''
   
   '''
   
   # Load the raw background-only data
-  data = GetData(koi, type = 'bkg')
+  data = GetData(koi, data_type = 'bkg')
   
   # Set up a function for the mapping
   def worker(q):
@@ -190,11 +195,11 @@ def Run(koi = 254.01, quarters = range(18), debug = False):
     if not os.path.exists(os.path.join(datadir, str(koi), 'pld')):
       os.makedirs(os.path.join(datadir, str(koi), 'pld'))
     np.savez(os.path.join(datadir, str(koi), 'pld', '%02d.npz' % q), 
-             data = Decorrelate(quarter, debug = debug))
+             data = Decorrelate(quarter, debug = debug, maxfun = maxfun))
     return True
 
   # Decorrelate the data for each quarter
-  map(worker, quarters)
+  list(map(worker, quarters))
 
 def Plot(koi = 254.01, quarters = range(18)):
   '''
@@ -266,14 +271,3 @@ def Plot(koi = 254.01, quarters = range(18)):
     ltq = lt[q]
     
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
-
-if __name__ == '__main__':
-    
-  calc = True
-  debug = False
-  koi = 254.01
-  
-  if calc:
-    Run(koi = koi, debug = debug)
-  
-  Plot(koi = koi)
