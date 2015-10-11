@@ -8,5 +8,5 @@ Config file for :py:mod:``eyepiece.py``. Set default values here.
 
 '''
 
-dir =                 '/Users/rod/src/templar/output'
-ttvpath =             '/Users/rod/src/templar/ttvs'
+dir =                 '/Users/rodrigo/src/templar/output'
+ttvpath =             '/Users/rodrigo/src/templar/ttvs'

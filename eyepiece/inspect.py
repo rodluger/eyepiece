@@ -7,6 +7,9 @@ inspect.py
 Download and visually inspect, split, and correct Kepler lightcurves.
 
 .. todo::
+   - Use ``blit`` for faster redrawing!
+   - Allow user to select ``tdur`` and ``pad``
+   - Suppress this message: ``setCanCycle: is deprecated.  Please use setCollectionBehavior instead``
    - Transit utility with outlier selection!
    - Bring focus to plot
    - Errorbars
@@ -15,18 +18,21 @@ Download and visually inspect, split, and correct Kepler lightcurves.
 
 '''
 
-from utils import Bold, RowCol, GitHash
-from download import GetTPFData, GetData, EmptyData
-import config
+from __future__ import (division, print_function, absolute_import,
+                        unicode_literals)
+from .utils import Bold, RowCol, GitHash
+from .download import GetTPFData, GetData, EmptyData
+import eyepiece.config as config
 import matplotlib.pyplot as pl
 from matplotlib.widgets import RectangleSelector, Cursor
+from matplotlib import patches
 import numpy as np
 import os
 import itertools
 
 __all__ = ["Inspect", "PlotTransits"]
 
-def Process(time, cad, tN, tdur, pad = 2.0, cad_tol = 10, min_sz = 300, split_cads = []):
+def GetJumps(time, cad, cad_tol = 10, min_sz = 300, split_cads = []):
   '''
   
   '''
@@ -72,12 +78,18 @@ def Process(time, cad, tN, tdur, pad = 2.0, cad_tol = 10, min_sz = 300, split_ca
   jumps.extend(list(cut))
   jumps = list(set(jumps) - set([0, len(cad) - 1]))
   
-  # Figure out the transit indices
-  for ti in tN:
-    i = np.where(np.abs(time - ti) <= (pad * tdur) / 2.)[0]
-    transits.extend(i)
+  return jumps
 
-  return jumps, transits
+class DummySelector(object):
+  '''
+  
+  '''
+  
+  def __init__(self):
+    self.active = True
+  
+  def set_active(self, active):
+    self.active = active
 
 class Selector(object):
   '''
@@ -92,7 +104,7 @@ class Selector(object):
     self.time = data['time']
     self.fsum = data['fsum']
     self.fpix = data['fpix']
-    self.tN = tN
+    self.tNc = self.cad[0] + (self.cad[-1] - self.cad[0])/(self.time[-1] - self.time[0]) * (tN - self.time[0])
     self.koi = koi
     self.dir = dir
     self.quarter = quarter
@@ -103,22 +115,28 @@ class Selector(object):
     self._transits = []
     self._jumps = []
     self._plots = []
+    self._transit_lines = []
     self.info = ""
     self.state = "fsum"
     self.alt = False
     self.hide = False
     
     # Process the data
-    self._jumps, self._transits = Process(self.time, self.cad, self.tN, tdur, 
-                                          pad = pad, cad_tol = cad_tol, 
-                                          min_sz = min_sz, split_cads = split_cads)
+    self._jumps = GetJumps(self.time, self.cad, cad_tol = cad_tol, min_sz = min_sz, 
+                           split_cads = split_cads)
+    
+    # Time per cadence
+    tpc = np.median(self.time[1:] - self.time[:-1])
+    # Cadences per transit
+    self.cpt = (pad * tdur / tpc)
+    
+    # Transit indices
+    self._transits = []
+    for tc in self.tNc:
+      i = np.where(np.abs(self.cad - tc) <= self.cpt / 2.)[0]
+      self._transits.extend(i) 
   
     # Initialize our selectors
-    self.Transits = RectangleSelector(ax, self.tselect,
-                                      rectprops = dict(facecolor='green', 
-                                                       edgecolor = 'black',
-                                                       alpha=0.1, fill=True))
-    self.Transits.set_active(False)
     self.Outliers = RectangleSelector(ax, self.oselect,
                                       rectprops = dict(facecolor='red', 
                                                        edgecolor = 'black',
@@ -128,9 +146,16 @@ class Selector(object):
                                   rectprops = dict(edgecolor = 'black', linestyle = 'dashed',
                                                    fill=False))
     self.Zoom.set_active(False) 
-      
+    self.Transits = DummySelector()
+    self.Transits.set_active(False)
+    self.Split = DummySelector()
+    self.Split.set_active(False)
+    
     pl.connect('key_press_event', self.on_key_press)
-    pl.connect('key_release_event', self.on_key_release)                                                 
+    pl.connect('key_release_event', self.on_key_release) 
+    pl.connect('motion_notify_event', self.on_mouse_move)     
+    pl.connect('button_release_event', self.on_mouse_release)  
+    pl.connect('button_press_event', self.on_mouse_click)                                         
     self.redraw(preserve_lims = False)
   
   def ShowHelp(self):
@@ -164,7 +189,11 @@ class Selector(object):
     # Reset the figure
     for p in self._plots:
       if len(p): p.pop(0).remove()
-    self._plots = [p for p in self._plots if len(p)]
+    self._plots = []
+    for l in self._transit_lines:
+      for i in l:
+        if len(i): i.pop(0).remove()
+    self._transit_lines = []
     self.ax.set_color_cycle(None)
     xlim = self.ax.get_xlim()
     ylim = self.ax.get_ylim()
@@ -225,7 +254,7 @@ class Selector(object):
             # Outliers
             o = self.outliers
             p = self.ax.plot(self.cad[o], py[o], 'ro')
-            self._plots.append(p)
+            self._plots.append(p)        
     
     # Splits
     for s in self._jumps:
@@ -257,6 +286,15 @@ class Selector(object):
       self.ax.set_xlim(xmin - dx, xmax + dx)    
       self.ax.set_ylim(ymin - dy, ymax + dy)
     
+    # Transit times
+    if not self.hide:
+      for tc in self.tNc:
+        if self.cad[0] <= tc <= self.cad[-1]:
+          l1 = [self.ax.axvline(tc, color = 'r', alpha = 0.1, ls = '-')]
+          l2 = self.ax.plot(tc, self.ax.get_ylim()[1], 'rv', markersize = 15)
+          l3 = self.ax.plot(tc, self.ax.get_ylim()[0], 'r^', markersize = 15)
+          self._transit_lines.append([l1, l2, l3])
+    
     # Labels
     self.ax.set_title(self.title, fontsize = 24, y = 1.01)
     self.ax.set_xlabel('Cadence Number', fontsize = 22)
@@ -266,18 +304,14 @@ class Selector(object):
     label = None
     if self.Zoom.active:
       label = 'zoom'
-    elif self.Transits.active:
-      if self.alt:
-        label = 'transits (-)'
-      else:
-        label = 'transits (+)'
     elif self.Outliers.active:
       if self.alt:
         label = 'outliers (-)'
       else:
         label = 'outliers (+)'
-    elif False:
-      # TODO
+    elif self.Transits.active:
+      label = 'transits'
+    elif self.Split.active:
       label = 'split'
     
     if label is not None:
@@ -336,21 +370,6 @@ class Selector(object):
       self.ax.set_ylim(min(eclick.ydata, erelease.ydata), max(eclick.ydata, erelease.ydata))
       self.redraw()
 
-  def tselect(self, eclick, erelease):
-    '''
-    
-    '''
-    
-    inds = self.get_inds(eclick, erelease)
-    for i in inds:
-      if self.alt:
-        if i in self._transits:
-          self._transits.remove(i)
-      else:
-        if i not in self._transits:
-          self._transits.append(i)
-    self.redraw()
-
   def oselect(self, eclick, erelease):
     '''
     
@@ -378,8 +397,8 @@ class Selector(object):
     # Super (command)
     if event.key == 'super+s':
       figname = os.path.join(self.dir, str(self.koi), "Q%02d_%s.png" % (self.quarter, self.state))
-      print("Saving to file %s..." % figname)
       self.fig.savefig(figname, bbox_inches = 'tight')
+      print("Saved to file %s." % figname)
   
     # Alt
     if event.key == 'alt':
@@ -401,8 +420,9 @@ class Selector(object):
     
     # Zoom
     if event.key == 'z':
-      self.Outliers.set_active(False)
       self.Transits.set_active(False)
+      self.Outliers.set_active(False)
+      self.Split.set_active(False)
       self.Zoom.set_active(not self.Zoom.active)
       self.redraw()
     
@@ -410,49 +430,25 @@ class Selector(object):
     if event.key == 't':
       self.Outliers.set_active(False)
       self.Zoom.set_active(False)
+      self.Split.set_active(False)
       self.Transits.set_active(not self.Transits.active)
       self.redraw()
-    
+
     # Outliers
     elif event.key == 'o':
       self.Transits.set_active(False)
       self.Zoom.set_active(False)
+      self.Split.set_active(False)
       self.Outliers.set_active(not self.Outliers.active)
       self.redraw()
       
     # Splits
     elif event.key == 's':
-      if event.inaxes is not None:
-        s = np.argmax(self.cad == int(np.ceil(event.xdata)))
-        
-        # Are we in a gap?
-        if self.cad[s] != int(np.ceil(event.xdata)):
-          s1 = np.argmin(np.abs(self.cad - event.xdata))
-          
-          # Don't split at the end
-          if s1 == len(self.cad) - 1:
-            return
-          
-          s2 = s1 + 1
-          if self.cad[s2] - self.cad[s1] > 1:
-            s = s2
-          else:
-            s = s1
-
-        # Don't split if s = 0
-        if s == 0:
-          return
-        
-        # Add
-        if s not in self._jumps:
-          self._jumps.append(s)
-          
-        # Delete
-        else:
-          i = np.argmin(np.abs(self.cad[self._jumps] - event.xdata))
-          self._jumps.pop(i)
-        
-        self.redraw()
+      self.Transits.set_active(False)
+      self.Zoom.set_active(False)
+      self.Outliers.set_active(False)
+      self.Split.set_active(not self.Outliers.active)
+      self.redraw()
     
     # Toggle pixels
     if event.key == 'p':
@@ -479,7 +475,76 @@ class Selector(object):
     elif event.key == 'escape':
       self.info = "quit"
       pl.close()
+  
+  def on_mouse_release(self, event):
+    if self.Transits.active:
+      self.redraw()
+  
+  def on_mouse_click(self, event):
+    if (event.inaxes is not None) and (self.Split.active):
+      s = np.argmax(self.cad == int(np.ceil(event.xdata)))
+      
+      # Are we in a gap?
+      if self.cad[s] != int(np.ceil(event.xdata)):
+        s1 = np.argmin(np.abs(self.cad - event.xdata))
+        
+        # Don't split at the end
+        if s1 == len(self.cad) - 1:
+          return
+        
+        s2 = s1 + 1
+        if self.cad[s2] - self.cad[s1] > 1:
+          s = s2
+        else:
+          s = s1
 
+      # Don't split if s = 0
+      if s == 0:
+        return
+      
+      # Add
+      if s not in self._jumps:
+        self._jumps.append(s)
+        
+      # Delete
+      else:
+        i = np.argmin(np.abs(self.cad[self._jumps] - event.xdata))
+        self._jumps.pop(i)
+      
+      self.redraw()
+  
+  def on_mouse_move(self, event):
+    if (self.hide) or (not self.Transits.active) or (event.button != 1): 
+      return
+    x, y = event.xdata, event.ydata
+    i = np.argmin(np.abs(x - self.cad))
+    j = np.argmin(np.abs(self.cad[i] - self.tNc))
+    self.tNc[j] = x
+    
+    # Remove these from the plot
+    for l in self._transit_lines:
+      for i in l:
+        if len(i): i.pop(0).remove()
+    self._transit_lines = []
+    
+    # Figure out the transit indices
+    self._transits = []
+    for tc in self.tNc:
+      i = np.where(np.abs(self.cad - tc) <= self.cpt / 2.)[0]
+      self._transits.extend(i)
+    
+      if self.cad[0] <= tc <= self.cad[-1]:
+        l1 = [self.ax.axvline(tc, color = 'r', alpha = 0.1, ls = '-')]
+        l2 = self.ax.plot(tc, self.ax.get_ylim()[1], 'rv', markersize = 15)
+        l3 = self.ax.plot(tc, self.ax.get_ylim()[0], 'r^', markersize = 15)
+        self._transit_lines.append([l1, l2, l3])
+    
+    self.fig.canvas.draw()
+  
+  @property
+  def tN(self):
+    return self.time[0] + (self.time[-1] - self.time[0])/(self.cad[-1] - self.cad[0]) * (self.tNc - self.cad[0])
+  
   @property
   def outliers(self):
     return np.array(sorted(self._outliers), dtype = int)
@@ -536,8 +601,8 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           fig, ax = pl.subplots(1, 1, figsize = (16, 6))
           fig.subplots_adjust(top=0.9, bottom=0.15, left = 0.075, right = 0.95)   
           sel = Selector(fig, ax, koi, q, data[q], tN, tdur, pad = padbkg, 
-                         split_cads = split_cads, cad_tol = cad_tol, min_sz = min_sz)
-    
+                       split_cads = split_cads, cad_tol = cad_tol, min_sz = min_sz)
+                    
           # If user is re-visiting this quarter, update with their selections 
           if len(uj[q]): 
             sel._jumps = uj[q]
@@ -550,6 +615,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             sel.redraw()
     
           fig.canvas.set_window_title('Eyepiece')       
+          
           pl.show()
           pl.close()
     
@@ -568,6 +634,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           jumps = sel.jumps
           transits = sel.transits
           outliers = sel.outliers
+          tN = sel.tN
         
         else:
           
@@ -575,6 +642,22 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           jumps, transits = Process(data[q]['time'], data[q]['cad'], tN, tdur, 
                                     pad = padbkg, cad_tol = cad_tol, min_sz = min_sz, 
                                     split_cads = split_cads)
+          
+          # Process the data
+          jumps = GetJumps(data[q]['time'], data[q]['cad'], cad_tol = cad_tol, 
+                           min_sz = min_sz, split_cads = split_cads)
+          # Time per cadence
+          tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
+          # Cadences per transit
+          cpt = (padbkg * tdur / tpc)
+         
+          # Transit indices. TODO: Verify
+          transits = []
+          tNc = data[q]['cad'][0] + (data[q]['cad'][-1] - data[q]['cad'][0])/(data[q]['time'][-1] - data[q]['time'][0]) * (tN - data[q]['time'][0])
+          for tc in tNc:
+            i = np.where(np.abs(data[q]['cad'] - tc) <= cpt / 2.)[0]
+            transits.extend(i) 
+          
           jumps = np.array(jumps, dtype = int)
           transits = np.array(transits, dtype = int)
           outliers = np.array([], dtype = int)

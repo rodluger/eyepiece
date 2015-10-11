@@ -6,7 +6,10 @@ download.py
 
 '''
 
-import config
+from __future__ import (division, print_function, absolute_import,
+                        unicode_literals)
+import eyepiece.config as config
+from .utils import GitHash
 import os
 import kplr
 import numpy as np
@@ -153,12 +156,12 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   
   if not os.path.exists(os.path.join(dir, str(koi))):
     os.makedirs(os.path.join(dir, str(koi)))
-  np.savez_compressed(os.path.join(dir, str(koi), 'data_raw.npz'), data = data, hash = GITHASH)
+  np.savez_compressed(os.path.join(dir, str(koi), 'data_raw.npz'), data = data, hash = GitHash())
   
   # Now get the transit info
   tN, per, tdur = GetTransitTimes(koi, tstart, tend, pad = pad, ttvs = ttvs, 
                                   long_cadence = long_cadence)
-  np.savez_compressed(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur, hash = GITHASH)
+  np.savez_compressed(os.path.join(dir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur, hash = GitHash())
     
   return data, tN, per, tdur
 
