@@ -171,9 +171,24 @@ def GetData(koi, data_type = 'proc', blind = False, datadir = config.datadir):
   '''
 
   try:
-    data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data']
+    data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data'][()]
   except IOError:
     Inspect(koi = koi, blind = blind)
-    data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data']
-    
+    data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data'][()]
+
   return data
+
+def GetInfo(koi, datadir = config.datadir):
+  '''
+  
+  '''
+  
+  try:
+    tN = np.load(os.path.join(datadir, str(koi), 'transits.npz'))['tN'][()]
+    per = np.load(os.path.join(datadir, str(koi), 'transits.npz'))['per'][()]
+    tdur = np.load(os.path.join(datadir, str(koi), 'transits.npz'))['tdur'][()]
+    hash = np.load(os.path.join(datadir, str(koi), 'transits.npz'))['hash'][()]
+  except IOError:
+    raise Exception("File ``transits.npz`` not found.")
+  
+  return tN, per, tdur, hash

@@ -9,24 +9,20 @@ Download and visually inspect, split, and correct Kepler lightcurves.
 .. todo::
    - Suppress this message: ``setCanCycle: is deprecated.  Please use setCollectionBehavior instead``
    - Bring focus to plot on start
-   - Transit utility with outlier selection!
-   - Show quarters in transit plot
 
 '''
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
-from .utils import Bold, RowCol, GitHash
+from .utils import Bold, GitHash
 from .download import GetTPFData, GetData, EmptyData
 import eyepiece.config as config
 import matplotlib.pyplot as pl
 from matplotlib.widgets import RectangleSelector, Cursor
-from matplotlib import patches
 import numpy as np
 import os
-import itertools
 
-__all__ = ["Inspect", "PlotTransits"]
+__all__ = ["Inspect"]
 
 # Python 2/3 compatibility. TODO: Verify
 import sys
@@ -776,6 +772,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           cptbkg = sel.cptbkg
           cpttrn = sel.cpttrn
         
+        # Blind
         else:
           
           # Process the data
@@ -799,10 +796,11 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             i = np.where(np.abs(data[q]['cad'] - tc) <= cpttrn / 2.)[0]
             transits_wide.extend(i) 
             transits_wide_tag.extend([j for k in i])
-          
+
           jumps = np.array(jumps, dtype = int)
           transits_narrow = np.array(transits_narrow, dtype = int)
           transits_wide = np.array(transits_wide, dtype = int)
+          transits_wide_tag = np.array(transits_wide_tag, dtype = int)
           outliers = np.array([], dtype = int)
         
         # Store the user-defined outliers, jumps, and transits
@@ -840,55 +838,3 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
       np.savez_compressed(os.path.join(datadir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
 
       return
-
-def PlotTransits(koi = 17.01, quarters = range(18), datadir = config.datadir, ttvs = False):
-  '''
-  
-  '''
-  time = []
-  flux = []
-  
-  try:
-    data = np.load(os.path.join(datadir, str(koi), 'data_trn.npz'))['data']
-    foo = np.load(os.path.join(datadir, str(koi), 'transits.npz'))
-    tN = foo['tN']
-    per = foo['per']
-    tdur = foo['tdur']
-  except IOError:
-    raise Exception("You must download and process the data first! Try using ``Inspect()``.")
-  
-  for q in quarters:
-    for t, f in zip(data[q]['time'], data[q]['fsum']):
-      time.append(t)
-      flux.append(f)
-    
-  COLS, ROWS = RowCol(len(time))
-  grid = list(itertools.product(*[np.arange(COLS), np.arange(ROWS)]))  
-  fig, axes = pl.subplots(COLS, ROWS, figsize = (2.5*ROWS,2.5*COLS))
-  fig.subplots_adjust(wspace=0.05, hspace=0.05)
-  if (COLS*ROWS) > len(time):
-    for g in grid[len(time):]:
-      axes[g].set_visible(False)
-  for i, _ in enumerate(time):
-  
-    # What transit number is this?
-    tnum = np.argmin(np.abs(tN - time[i][0]))
-    tNi = tN[tnum]
-
-    if (COLS > 1):
-      ax = axes[grid[i]]
-    else:
-      ax = axes[grid[i][1]]
-
-    ax.plot(time[i], flux[i], 'b.')
-    ax.plot(time[i], flux[i], 'b-', alpha = 0.25)
-    ax.annotate("%03d" % tnum,
-            xy=(0.8, 0.05), xycoords='axes fraction',
-            xytext=(0, 0), textcoords='offset points')
-    ax.axvline(tNi, color = 'r', ls = '-', alpha = 0.75)
-    ax.set_xlim(tNi - tdur / 2., tNi + tdur / 2.)
-    ax.get_xaxis().set_ticks([])
-    ax.get_yaxis().set_ticks([])
-  
-  fig.savefig(os.path.join(datadir, str(koi), "transits.png"), bbox_inches = 'tight')
-  pl.close()
