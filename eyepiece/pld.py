@@ -9,7 +9,7 @@ An example of our PLD + GP decorrelation method for KOI 254.01.
 '''
 
 from eyepiece import GetData
-from eyepiece.config import dir
+from eyepiece.config import datadir
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 import matplotlib.pyplot as pl
@@ -44,12 +44,7 @@ def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
   # Its gradient
   grad_ll = np.zeros_like(coeffs)
   
-  for chunk in quarter:
-  
-    # The flux data for this chunk
-    fpix = chunk.mask.fpix
-    fsum = chunk.mask.fsum
-    perr = chunk.mask.perr
+  for time, fsum, fpix, perr in zip(quarter['time'], quarter['fsum'], quarter['fpix'], quarter['perr']):
   
     # The pixel model
     pmod = np.sum(fpix * np.outer(1. / fsum, d), axis = 1)
@@ -62,8 +57,8 @@ def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
     
     # Evaluate the model
     try:
-      gp.compute(chunk.mask.time, ferr)
-      ll += gp.lnlikelihood(chunk.mask.fsum - pmod)
+      gp.compute(time, ferr)
+      ll += gp.lnlikelihood(fsum - pmod)
     except:
       if return_gradient:
         return 1.e10, np.zeros_like(coeffs, dtype = float)
@@ -90,19 +85,20 @@ def Decorrelate(quarter, maxfun = 15000, approx_grad = False, debug = False):
   '''
    
   # Number of pixels in aperture       
-  npix = quarter[0].mask.fpix.shape[1]
+  npix = quarter['fpix'][0].shape[1]
   
   # Below we construct our initial guess:
+  # TODO: This is likely not the best initial guess. Test this.
   
   # Let's find the analytical solution, c_j = (A_jm)^-1 * B_m
-  fpix = np.array([x for chunk in quarter for x in chunk.mask.fpix])
-  fsum = np.array([x for chunk in quarter for x in chunk.mask.fsum])
-  time = np.array([x for chunk in quarter for x in chunk.mask.time])
+  fpix = np.array([x for chunk in quarter['fpix'] for x in chunk])
+  fsum = np.array([x for chunk in quarter['fpix'] for x in chunk])
+  time = np.array([x for chunk in quarter['fpix'] for x in chunk])
+
   A = np.zeros((npix, npix))
   for j in range(npix):
     for m in range(npix):
-    
-      # This could be sped up!
+      # TODO: This could be sped up!
       A[j][m] = np.sum( fpix[:, j] * fpix[:, m] / fsum ** 2 , axis = 0)
       
   B = np.sum(fpix, axis=0)  
@@ -143,38 +139,38 @@ def Decorrelate(quarter, maxfun = 15000, approx_grad = False, debug = False):
   d = res[0][3:]
   gp = george.GP(kernel = (a ** 2) * george.kernels.Matern32Kernel(b ** 2) * george.kernels.CosineKernel(c))
   
-  time = []
-  fsum = []
-  pmod = []
-  gpmu = []
-  yerr = []
+  all_time = []
+  all_fsum = []
+  all_pmod = []
+  all_gpmu = []
+  all_yerr = []
   
-  for chunk in quarter:
-  
+  for time, fsum, fpix, perr in zip(quarter['time'], quarter['fsum'], quarter['fpix'], quarter['perr']):
+
     # The PLD pixel model
-    pm = np.sum(chunk.mask.fpix * np.outer(1. / chunk.mask.fsum, d), axis = 1)
+    pm = np.sum(fpix * np.outer(1. / fsum, d), axis = 1)
     
     # Correct error propagation
-    T = np.ones_like(chunk.mask.fsum)
-    cerr = np.zeros_like(chunk.mask.fsum)
-    for k in range(len(chunk.mask.ferr)):
-      cerr[k] = np.sum(((1. / T[k]) + (pm[k] / chunk.mask.fsum[k]) - (d / chunk.mask.fsum[k])) ** 2 * chunk.mask.perr[k] ** 2)
+    T = np.ones_like(fsum)
+    cerr = np.zeros_like(fsum)
+    for k in range(len(ferr)):
+      cerr[k] = np.sum(((1. / T[k]) + (pm[k] / fsum[k]) - (d / fsum[k])) ** 2 * perr[k] ** 2)
     
     # Detrend with GP
-    gp.compute(chunk.mask.time, cerr)
-    mu, cov = gp.predict(chunk.mask.fsum - pm, chunk.mask.time)
+    gp.compute(time, cerr)
+    mu, cov = gp.predict(fsum - pm, time)
 
-    time.extend(chunk.mask.time)
-    fsum.extend(chunk.mask.fsum)
-    pmod.extend(pm)
-    gpmu.extend(mu)
-    yerr.extend(cerr)
+    all_time.extend(time)
+    all_fsum.extend(fsum)
+    all_pmod.extend(pm)
+    all_gpmu.extend(mu)
+    all_yerr.extend(cerr)
     
-  time = np.array(time)
-  fsum = np.array(fsum)
-  pmod = np.array(pmod)
-  gpmu = np.array(gpmu)
-  yerr = np.array(yerr)  
+  time = np.array(all_time)
+  fsum = np.array(all_fsum)
+  pmod = np.array(all_pmod)
+  gpmu = np.array(all_gpmu)
+  yerr = np.array(all_yerr)  
   
   return time, fsum, pmod, gpmu, yerr, coeffs, lnlike, info
   
@@ -183,17 +179,17 @@ def Run(koi = 254.01, quarters = range(18), debug = False):
   
   '''
   
-  # Load the raw data
-  data = GetData(koi)
+  # Load the raw background-only data
+  data = GetData(koi, type = 'bkg')
   
   # Set up a function for the mapping
   def worker(q):
     quarter = data[q]
     if quarter['time'] == []: 
       return False
-    if not os.path.exists(os.path.join(dir, str(koi), 'pld')):
-      os.makedirs(os.path.join(dir, str(koi), 'pld'))
-    np.savez(os.path.join(dir, str(koi), 'pld', '%02d.npz' % q), 
+    if not os.path.exists(os.path.join(datadir, str(koi), 'pld')):
+      os.makedirs(os.path.join(datadir, str(koi), 'pld'))
+    np.savez(os.path.join(datadir, str(koi), 'pld', '%02d.npz' % q), 
              data = Decorrelate(quarter, debug = debug))
     return True
 
@@ -217,7 +213,7 @@ def Plot(koi = 254.01, quarters = range(18)):
     
     # Load the decorrelated data
     try:
-      time, fsum, pmod, gpmu, yerr, coeffs, lnlike, info = np.load(os.path.join(dir, str(koi), 'pld', '%02d.npz' % q))['data']
+      time, fsum, pmod, gpmu, yerr, coeffs, lnlike, info = np.load(os.path.join(datadir, str(koi), 'pld', '%02d.npz' % q))['data']
     except IOError:
       continue
     
@@ -269,7 +265,7 @@ def Plot(koi = 254.01, quarters = range(18)):
       axis.axvline(lt[q], color='k', ls = '--')
     ltq = lt[q]
     
-  fig.savefig(os.path.join(dir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
+  fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
 
 if __name__ == '__main__':
     

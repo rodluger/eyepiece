@@ -33,6 +33,7 @@ def PlotFolded(koi = 17.01, blind = False, minsz = 8, datadir = config.datadir):
   tN, per, tdur, hash = GetInfo(koi)
   
   fig = pl.figure()
+  fig.set_size_inches(16,6)
   
   for q, quarter in data.items():
     for time, fsum, ferr in zip(quarter['time'], quarter['fsum'], quarter['ferr']):

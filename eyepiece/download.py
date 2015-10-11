@@ -14,6 +14,8 @@ import os
 import kplr
 import numpy as np
 
+__all__ = ['GetData', 'GetInfo']
+
 def EmptyData(quarters):
   '''
   

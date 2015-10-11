@@ -494,7 +494,7 @@ class Selector(object):
       self.Transits.set_active(False)
       self.Zoom.set_active(False)
       self.Outliers.set_active(False)
-      self.Split.set_active(not self.Outliers.active)
+      self.Split.set_active(not self.Split.active)
       self.redraw()
     
     # Toggle pixels
