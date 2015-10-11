@@ -254,7 +254,7 @@ class Selector(object):
             if a <= ti and ti <= b:
               x.append(self.cad[ti])
               y.append(self.fsum[ti])
-          p = self.ax.plot(x, y, 'o', markersize = 10, color = 'None', markeredgecolor = color, zorder = -1, alpha = 0.1)
+          p = self.ax.plot(x, y, 'o', markersize = 10, markerfacecolor = 'None', markeredgecolor = color, zorder = -1, alpha = 0.1)
           self._plots.append(p)
     
       if not self.hide:
@@ -695,13 +695,13 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
                     
           # If user is re-visiting this quarter, update with their selections 
           if len(uj[q]): 
-            sel._jumps = uj[q]
+            sel._jumps = list(uj[q])
           if len(uo[q]): 
-            sel._outliers = uo[q]
+            sel._outliers = list(uo[q])
           if len(utn[q]): 
-            sel._transits_narrow = utn[q]
+            sel._transits_narrow = list(utn[q])
           if len(utw[q]): 
-            sel._transits_wide = utw[q]
+            sel._transits_wide = list(utw[q])
 
           fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (koi, q)) 
           sel.UpdateTransits()
