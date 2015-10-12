@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from __future__ import (division, print_function, absolute_import,
@@ -8,6 +8,7 @@ import matplotlib.pyplot as pl
 from .inspect import *
 from .transits import *
 from .download import *
+import eyepiece.pld
 
 # Info
 __version__ = "0.0.1"

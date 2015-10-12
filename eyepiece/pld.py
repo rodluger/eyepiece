@@ -25,6 +25,9 @@ with warnings.catch_warnings():
   warnings.simplefilter("ignore")
   from statsmodels.tsa.stattools import acf
 import scipy.signal as signal
+import itertools
+
+__all__ = ['Run', 'Plot']
 
 def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
   '''
@@ -64,7 +67,9 @@ def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
     try:
       gp.compute(time, ferr)
       ll += gp.lnlikelihood(fsum - pmod)
-    except:
+    except Exception as e:
+      if debug:
+        print("Exception evaluating the Ln-Like func:", str(e))
       if return_gradient:
         return 1.e10, np.zeros_like(coeffs, dtype = float)
       else:
@@ -77,54 +82,21 @@ def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
 
   # Print the likelihood and the gradient?
   if debug:
-    print(ll, grad_ll)
+    print("Ln-Like: ", ll)
+    print("Grad-LL: ", grad_ll)
 
   if return_gradient:
     return -ll, -grad_ll
   else:
     return -ll
 
-def Decorrelate(quarter, maxfun = 15000, approx_grad = False, debug = False):
+def Decorrelate(quarter, init, maxfun = 15000, approx_grad = False, debug = False):
   '''
   
   '''
-   
-  # Number of pixels in aperture       
-  npix = quarter['fpix'][0].shape[1]
-  
-  # Below we construct our initial guess:
-  # TODO: This is likely not the best initial guess. Test this.
-  
-  # Let's find the analytical solution, c_j = (A_jm)^-1 * B_m
-  fpix = np.array([x for chunk in quarter['fpix'] for x in chunk])
-  fsum = np.array([x for chunk in quarter['fsum'] for x in chunk])
-  time = np.array([x for chunk in quarter['time'] for x in chunk])
 
-  A = np.zeros((npix, npix))
-  for j in range(npix):
-    for m in range(npix):
-      # TODO: This could be sped up!
-      A[j][m] = np.sum( fpix[:, j] * fpix[:, m] / fsum ** 2 , axis = 0)
-      
-  B = np.sum(fpix, axis=0)  
-  cj = np.dot(np.linalg.inv(A), B)
-  y = fsum - np.sum(fpix * np.outer(1. / fsum, cj), axis = 1)
-  
-  # Timescale (1 <= tau <= 20)
-  acor = acf(y, nlags = len(y))[1:]
-  t = np.linspace(0, time[-1] - time[0], len(y) - 1)
-  tau = min(max(1., t[np.argmax(y < 0)]), 20.)
-  
-  # Amplitude (standard deviation of PLD-decorrelated data)
-  amp = np.std(y)
-  
-  # Period (1 <= per <= 100)
-  par = np.linspace(100, 1, 101)
-  pdg = signal.lombscargle(time, y, 2. * np.pi / par)
-  per = par[np.argmax(pdg)]
-  
-  # Initial guess
-  init = np.append([amp, tau, per], cj)
+  # Number of pixels in aperture
+  npix = quarter['fpix'][0].shape[1]
 
   # Very loose physical bounds
   bounds = [[0, 1.e4], [0, 1.e4], [0, 1.e4]] + [[-np.inf, np.inf]] * npix
@@ -177,29 +149,113 @@ def Decorrelate(quarter, maxfun = 15000, approx_grad = False, debug = False):
   gpmu = np.array(all_gpmu)
   yerr = np.array(all_yerr)  
   
-  return time, fsum, pmod, gpmu, yerr, coeffs, lnlike, info
-  
-def Run(koi = 254.01, quarters = range(18), maxfun = 15000, debug = False):
+  return {'time': time, 'fsum': fsum, 'pmod': pmod, 'gpmu': gpmu, 'yerr': yerr, 'coeffs': coeffs, 'lnlike': lnlike, 'info': info}
+
+def InitialGuess(quarter, seed = None, sigma = 0.1):
   '''
   
   '''
+   
+  # Number of pixels in aperture       
+  npix = quarter['fpix'][0].shape[1]
+    
+  # Let's find the analytical solution, c_j = (A_jm)^-1 * B_m
+  fpix = np.array([x for chunk in quarter['fpix'] for x in chunk])
+  fsum = np.array([x for chunk in quarter['fsum'] for x in chunk])
+  time = np.array([x for chunk in quarter['time'] for x in chunk])
+
+  A = np.zeros((npix, npix))
+  for j in range(npix):
+    for m in range(npix):
+      # TODO: This could be sped up!
+      A[j][m] = np.sum( fpix[:, j] * fpix[:, m] / fsum ** 2 , axis = 0)
+      
+  B = np.sum(fpix, axis=0)  
+  cj = np.dot(np.linalg.inv(A), B)
+  y = fsum - np.sum(fpix * np.outer(1. / fsum, cj), axis = 1)
+  
+  # Timescale (1 <= tau <= 20)
+  acor = acf(y, nlags = len(y))[1:]
+  t = np.linspace(0, time[-1] - time[0], len(y) - 1)
+  tau = min(max(1., t[np.argmax(y < 0)]), 20.)
+  
+  # Amplitude (standard deviation of PLD-decorrelated data)
+  amp = np.std(y)
+  
+  # Period (1 <= per <= 100)
+  par = np.linspace(100, 1, 101)
+  pdg = signal.lombscargle(time, y, 2. * np.pi / par)
+  per = par[np.argmax(pdg)]
+  
+  # Initial guess
+  init = np.append([amp, tau, per], cj)
+  
+  # Perturb it by sigma
+  if seed is not None:
+    np.random.seed(seed)
+  init = init * (1 + sigma * np.random.randn(len(init)))
+  
+  return init
+  
+class Worker(object):
+  '''
+  
+  '''
+  
+  def __init__(self, koi, data, maxfun, debug):
+    self.koi = koi
+    self.data = data
+    self.maxfun = maxfun
+    self.debug = debug
+  
+  def __call__(self, tag):
+  
+    if self.debug:
+      print("Began decorrelation for tag", tag)
+  
+    i = tag[0]
+    q = tag[1]
+
+    quarter = self.data[q]
+  
+    if quarter['time'] == []:
+      if self.debug: 
+        print("No data for tag", tag)
+      return False
+  
+    # Decorrelate
+    init = InitialGuess(quarter)
+    res = Decorrelate(quarter, init, debug = self.debug, maxfun = self.maxfun)
+  
+    # Save
+    if not os.path.exists(os.path.join(datadir, str(self.koi), 'pld')):
+      os.makedirs(os.path.join(datadir, str(self.koi), 'pld'))
+    np.savez(os.path.join(datadir, str(self.koi), 'pld', '%02d.%02d.npz' % (q, i)), **res)
+  
+    if self.debug:
+      print("Decorrelation finished for tag", tag)
+  
+    return True  
+  
+def Run(koi = 254.01, quarters = range(18), niter = 5, maxfun = 15000, debug = False, pool = None):
+  '''
+  
+  '''
+  
+  # Multiprocess?
+  if pool is None:
+    M = map
+  else:
+    M = pool.map
   
   # Load the raw background-only data
   data = GetData(koi, data_type = 'bkg')
   
-  # Set up a function for the mapping
-  def worker(q):
-    quarter = data[q]
-    if quarter['time'] == []: 
-      return False
-    if not os.path.exists(os.path.join(datadir, str(koi), 'pld')):
-      os.makedirs(os.path.join(datadir, str(koi), 'pld'))
-    np.savez(os.path.join(datadir, str(koi), 'pld', '%02d.npz' % q), 
-             data = Decorrelate(quarter, debug = debug, maxfun = maxfun))
-    return True
-
-  # Decorrelate the data for each quarter
-  list(map(worker, quarters))
+  # Set up our list of runs  
+  tags = list(itertools.product(range(niter), quarters))
+  W = Worker(koi, data, maxfun, debug)
+  
+  return list(M(W, tags))
 
 def Plot(koi = 254.01, quarters = range(18)):
   '''
@@ -218,7 +274,29 @@ def Plot(koi = 254.01, quarters = range(18)):
     
     # Load the decorrelated data
     try:
-      time, fsum, pmod, gpmu, yerr, coeffs, lnlike, info = np.load(os.path.join(datadir, str(koi), 'pld', '%02d.npz' % q))['data']
+    
+      # Look at the likelihoods of all runs for this quarter
+      pldpath = os.path.join(datadir, str(koi), 'pld')
+      files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) if f.startswith('%02d.' % q) and f.endswith('.npz')]
+      
+      if len(files) == 0:
+        continue
+      
+      lnl = np.zeros_like(files)
+      for i, f in enumerate(files):
+        lnl[i] = float(np.load(f)['lnlike'])
+      
+      # Grab the highest likelihood run
+      res = np.load(files[np.argmax(lnl)])
+      time = res['time']
+      fsum = res['fsum']
+      pmod = res['pmod']
+      gpmu = res['gpmu']
+      yerr = res['yerr']
+      coeffs = res['coeffs']
+      lnlike = res['lnlike']
+      info = res['info'][()]
+    
     except IOError:
       continue
     
@@ -271,3 +349,41 @@ def Plot(koi = 254.01, quarters = range(18)):
     ltq = lt[q]
     
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
+
+def PLD(koi = 254.01, quarters = range(18), niter = 5, maxfun = 15000, debug = False):
+  '''
+  
+  '''
+  
+  # Handle multiprocessing
+  try:
+    from mpi4py import MPI
+    from mpi_pool import MPIPool
+    multi = 'mpi'
+  except:
+    try:
+      from multiprocessing.pool import Pool
+      multi = 'mp'
+    except:
+      multi = 'none'
+
+  if multi == 'mpi':
+    print("Parallelizing with MPI.")
+    pool = MPIPool(loadbalance = True)
+    if not pool.is_master():
+      pool.wait()                                            
+      sys.exit(0)
+  elif multi == 'mp':
+    print("Parallelizing with multiprocessing.")
+    pool = Pool()
+  else:
+    print("No parallelization.")
+    pool = None
+  
+  # Run and plot
+  Run(koi = koi, quarters = quarters, niter = niter, maxfun = maxfun, pool = pool, debug = debug)
+  Plot(koi = koi, quarters = quarter)
+  
+  # Close
+  if multi == 'mpi':
+    pool.close()
