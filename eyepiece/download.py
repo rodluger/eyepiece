@@ -9,7 +9,6 @@ download.py
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
 import eyepiece.config as config
-from eyepiece import Inspect
 from .utils import GitHash
 import os
 import kplr
