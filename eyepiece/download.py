@@ -9,8 +9,8 @@ download.py
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
 import eyepiece.config as config
+from eyepiece import Inspect
 from .utils import GitHash
-from .inspect import Inspect
 import os
 import kplr
 import numpy as np
