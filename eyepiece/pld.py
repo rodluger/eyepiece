@@ -237,7 +237,7 @@ class Worker(object):
   
     return True  
   
-def Run(koi = 254.01, quarters = range(18), niter = 5, maxfun = 15000, debug = False, pool = None):
+def Run(koi = 254.01, quarters = list(range(18)), niter = 5, maxfun = 15000, debug = False, pool = None):
   '''
   
   '''
@@ -252,12 +252,12 @@ def Run(koi = 254.01, quarters = range(18), niter = 5, maxfun = 15000, debug = F
   data = GetData(koi, data_type = 'bkg')
   
   # Set up our list of runs  
-  tags = list(itertools.product(range(niter), quarters))
+  tags = list(itertools.product(list(range(niter)), quarters))
   W = Worker(koi, data, maxfun, debug)
   
   return list(M(W, tags))
 
-def Plot(koi = 254.01, quarters = range(18)):
+def Plot(koi = 254.01, quarters = list(range(18))):
   '''
   
   '''
@@ -350,7 +350,7 @@ def Plot(koi = 254.01, quarters = range(18)):
     
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
 
-def PLD(koi = 254.01, quarters = range(18), niter = 5, maxfun = 15000, debug = False, multiprocess = True):
+def PLD(koi = 254.01, quarters = list(range(18)), niter = 5, maxfun = 15000, debug = False, multiprocess = True):
   '''
   
   '''
@@ -385,7 +385,7 @@ def PLD(koi = 254.01, quarters = range(18), niter = 5, maxfun = 15000, debug = F
   
   # Run and plot
   Run(koi = koi, quarters = quarters, niter = niter, maxfun = maxfun, pool = pool, debug = debug)
-  Plot(koi = koi, quarters = quarter)
+  Plot(koi = koi, quarters = quarters)
   
   # Close
   if multi == 'mpi':
