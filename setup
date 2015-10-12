@@ -6,8 +6,6 @@ import os
 import sys
 import subprocess
 
-import pdb; pdb.set_trace()
-
 str_config = \
 """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
