@@ -176,8 +176,7 @@ def GetData(koi, data_type = 'proc', blind = False, datadir = config.datadir):
   try:
     data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data'][()]
   except IOError:
-    Inspect(koi = koi, blind = blind)
-    data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data'][()]
+    raise Exception("File ``data_%s.npz`` not found." % data_type)
 
   return data
 
