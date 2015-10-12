@@ -350,23 +350,26 @@ def Plot(koi = 254.01, quarters = range(18)):
     
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
 
-def PLD(koi = 254.01, quarters = range(18), niter = 5, maxfun = 15000, debug = False):
+def PLD(koi = 254.01, quarters = range(18), niter = 5, maxfun = 15000, debug = False, multiprocess = True):
   '''
   
   '''
   
   # Handle multiprocessing
-  try:
-    from mpi4py import MPI
-    from mpi_pool import MPIPool
-    multi = 'mpi'
-  except:
+  if multiprocess:
     try:
-      from multiprocessing.pool import Pool
-      multi = 'mp'
+      from mpi4py import MPI
+      from mpi_pool import MPIPool
+      multi = 'mpi'
     except:
-      multi = 'none'
-
+      try:
+        from multiprocessing.pool import Pool
+        multi = 'mp'
+      except:
+        multi = 'none'
+  else:
+    multi = 'none'
+    
   if multi == 'mpi':
     print("Parallelizing with MPI.")
     pool = MPIPool(loadbalance = True)

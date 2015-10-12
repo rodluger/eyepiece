@@ -1,0 +1,12 @@
+#!/bin/sh
+#PBS -N pld
+#PBS -l nodes=20:ppn=12,feature=12core,mem=500gb,walltime=10:00:00
+#PBS -M rodluger@uw.edu
+#PBS -m abe
+#PBS -o /usr/lusers/rodluger/src/eyepiece/scripts/stdout.txt
+#PBS -e /usr/lusers/rodluger/src/eyepiece/scripts/stderr.txt
+
+# Run the job.
+cd /usr/lusers/rodluger/src/eyepiece/scripts
+
+mpiexec -np $PBS_NP python example.py &> pld.log
