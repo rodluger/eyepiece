@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
@@ -6,8 +6,10 @@ import os
 import sys
 import subprocess
 
+import pdb; pdb.set_trace()
+
 str_config = \
-"""#!/usr/bin/python
+"""#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 config.py
@@ -39,11 +41,7 @@ if __name__ == '__main__':
   print("First, let's check if you have \x1b[01mkplr\x1b[39;49;00m installed.")
   print("")
   try:
-    x = subprocess.call(["python", "-c", "import kplr"])
-    if x == 0:
-      print("Looks like \x1b[01mkplr\x1b[39;49;00m is already installed!\n")
-    else:
-      raise ImportError("")
+    import kplr
   except ImportError:
     print("Uh-oh, doesn't look like you have it. I'm going to try to install\nit for you using \x1b[01mpip install\x1b[39;49;00m. If you'd rather do it manually,\nhit \x1b[01mCtrl+C\x1b[39;49;00m to get out of here, and run this utility again later.\n")
     prompt("", "Press Enter to continue", "")
