@@ -212,6 +212,10 @@ def InitialGuess(koi, q, seed = None, sigma = 0.1):
     np.random.seed(seed)
   init = init * (1 + sigma * np.random.randn(len(init)))
   
+  # DEBUG DEBUG DEBUG
+  return np.array([10., 10., 10.] + [fsum[0]] * npix)
+  # DEBUG DEBUG DEBUG
+  
   return np.array(init)
   
 class Worker(object):
