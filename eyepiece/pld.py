@@ -76,6 +76,8 @@ def NegLnLike(coeffs, koi, q, debug = False):
     try:      
     
       print("CHECKPOINT A")
+      
+      import pdb; pdb.set_trace()
     
       # Compute the likelihood
       gp.compute(time, ferr)
