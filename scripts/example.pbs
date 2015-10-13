@@ -1,0 +1,16 @@
+#!/bin/sh
+#PBS -N pld_$TAG
+#PBS -l nodes=1:ppn=12,feature=12core,mem=40gb,walltime=10:00:00
+#PBS -M rodluger@uw.edu
+#PBS -m abe
+
+# NOTE: Please supply a tag when running this script:
+#
+# >>> qsub -vTAG=0 example.pbs
+#
+#
+
+# Run the job.
+cd /usr/lusers/rodluger/src/eyepiece/scripts
+
+python example.py $TAG &> pld_$TAG.log

@@ -21,19 +21,28 @@ import matplotlib.pyplot as pl
 import george
 import os
 import warnings
-with warnings.catch_warnings():
-  warnings.simplefilter("ignore")
-  from statsmodels.tsa.stattools import acf
+try:
+  with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    from statsmodels.tsa.stattools import acf
+except ImportError:
+  acf = None
 import scipy.signal as signal
-import itertools
 
 __all__ = ['Run', 'Plot']
+data = None
 
-def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
+def NegLnLike(coeffs, koi, q, debug = False):
   '''
   Returns the negative log-likelihood and its gradient for the model with coefficients ``coeffs``
   
   '''
+
+  # Load the data (if necessary)
+  global data
+  if data is None:
+    data = GetData(koi, data_type = 'bkg')
+  quarter = data[q]
 
   # Pixel model coefficients
   d = coeffs[3:]
@@ -70,10 +79,7 @@ def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
     except Exception as e:
       if debug:
         print("Exception evaluating the Ln-Like func:", str(e))
-      if return_gradient:
-        return 1.e10, np.zeros_like(coeffs, dtype = float)
-      else:
-        return 1.e10
+      return 1.e10, np.zeros_like(coeffs, dtype = float)
 
     # Compute the gradient of the likelihood with some badass linear algebra   
     A = fpix.T / fsum
@@ -85,27 +91,28 @@ def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
     print("Ln-Like: ", ll)
     print("Grad-LL: ", grad_ll)
 
-  if return_gradient:
-    return -ll, -grad_ll
-  else:
-    return -ll
-
-def Decorrelate(quarter, init, maxfun = 15000, approx_grad = False, debug = False):
+  return -ll, -grad_ll
+    
+def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   '''
   
   '''
-
+  
+  # Load the data (if necessary)
+  global data
+  if data is None:
+    data = GetData(koi, data_type = 'bkg')
+  quarter = data[q]
+  
   # Number of pixels in aperture
   npix = quarter['fpix'][0].shape[1]
 
   # Very loose physical bounds
   bounds = np.array([[0, 1.e4], [0, 1.e4], [0, 1.e4]] + [[-np.inf, np.inf]] * npix)
   
-  # Run the optimizer
-  args = [quarter, not approx_grad, debug]  
-  
-  res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = approx_grad,
-                      args = args, bounds = bounds,
+  # Run the optimizer  
+  res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
+                      args = [koi, q, debug], bounds = bounds,
                       m = 10, factr = 1.e1, epsilon = 1e-8,
                       pgtol = 1e-05, maxfun = maxfun)
   coeffs = res[0]
@@ -152,11 +159,17 @@ def Decorrelate(quarter, init, maxfun = 15000, approx_grad = False, debug = Fals
   
   return {'time': time, 'fsum': fsum, 'pmod': pmod, 'gpmu': gpmu, 'yerr': yerr, 'coeffs': coeffs, 'lnlike': lnlike, 'info': info}
 
-def InitialGuess(quarter, seed = None, sigma = 0.1):
+def InitialGuess(koi, q, seed = None, sigma = 0.1):
   '''
   
   '''
-   
+  
+  # Load the data (if necessary)
+  global data
+  if data is None:
+    data = GetData(koi, data_type = 'bkg')
+  quarter = data[q]
+      
   # Number of pixels in aperture       
   npix = quarter['fpix'][0].shape[1]
     
@@ -176,9 +189,12 @@ def InitialGuess(quarter, seed = None, sigma = 0.1):
   y = fsum - np.sum(fpix * np.outer(1. / fsum, cj), axis = 1)
   
   # Timescale (1 <= tau <= 20)
-  acor = acf(y, nlags = len(y))[1:]
-  t = np.linspace(0, time[-1] - time[0], len(y) - 1)
-  tau = min(max(1., t[np.argmax(y < 0)]), 20.)
+  if acf is not None:
+    acor = acf(y, nlags = len(y))[1:]
+    t = np.linspace(0, time[-1] - time[0], len(y) - 1)
+    tau = min(max(1., t[np.argmax(acor < 0)]), 20.)
+  else:
+    tau = 10.
   
   # Amplitude (standard deviation of PLD-decorrelated data)
   amp = np.std(y)
@@ -203,21 +219,24 @@ class Worker(object):
   
   '''
   
-  def __init__(self, koi, data, maxfun, debug):
+  def __init__(self, koi, maxfun, debug):
     self.koi = koi
-    self.data = data
     self.maxfun = maxfun
     self.debug = debug
   
   def __call__(self, tag):
-  
+    
+    # Load the data (if necessary)
+    global data
+    if data is None:
+      data = GetData(self.koi, data_type = 'bkg')
+    
     if self.debug:
       print("Began decorrelation for tag", tag)
   
     i = tag[0]
     q = tag[1]
-
-    quarter = self.data[q]
+    quarter = data[q]
   
     if quarter['time'] == []:
       if self.debug: 
@@ -225,8 +244,8 @@ class Worker(object):
       return False
   
     # Decorrelate
-    init = InitialGuess(quarter)
-    res = Decorrelate(quarter, init, debug = self.debug, maxfun = self.maxfun)
+    init = InitialGuess(self.koi, q, seed = i)
+    res = Decorrelate(self.koi, q, init, debug = self.debug, maxfun = self.maxfun)
   
     # Save
     if not os.path.exists(os.path.join(datadir, str(self.koi), 'pld')):
@@ -238,7 +257,7 @@ class Worker(object):
   
     return True  
   
-def Run(koi = 254.01, quarters = list(range(18)), niter = 5, maxfun = 15000, debug = False, pool = None):
+def Run(koi = 254.01, quarters = list(range(18)), tag = 0, maxfun = 15000, debug = False, pool = None):
   '''
   
   '''
@@ -249,13 +268,11 @@ def Run(koi = 254.01, quarters = list(range(18)), niter = 5, maxfun = 15000, deb
   else:
     M = pool.map
   
-  # Load the raw background-only data
-  data = GetData(koi, data_type = 'bkg')
-  
   # Set up our list of runs  
-  tags = list(itertools.product(list(range(niter)), quarters))
-  W = Worker(koi, data, maxfun, debug)
+  tags = [(tag, q) for q in quarters]
+  W = Worker(koi, maxfun, debug)
   
+  # Run!
   return list(M(W, tags))
 
 def Plot(koi = 254.01, quarters = list(range(18))):
