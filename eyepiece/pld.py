@@ -126,7 +126,7 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   
   
   if debug:
-    print(q, lnlike, coeffs)
+    print(q, -res[1], res[0])
   
   coeffs = res[0]
   lnlike = -res[1]
