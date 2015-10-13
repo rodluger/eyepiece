@@ -20,12 +20,6 @@ maxfun = 50
 debug = True
 pool = InterruptiblePool()
 
-
-# DEBUG
-pool = None
-# DEBUG
-
-
 # Tag number
 try:
   tag = sys.argv[1]
