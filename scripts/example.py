@@ -14,7 +14,7 @@ import sys
 
 # User
 koi = 254.01
-quarters = [2]
+quarters = [3]
 niter = 2
 maxfun = 50
 debug = True
