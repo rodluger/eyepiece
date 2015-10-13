@@ -74,24 +74,31 @@ def NegLnLike(coeffs, koi, q, debug = False):
     
     # Evaluate the model
     try:      
+    
+      # Compute the likelihood
       gp.compute(time, ferr)
       ll += gp.lnlikelihood(fsum - pmod)
+    
+      # Compute the gradient of the likelihood with some badass linear algebra   
+      A = fpix.T / fsum
+      grad_ll_pld = -np.dot(A, gp.solver.apply_inverse(fsum - pmod))    
+      grad_ll += np.append(gp.grad_lnlikelihood(fsum - pmod), grad_ll_pld)
+    
     except Exception as e:
+      
+      # Return a low likelihood
       if debug:
         print("Exception evaluating the Ln-Like func:", str(e))
-      return 1.e10, np.zeros_like(coeffs, dtype = float)
-
-    # Compute the gradient of the likelihood with some badass linear algebra   
-    A = fpix.T / fsum
-    grad_ll_pld = -np.dot(A, gp.solver.apply_inverse(fsum - pmod))    
-    grad_ll += np.append(gp.grad_lnlikelihood(fsum - pmod), grad_ll_pld)
+      ll = -1.e10
+      grad_ll = np.zeros_like(coeffs, dtype = float)
+      break
 
   # Print the likelihood and the gradient?
   if debug:
     print("Ln-Like: ", ll)
     print("Grad-LL: ", grad_ll)
 
-  return -ll, -grad_ll
+  return (-ll, -grad_ll)
     
 def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   '''
