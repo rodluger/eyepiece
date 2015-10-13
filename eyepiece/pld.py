@@ -95,9 +95,9 @@ def NegLnLike(coeffs, koi, q, debug = False):
       break
 
   # Print the likelihood and the gradient?
-  if debug:
-    print("Ln-Like: ", ll)
-    print("Grad-LL: ", grad_ll)
+  #if debug:
+  #  print("Ln-Like: ", ll)
+  #  print("Grad-LL: ", grad_ll)
 
   return (-ll, -grad_ll)
     
