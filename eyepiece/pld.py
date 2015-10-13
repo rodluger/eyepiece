@@ -79,6 +79,8 @@ def NegLnLike(coeffs, koi, q, debug = False):
       gp.compute(time, ferr)
       ll += gp.lnlikelihood(fsum - pmod)
     
+      print("ITSNOTGEORGE")
+    
       # Compute the gradient of the likelihood with some badass linear algebra   
       A = fpix.T / fsum
       grad_ll_pld = -np.dot(A, gp.solver.apply_inverse(fsum - pmod))    
@@ -89,6 +91,7 @@ def NegLnLike(coeffs, koi, q, debug = False):
       # Return a low likelihood
       if debug:
         print("Exception evaluating the Ln-Like func:", str(e))
+        
       ll = -1.e10
       grad_ll = np.zeros_like(coeffs, dtype = float)
       break
