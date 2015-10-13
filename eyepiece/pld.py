@@ -64,7 +64,7 @@ def NegLnLike(coeffs, quarter, return_gradient = True, debug = False):
       ferr[k] = np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (d / fsum[k])) ** 2 * perr[k] ** 2)
     
     # Evaluate the model
-    try:
+    try:      
       gp.compute(time, ferr)
       ll += gp.lnlikelihood(fsum - pmod)
     except Exception as e:
@@ -99,10 +99,11 @@ def Decorrelate(quarter, init, maxfun = 15000, approx_grad = False, debug = Fals
   npix = quarter['fpix'][0].shape[1]
 
   # Very loose physical bounds
-  bounds = [[0, 1.e4], [0, 1.e4], [0, 1.e4]] + [[-np.inf, np.inf]] * npix
+  bounds = np.array([[0, 1.e4], [0, 1.e4], [0, 1.e4]] + [[-np.inf, np.inf]] * npix)
   
   # Run the optimizer
-  args = [quarter, not approx_grad, debug]
+  args = [quarter, not approx_grad, debug]  
+  
   res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = approx_grad,
                       args = args, bounds = bounds,
                       m = 10, factr = 1.e1, epsilon = 1e-8,
@@ -195,7 +196,7 @@ def InitialGuess(quarter, seed = None, sigma = 0.1):
     np.random.seed(seed)
   init = init * (1 + sigma * np.random.randn(len(init)))
   
-  return init
+  return np.array(init)
   
 class Worker(object):
   '''
@@ -349,44 +350,3 @@ def Plot(koi = 254.01, quarters = list(range(18))):
     ltq = lt[q]
     
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
-
-def PLD(koi = 254.01, quarters = list(range(18)), niter = 5, maxfun = 15000, debug = False, multiprocess = True):
-  '''
-  
-  '''
-  
-  # Handle multiprocessing
-  if multiprocess:
-    try:
-      from mpi4py import MPI
-      from mpi_pool import MPIPool
-      multi = 'mpi'
-    except:
-      try:
-        from multiprocessing.pool import Pool
-        multi = 'mp'
-      except:
-        multi = 'none'
-  else:
-    multi = 'none'
-    
-  if multi == 'mpi':
-    print("Parallelizing with MPI.")
-    pool = MPIPool(loadbalance = True)
-    if not pool.is_master():
-      pool.wait()                                            
-      sys.exit(0)
-  elif multi == 'mp':
-    print("Parallelizing with multiprocessing.")
-    pool = Pool()
-  else:
-    print("No parallelization.")
-    pool = None
-  
-  # Run and plot
-  Run(koi = koi, quarters = quarters, niter = niter, maxfun = maxfun, pool = pool, debug = debug)
-  Plot(koi = koi, quarters = quarters)
-  
-  # Close
-  if multi == 'mpi':
-    pool.close()
