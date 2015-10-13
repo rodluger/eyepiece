@@ -820,9 +820,6 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             data_new[q][arr].append(np.array(data[q][arr][ai]))
             data_bkg[q][arr].append(np.array(data[q][arr][bi]))
           
-          if q == 3:
-            import pdb; pdb.set_trace()
-          
           # Transit-only data        
           for i in range(len(tN)):
             ti = transits_wide[np.where(transits_wide_tag == i)]
