@@ -27,5 +27,5 @@ except:
   tag = 0
 
 # Run and plot
-Run(koi = koi, quarters = quarters, tag = tag, maxfun = maxfun, pool = pool, debug = debug)
+Run(koi = koi, quarters = quarters, tag = tag, maxfun = maxfun, pool = None, debug = debug)
 Plot(koi = koi, quarters = quarters)
