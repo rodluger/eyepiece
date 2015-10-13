@@ -192,7 +192,7 @@ def InitialGuess(koi, q, seed = None, sigma = 0.1):
   if acf is not None:
     acor = acf(y, nlags = len(y))[1:]
     t = np.linspace(0, time[-1] - time[0], len(y) - 1)
-    tau = min(max(1., t[np.argmax(acor < 0)]), 20.)
+    tau = min(max(1., t[np.argmax(acor < 0)] / 2.), 20.)                              # ~ Half the time it takes for acor to drop to zero
   else:
     tau = 10.
   
@@ -245,6 +245,10 @@ class Worker(object):
   
     # Decorrelate
     init = InitialGuess(self.koi, q, seed = i)
+    
+    if self.debug:
+      print("Initial guess for tag", tag, ":", init)
+    
     res = Decorrelate(self.koi, q, init, debug = self.debug, maxfun = self.maxfun)
   
     # Save
