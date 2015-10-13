@@ -797,10 +797,10 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             transits_wide.extend(i) 
             transits_wide_tag.extend([j for k in i])
 
-          jumps = np.array(jumps, dtype = int)
-          transits_narrow = np.array(transits_narrow, dtype = int)
-          transits_wide = np.array(transits_wide, dtype = int)
-          transits_wide_tag = np.array(transits_wide_tag, dtype = int)
+          jumps = np.array(sorted(jumps), dtype = int)
+          transits_narrow = np.array(sorted(transits_narrow), dtype = int)
+          transits_wide = np.array(sorted(transits_wide), dtype = int)
+          transits_wide_tag = np.array(sorted(transits_wide_tag), dtype = int)
           outliers = np.array([], dtype = int)
         
         # Store the user-defined outliers, jumps, and transits
@@ -819,6 +819,9 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             bi = [i for i in range(a, b) if i not in np.append(outliers, transits_narrow)]
             data_new[q][arr].append(np.array(data[q][arr][ai]))
             data_bkg[q][arr].append(np.array(data[q][arr][bi]))
+          
+          if q == 3:
+            import pdb; pdb.set_trace()
           
           # Transit-only data        
           for i in range(len(tN)):
