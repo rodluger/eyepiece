@@ -116,7 +116,7 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   npix = quarter['fpix'][0].shape[1]
 
   # Very loose physical bounds
-  bounds = np.array([[0, 1.e4], [0, 1.e4], [0, 1.e4]] + [[-np.inf, np.inf]] * npix)
+  bounds = np.array([[1.e-2, 1.e4], [0.1, 1.e4], [1., 1.e4]] + [[-np.inf, np.inf]] * npix)
   
   # Run the optimizer  
   res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
@@ -160,7 +160,10 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
       gp.compute(time, cerr)
       mu, cov = gp.predict(fsum - pm, time)
     except Exception as e:
+    
+      # DEBUG
       print("Decorrelate:", q, str(e))
+      quit()
 
     all_time.extend(time)
     all_fsum.extend(fsum)
