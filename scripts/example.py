@@ -18,7 +18,7 @@ debug = True
 
 try:
   from mpi4py import MPI
-  from mpi_pool import MPIPool
+  from eyepiece.mpi_pool import MPIPool
   multi = 'mpi'
 except:
   try:
