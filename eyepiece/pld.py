@@ -123,6 +123,11 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
                       args = [koi, q, debug], bounds = bounds,
                       m = 10, factr = 1.e1, epsilon = 1e-8,
                       pgtol = 1e-05, maxfun = maxfun)
+  
+  
+  if debug:
+    print(q, lnlike, coeffs)
+  
   coeffs = res[0]
   lnlike = -res[1]
   info = res[2]       
@@ -150,8 +155,12 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
       cerr[k] = np.sum(((1. / T[k]) + (pm[k] / fsum[k]) - (d / fsum[k])) ** 2 * perr[k] ** 2)
     
     # Detrend with GP
-    gp.compute(time, cerr)
-    mu, cov = gp.predict(fsum - pm, time)
+    
+    try:
+      gp.compute(time, cerr)
+      mu, cov = gp.predict(fsum - pm, time)
+    except Exception as e:
+      print("Decorrelate:", q, str(e))
 
     all_time.extend(time)
     all_fsum.extend(fsum)
