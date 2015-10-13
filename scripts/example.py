@@ -20,6 +20,12 @@ maxfun = 50
 debug = True
 pool = InterruptiblePool()
 
+
+# DEBUG
+pool = None
+# DEBUG
+
+
 # Tag number
 try:
   tag = sys.argv[1]
@@ -27,5 +33,5 @@ except:
   tag = 0
 
 # Run and plot
-Run(koi = koi, quarters = quarters, tag = tag, maxfun = maxfun, pool = None, debug = debug)
+Run(koi = koi, quarters = quarters, tag = tag, maxfun = maxfun, pool = pool, debug = debug)
 Plot(koi = koi, quarters = quarters)

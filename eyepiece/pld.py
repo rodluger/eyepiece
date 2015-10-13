@@ -75,16 +75,20 @@ def NegLnLike(coeffs, koi, q, debug = False):
     # Evaluate the model
     try:      
     
+      print("CHECKPOINT A")
+    
       # Compute the likelihood
       gp.compute(time, ferr)
       ll += gp.lnlikelihood(fsum - pmod)
     
-      print("ITSNOTGEORGE")
+      print("CHECKPOINT B")
     
       # Compute the gradient of the likelihood with some badass linear algebra   
       A = fpix.T / fsum
       grad_ll_pld = -np.dot(A, gp.solver.apply_inverse(fsum - pmod))    
       grad_ll += np.append(gp.grad_lnlikelihood(fsum - pmod), grad_ll_pld)
+    
+      print("CHECKPOINT C")
     
     except Exception as e:
       
