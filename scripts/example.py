@@ -14,7 +14,7 @@ import sys
 
 # User
 koi = 254.01
-quarters = list(range(1,18))
+quarters = list(range(3,18))
 niter = 2
 maxfun = 50
 debug = True
