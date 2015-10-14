@@ -337,9 +337,6 @@ def Plot(koi = 254.01, quarters = list(range(18))):
       # Grab the highest likelihood run
       res = np.load(files[np.argmax(lnl)])
       
-      if q == 3:
-        import pdb; pdb.set_trace()
-      
       time = res['time']
       fsum = res['fsum']
       pmod = res['pmod']
