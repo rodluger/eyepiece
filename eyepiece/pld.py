@@ -398,10 +398,7 @@ def Plot(koi = 254.01, quarters = list(range(18))):
     ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
     
     # Best coeff values
-    for i, c in enumerate(cc[3:]):
-      
-      import pdb; pdb.set_trace()
-    
+    for i, c in enumerate(cc[q][3:]):
       ax[0].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8)
     
     # Best GP param values
