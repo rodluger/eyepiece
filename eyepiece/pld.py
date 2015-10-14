@@ -180,7 +180,7 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   
   return {'time': time, 'fsum': fsum, 'pmod': pmod, 'gpmu': gpmu, 'yerr': yerr, 'coeffs': coeffs, 'lnlike': lnlike, 'info': info}
 
-def InitialGuess(koi, q, seed = None, sigma = 0.1):
+def InitialGuess(koi, q, seed = None, sigma = 0.5):
   '''
   
   '''
