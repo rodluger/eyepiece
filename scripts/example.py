@@ -22,7 +22,7 @@ pool = InterruptiblePool()
 
 # Tag number
 try:
-  tag = sys.argv[1]
+  tag = int(sys.argv[1])
 except:
   tag = 0
 
