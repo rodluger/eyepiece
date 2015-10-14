@@ -232,12 +232,11 @@ def InitialGuess(koi, q, seed = None, sigma = 0.5):
   if seed is not None:
     np.random.seed(seed)
   
-  # TODO: Make bounds a user option. TODO: Prevent infinite loops
+  # TODO: Make bounds a user option. 
+  # TODO: Prevent infinite loops
   bounds = np.array([[1.e-2, 1.e4], [0.1, 1.e4], [1., 1.e4]] + [[-np.inf, np.inf]] * npix)
   while any([init[i] <= bounds[i][0] or init[i] >= bounds[i][1] for i in range(len(init))]):
     init = init * (1 + sigma * np.random.randn(len(init)))
-  
-  import pdb; pdb.set_trace()
     
   return np.array(init)
   
@@ -337,6 +336,10 @@ def Plot(koi = 254.01, quarters = list(range(18))):
       
       # Grab the highest likelihood run
       res = np.load(files[np.argmax(lnl)])
+      
+      if q == 3:
+        import pdb; pdb.set_trace()
+      
       time = res['time']
       fsum = res['fsum']
       pmod = res['pmod']
