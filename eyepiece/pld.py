@@ -201,7 +201,7 @@ def InitialGuess(koi, q, seed = None, sigma = 0.1, simple = False):
 
   # Simple initial guess: 10. for all GP params, fsum[0] for all coeffs
   if simple:
-    init = np.append([amp, tau, per], [fsum[0]] * npix)
+    init = np.append([10., 10., 10.], [fsum[0]] * npix)
     
   else:
 
