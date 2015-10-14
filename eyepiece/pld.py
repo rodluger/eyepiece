@@ -194,45 +194,45 @@ def InitialGuess(koi, q, seed = None, sigma = 0.1, simple = False):
   # Number of pixels in aperture       
   npix = quarter['fpix'][0].shape[1]
     
-  # Let's find the analytical solution, c_j = (A_jm)^-1 * B_m
+  # Arrays
   fpix = np.array([x for chunk in quarter['fpix'] for x in chunk])
   fsum = np.array([x for chunk in quarter['fsum'] for x in chunk])
   time = np.array([x for chunk in quarter['time'] for x in chunk])
-
-  # Simple initial guess: 10. for all GP params, fsum[0] for all coeffs
+  
   if simple:
-    init = np.append([10., 10., 10.], [fsum[0]] * npix)
-    
+    # Simple initial guess
+    cj = np.ones(npix) * np.median(fsum)
   else:
-
+    # The analytical solution, c_j = (A_jm)^-1 * B_m
     A = np.zeros((npix, npix))
     for j in range(npix):
       for m in range(npix):
         # TODO: This could be sped up!
         A[j][m] = np.sum( fpix[:, j] * fpix[:, m] / fsum ** 2 , axis = 0)
-      
     B = np.sum(fpix, axis=0)  
     cj = np.dot(np.linalg.inv(A), B)
-    y = fsum - np.sum(fpix * np.outer(1. / fsum, cj), axis = 1)
   
-    # Timescale (1 <= tau <= 20)
-    if acf is not None:
-      acor = acf(y, nlags = len(y))[1:]
-      t = np.linspace(0, time[-1] - time[0], len(y) - 1)
-      tau = min(max(1., t[np.argmax(acor < 0)] / 2.), 20.)                            # ~ Half the time it takes for acor to drop to zero
-    else:
-      tau = 10.
-  
-    # Amplitude (standard deviation of PLD-decorrelated data)
-    amp = np.std(y)
-  
-    # Period (1 <= per <= 100)
-    par = np.linspace(100, 1, 101)
-    pdg = signal.lombscargle(time, y, 2. * np.pi / par)
-    per = par[np.argmax(pdg)]
-  
-    # Initial guess
-    init = np.append([amp, tau, per], cj)
+  # PLD-decorrelated data  
+  y = fsum - np.sum(fpix * np.outer(1. / fsum, cj), axis = 1)
+
+  # Timescale (1 <= tau <= 20)
+  if acf is not None:
+    acor = acf(y, nlags = len(y))[1:]
+    t = np.linspace(0, time[-1] - time[0], len(y) - 1)
+    tau = min(max(1., t[np.argmax(acor < 0)] / 2.), 20.)                              # ~ Half the time it takes for acor to drop to zero
+  else:
+    tau = 10.
+
+  # Amplitude (standard deviation of PLD-decorrelated data)
+  amp = np.std(y)
+
+  # Period (1 <= per <= 100)
+  par = np.linspace(100, 1, 101)
+  pdg = signal.lombscargle(time, y, 2. * np.pi / par)
+  per = par[np.argmax(pdg)]
+
+  # Initial guess
+  init = np.append([amp, tau, per], cj)
   
   # Perturb it by sigma
   if seed is not None:
