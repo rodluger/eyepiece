@@ -3,7 +3,7 @@
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
-import matplotlib; matplotlib.use('TkAgg')
+import matplotlib; matplotlib.use('TkAgg', warn = False)
 import matplotlib.pyplot as pl
 from .inspect import *
 from .transits import *
