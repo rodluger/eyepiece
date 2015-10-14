@@ -399,7 +399,7 @@ def Plot(koi = 254.01, quarters = list(range(18))):
     
     # Best coeff values
     for i, c in enumerate(cc[q][3:]):
-      ax[0].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8)
+      ax[0].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
     
     # Best GP param values
     ax[1].annotate("\n   AMP: %.2f" % cc[q][0], (ltq, yp1), ha='left', va='top', fontsize = 8)
