@@ -190,7 +190,7 @@ def InitialGuess(koi, q, seed = None, sigma = 0.1):
     np.random.seed(seed)
   
   # PLD method
-  pld_method = random.choice(['median', 'analytic'])
+  pld_method = np.random.choice(['median', 'analytic'])
   
   # Load the data (if necessary)
   global data
