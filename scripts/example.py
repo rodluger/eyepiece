@@ -17,6 +17,7 @@ import sys
 koi = 254.01
 quarters = list(range(1,18))
 pool = InterruptiblePool()
+simple = True
 
 # Tag number
 try:
@@ -30,4 +31,4 @@ except IndexError:
   tag = 0
 
 # Run!
-Run(koi = koi, quarters = quarters, tag = tag, pool = pool)
+Run(koi = koi, quarters = quarters, tag = tag, pool = pool, simple = simple)

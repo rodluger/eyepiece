@@ -180,7 +180,7 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   
   return {'time': time, 'fsum': fsum, 'pmod': pmod, 'gpmu': gpmu, 'yerr': yerr, 'coeffs': coeffs, 'lnlike': lnlike, 'info': info}
 
-def InitialGuess(koi, q, seed = None, sigma = 0.5):
+def InitialGuess(koi, q, seed = None, sigma = 0.1, simple = False):
   '''
   
   '''
@@ -199,34 +199,40 @@ def InitialGuess(koi, q, seed = None, sigma = 0.5):
   fsum = np.array([x for chunk in quarter['fsum'] for x in chunk])
   time = np.array([x for chunk in quarter['time'] for x in chunk])
 
-  A = np.zeros((npix, npix))
-  for j in range(npix):
-    for m in range(npix):
-      # TODO: This could be sped up!
-      A[j][m] = np.sum( fpix[:, j] * fpix[:, m] / fsum ** 2 , axis = 0)
-      
-  B = np.sum(fpix, axis=0)  
-  cj = np.dot(np.linalg.inv(A), B)
-  y = fsum - np.sum(fpix * np.outer(1. / fsum, cj), axis = 1)
-  
-  # Timescale (1 <= tau <= 20)
-  if acf is not None:
-    acor = acf(y, nlags = len(y))[1:]
-    t = np.linspace(0, time[-1] - time[0], len(y) - 1)
-    tau = min(max(1., t[np.argmax(acor < 0)] / 2.), 20.)                              # ~ Half the time it takes for acor to drop to zero
+  # Simple initial guess: 10. for all GP params, fsum[0] for all coeffs
+  if simple:
+    init = np.append([amp, tau, per], [fsum[0]] * npix)
+    
   else:
-    tau = 10.
+
+    A = np.zeros((npix, npix))
+    for j in range(npix):
+      for m in range(npix):
+        # TODO: This could be sped up!
+        A[j][m] = np.sum( fpix[:, j] * fpix[:, m] / fsum ** 2 , axis = 0)
+      
+    B = np.sum(fpix, axis=0)  
+    cj = np.dot(np.linalg.inv(A), B)
+    y = fsum - np.sum(fpix * np.outer(1. / fsum, cj), axis = 1)
   
-  # Amplitude (standard deviation of PLD-decorrelated data)
-  amp = np.std(y)
+    # Timescale (1 <= tau <= 20)
+    if acf is not None:
+      acor = acf(y, nlags = len(y))[1:]
+      t = np.linspace(0, time[-1] - time[0], len(y) - 1)
+      tau = min(max(1., t[np.argmax(acor < 0)] / 2.), 20.)                            # ~ Half the time it takes for acor to drop to zero
+    else:
+      tau = 10.
   
-  # Period (1 <= per <= 100)
-  par = np.linspace(100, 1, 101)
-  pdg = signal.lombscargle(time, y, 2. * np.pi / par)
-  per = par[np.argmax(pdg)]
+    # Amplitude (standard deviation of PLD-decorrelated data)
+    amp = np.std(y)
   
-  # Initial guess
-  init = np.append([amp, tau, per], cj)
+    # Period (1 <= per <= 100)
+    par = np.linspace(100, 1, 101)
+    pdg = signal.lombscargle(time, y, 2. * np.pi / par)
+    per = par[np.argmax(pdg)]
+  
+    # Initial guess
+    init = np.append([amp, tau, per], cj)
   
   # Perturb it by sigma
   if seed is not None:
@@ -245,10 +251,11 @@ class Worker(object):
   
   '''
   
-  def __init__(self, koi, maxfun, debug):
+  def __init__(self, koi, maxfun, debug, simple):
     self.koi = koi
     self.maxfun = maxfun
     self.debug = debug
+    self.simple = simple
   
   def __call__(self, tag):
     
@@ -270,7 +277,7 @@ class Worker(object):
       return False
   
     # Decorrelate
-    init = InitialGuess(self.koi, q, seed = i)
+    init = InitialGuess(self.koi, q, seed = i, simple = self.simple)
     
     if self.debug:
       print("Initial guess for tag", tag, ":", init)
@@ -287,7 +294,7 @@ class Worker(object):
   
     return True  
   
-def Run(koi = 254.01, quarters = list(range(18)), tag = 0, maxfun = 15000, debug = False, pool = None):
+def Run(koi = 254.01, quarters = list(range(18)), tag = 0, maxfun = 15000, debug = False, pool = None, simple = False):
   '''
   
   '''
@@ -300,7 +307,7 @@ def Run(koi = 254.01, quarters = list(range(18)), tag = 0, maxfun = 15000, debug
   
   # Set up our list of runs  
   tags = [(tag, q) for q in quarters]
-  W = Worker(koi, maxfun, debug)
+  W = Worker(koi, maxfun, debug, simple)
   
   # Run!
   return list(M(W, tags))
