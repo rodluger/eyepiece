@@ -325,10 +325,9 @@ def Plot(koi = 254.01, quarters = list(range(18))):
       if len(files) == 0:
         continue
       
-      lnl = np.zeros_like(files)
+      lnl = np.zeros_like(files, dtype = float)
       for i, f in enumerate(files):
-        foo = np.load(f)['lnlike']
-        lnl[i] = float(foo)
+        lnl[i] = float(np.load(f)['lnlike'])
       
       # DEBUG
       print(q, lnl)
