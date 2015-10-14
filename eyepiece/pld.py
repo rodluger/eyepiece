@@ -180,10 +180,17 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   
   return {'time': time, 'fsum': fsum, 'pmod': pmod, 'gpmu': gpmu, 'yerr': yerr, 'coeffs': coeffs, 'lnlike': lnlike, 'info': info}
 
-def InitialGuess(koi, q, seed = None, sigma = 0.1, simple = False):
+def InitialGuess(koi, q, seed = None, sigma = 0.1):
   '''
   
   '''
+  
+  # Randomizer seed
+  if seed is not None:
+    np.random.seed(seed)
+  
+  # PLD method
+  pld_method = random.choice(['median', 'analytic'])
   
   # Load the data (if necessary)
   global data
@@ -199,11 +206,11 @@ def InitialGuess(koi, q, seed = None, sigma = 0.1, simple = False):
   fsum = np.array([x for chunk in quarter['fsum'] for x in chunk])
   time = np.array([x for chunk in quarter['time'] for x in chunk])
   
-  if simple:
+  if pld_method == 'median':
     # Simple initial guess
     cj = np.ones(npix) * np.median(fsum)
-  else:
-    # The analytical solution, c_j = (A_jm)^-1 * B_m
+  elif pld_method == 'analytic':
+    # The analytic solution, c_j = (A_jm)^-1 * B_m
     A = np.zeros((npix, npix))
     for j in range(npix):
       for m in range(npix):
@@ -234,10 +241,6 @@ def InitialGuess(koi, q, seed = None, sigma = 0.1, simple = False):
   # Initial guess
   init = np.append([amp, tau, per], cj)
   
-  # Perturb it by sigma
-  if seed is not None:
-    np.random.seed(seed)
-  
   # TODO: Make bounds a user option. 
   # TODO: Prevent infinite loops
   bounds = np.array([[1.e-2, 1.e4], [0.1, 1.e4], [1., 1.e4]] + [[-np.inf, np.inf]] * npix)
@@ -251,11 +254,10 @@ class Worker(object):
   
   '''
   
-  def __init__(self, koi, maxfun, debug, simple):
+  def __init__(self, koi, maxfun, debug):
     self.koi = koi
     self.maxfun = maxfun
     self.debug = debug
-    self.simple = simple
   
   def __call__(self, tag):
     
@@ -277,7 +279,7 @@ class Worker(object):
       return False
   
     # Decorrelate
-    init = InitialGuess(self.koi, q, seed = i, simple = self.simple)
+    init = InitialGuess(self.koi, q, seed = i)
     
     if self.debug:
       print("Initial guess for tag", tag, ":", init)
@@ -294,7 +296,7 @@ class Worker(object):
   
     return True  
   
-def Run(koi = 254.01, quarters = list(range(18)), tag = 0, maxfun = 15000, debug = False, pool = None, simple = False):
+def Run(koi = 254.01, quarters = list(range(18)), tag = 0, maxfun = 15000, debug = False, pool = None):
   '''
   
   '''
@@ -307,7 +309,7 @@ def Run(koi = 254.01, quarters = list(range(18)), tag = 0, maxfun = 15000, debug
   
   # Set up our list of runs  
   tags = [(tag, q) for q in quarters]
-  W = Worker(koi, maxfun, debug, simple)
+  W = Worker(koi, maxfun, debug)
   
   # Run!
   return list(M(W, tags))
