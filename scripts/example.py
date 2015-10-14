@@ -23,10 +23,10 @@ try:
   tag = sys.argv[1]
   if tag == '-p':
     Plot(koi = koi, quarters = quarters)
-    quit()
+    sys.exit()
   else:
     tag = int(tag)
-except:
+except IndexError:
   tag = 0
 
 # Run!
