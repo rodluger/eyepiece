@@ -13,6 +13,7 @@ An example of our PLD + GP decorrelation method for KOI 254.01.
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
+import eyepiece
 from .download import GetData
 from eyepiece.config import datadir
 import numpy as np
