@@ -329,6 +329,9 @@ def Plot(koi = 254.01, quarters = list(range(18))):
       for i, f in enumerate(files):
         lnl[i] = float(np.load(f)['lnlike'])
       
+      # DEBUG
+      print(q, lnl)
+      
       # Grab the highest likelihood run
       res = np.load(files[np.argmax(lnl)])
       time = res['time']

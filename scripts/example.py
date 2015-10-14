@@ -21,8 +21,9 @@ pool = InterruptiblePool()
 # Tag number
 try:
   tag = sys.argv[1]
-  if tag == 'p':
+  if tag == '-p':
     Plot(koi = koi, quarters = quarters)
+    quit()
   else:
     tag = int(tag)
 except:
