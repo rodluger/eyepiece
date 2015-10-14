@@ -14,5 +14,4 @@
 
 # Run the job.
 cd /usr/lusers/rodluger/src/eyepiece/scripts
-
 python example.py $TAG &> pld_$TAG.log

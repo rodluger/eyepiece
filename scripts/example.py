@@ -24,6 +24,5 @@ try:
 except:
   tag = 0
 
-# Run and plot
+# Run!
 Run(koi = koi, quarters = quarters, tag = tag, pool = pool)
-Plot(koi = koi, quarters = quarters)
