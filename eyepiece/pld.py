@@ -397,7 +397,11 @@ def Plot(koi = 254.01, quarters = list(range(18))):
     # Quarter number
     ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
     
-    # Best param values
+    # Best coeff values
+    for i, c in enumerate(cc[3:]):
+      ax[0].annotate("\n" * (i + 1) + "%.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8)
+    
+    # Best GP param values
     ax[1].annotate("\n   AMP: %.2f" % cc[q][0], (ltq, yp1), ha='left', va='top', fontsize = 8)
     ax[1].annotate("\n\n   TAU: %.2f" % cc[q][1], (ltq, yp1), ha='left', va='top', fontsize = 8)
     ax[1].annotate("\n\n\n   PER: %.2f" % cc[q][2], (ltq, yp1), ha='left', va='top', fontsize = 8)
