@@ -21,7 +21,7 @@ pool = InterruptiblePool()
 try:
   tag = sys.argv[1]
   if tag == '-p':
-    Plot(koi = koi, quarters = quarters)
+    Plot(koi = koi)
     sys.exit()
   else:
     tag = int(tag)
