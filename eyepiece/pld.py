@@ -95,12 +95,7 @@ def NegLnLike(coeffs, koi, q, debug = False):
       grad_ll = np.zeros_like(coeffs, dtype = float)
       break
 
-  # Print the likelihood and the gradient?
-  #if debug:
-  #  print("Ln-Like: ", ll)
-  #  print("Grad-LL: ", grad_ll)
-
-  return (-ll, -grad_ll)
+  return -ll #(-ll, -grad_ll)
     
 def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   '''
@@ -120,7 +115,7 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   bounds = np.array([[1.e-2, 1.e4], [0.1, 1.e4], [1., 1.e4]] + [[-np.inf, np.inf]] * npix)
   
   # Run the optimizer  
-  res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
+  res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = True,
                       args = [koi, q, debug], bounds = bounds,
                       m = 10, factr = 1.e1, epsilon = 1e-8,
                       pgtol = 1e-05, maxfun = maxfun)
