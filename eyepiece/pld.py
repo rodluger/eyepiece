@@ -33,7 +33,7 @@ import scipy.signal as signal
 __all__ = ['Run', 'Plot']
 data = None
 
-def NegLnLike(coeffs, koi, q, debug = False):
+def NegLnLike(coeffs, koi, q, debug = False, return_grad = False):
   '''
   Returns the negative log-likelihood and its gradient for the model with coefficients ``coeffs``
   
@@ -79,11 +79,15 @@ def NegLnLike(coeffs, koi, q, debug = False):
       # Compute the likelihood
       gp.compute(time, ferr)
       ll += gp.lnlikelihood(fsum - pmod)
-
-      # Compute the gradient of the likelihood with some badass linear algebra   
-      A = fpix.T / fsum
-      grad_ll_pld = -np.dot(A, gp.solver.apply_inverse(fsum - pmod))    
-      grad_ll += np.append(gp.grad_lnlikelihood(fsum - pmod), grad_ll_pld)
+      
+      if return_grad:
+      
+        # BUG: We're not propagating the errors correctly here!
+      
+        # Compute the gradient of the likelihood with some badass linear algebra   
+        A = fpix.T / fsum
+        grad_ll_pld = -np.dot(A, gp.solver.apply_inverse(fsum - pmod))    
+        grad_ll += np.append(gp.grad_lnlikelihood(fsum - pmod), grad_ll_pld)
 
     except Exception as e:
       
@@ -95,7 +99,10 @@ def NegLnLike(coeffs, koi, q, debug = False):
       grad_ll = np.zeros_like(coeffs, dtype = float)
       break
 
-  return -ll #(-ll, -grad_ll)
+  if return_grad:
+    return (-ll, -grad_ll)
+  else:
+    return -ll
     
 def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   '''
@@ -112,7 +119,7 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   npix = quarter['fpix'][0].shape[1]
 
   # Very loose physical bounds
-  bounds = np.array([[1.e-2, 1.e4], [0.1, 1.e4], [1., 1.e4]] + [[-np.inf, np.inf]] * npix)
+  bounds = np.array([[1.e-2, 1.e4], [0.1, 50.], [1., 1.e4]] + [[-np.inf, np.inf]] * npix)
   
   # Run the optimizer  
   res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = True,
@@ -173,7 +180,7 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   gpmu = np.array(all_gpmu)
   yerr = np.array(all_yerr)  
   
-  return {'time': time, 'fsum': fsum, 'pmod': pmod, 'gpmu': gpmu, 'yerr': yerr, 'coeffs': coeffs, 'lnlike': lnlike, 'info': info}
+  return {'time': time, 'fsum': fsum, 'pmod': pmod, 'gpmu': gpmu, 'yerr': yerr, 'coeffs': coeffs, 'lnlike': lnlike, 'info': info, 'init': init}
 
 def InitialGuess(koi, q, seed = None, sigma = 0.1):
   '''
@@ -349,6 +356,7 @@ def Plot(koi = 254.01, quarters = list(range(18))):
       coeffs = res['coeffs']
       lnlike = res['lnlike']
       info = res['info'][()]
+      init = res['init']
     
     except IOError:
       continue
@@ -397,7 +405,7 @@ def Plot(koi = 254.01, quarters = list(range(18))):
     # Best coeff values
     for i, c in enumerate(cc[q][3:]):
       ax[0].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
-    
+      
     # Best GP param values
     ax[1].annotate("\n   AMP: %.2f" % cc[q][0], (ltq, yp1), ha='left', va='top', fontsize = 8)
     ax[1].annotate("\n\n   TAU: %.2f" % cc[q][1], (ltq, yp1), ha='left', va='top', fontsize = 8)
