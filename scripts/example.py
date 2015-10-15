@@ -14,8 +14,7 @@ from eyepiece.interruptible_pool import InterruptiblePool
 import sys
 
 # User
-koi = 254.01
-quarters = list(range(1,18))
+koi = 17.01
 pool = InterruptiblePool()
 
 # Tag number
@@ -30,4 +29,4 @@ except IndexError:
   tag = 0
 
 # Run!
-Run(koi = koi, quarters = quarters, tag = tag, pool = pool)
+Run(koi = koi, tag = tag, pool = pool)
