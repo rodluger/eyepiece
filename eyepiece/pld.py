@@ -46,15 +46,16 @@ def NegLnLike(coeffs, koi, q, debug = False, return_grad = False):
   quarter = data[q]
 
   # Pixel model coefficients
-  d = coeffs[3:]
+  d = coeffs[4:]
   
   # Gaussian process coefficients
-  a = coeffs[0]
-  b = coeffs[1]
-  c = coeffs[2]
+  a1 = coeffs[0]
+  t1 = coeffs[1]
+  a2 = coeffs[2]
+  t2 = coeffs[3]
   
   # Our quasi-periodic kernel
-  gp = george.GP(kernel = (a ** 2) * george.kernels.Matern32Kernel(b ** 2) * george.kernels.CosineKernel(c))
+  gp = george.GP(kernel = (a1 ** 2) * george.kernels.Matern32Kernel(t1 ** 2) + (a2 ** 2) * george.kernels.Matern32Kernel(t2 ** 2))
   
   # The log-likelihood
   ll = 0
@@ -119,7 +120,7 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   npix = quarter['fpix'][0].shape[1]
 
   # Very loose physical bounds
-  bounds = np.array([[1.e-2, 1.e4], [0.1, 50.], [1., 1.e4]] + [[-np.inf, np.inf]] * npix)
+  bounds = np.array([[1.e-2, 1.e4], [0.05, 10.], [1.e-2, 1.e4], [10., 1.e4]] + [[-np.inf, np.inf]] * npix)
   
   # Run the optimizer  
   res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = True,
@@ -134,11 +135,12 @@ def Decorrelate(koi, q, init, maxfun = 15000, debug = False):
   coeffs = res[0]
   lnlike = -res[1]
   info = res[2]       
-  a = res[0][0]
-  b = res[0][1]
-  c = res[0][2]
-  d = res[0][3:]
-  gp = george.GP(kernel = (a ** 2) * george.kernels.Matern32Kernel(b ** 2) * george.kernels.CosineKernel(c))
+  a1 = res[0][0]
+  t1 = res[0][1]
+  a2 = res[0][2]
+  t2 = res[0][3]
+  d = res[0][4:]
+  gp = george.GP(kernel = (a1 ** 2) * george.kernels.Matern32Kernel(t1 ** 2) + (a2 ** 2) * george.kernels.Matern32Kernel(t2 ** 2))
   
   all_time = []
   all_fsum = []
@@ -241,11 +243,11 @@ def InitialGuess(koi, q, seed = None, sigma = 0.1):
   per = par[np.argmax(pdg)]
 
   # Initial guess
-  init = np.append([amp, tau, per], cj)
+  init = np.append([amp, 5., amp, 50.], cj)
   
   # TODO: Make bounds a user option. 
   # TODO: Prevent infinite loops
-  bounds = np.array([[1.e-2, 1.e4], [0.1, 1.e4], [1., 1.e4]] + [[-np.inf, np.inf]] * npix)
+  bounds = np.array([[1.e-2, 1.e4], [0.05, 10.], [1.e-2, 1.e4], [10., 1.e4]] + [[-np.inf, np.inf]] * npix)
   while any([init[i] <= bounds[i][0] or init[i] >= bounds[i][1] for i in range(len(init))]):
     init = init * (1 + sigma * np.random.randn(len(init)))
     
@@ -403,13 +405,14 @@ def Plot(koi = 254.01, quarters = list(range(18))):
     ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
     
     # Best coeff values
-    for i, c in enumerate(cc[q][3:]):
+    for i, c in enumerate(cc[q][4:]):
       ax[0].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
       
     # Best GP param values
     ax[1].annotate("\n   AMP: %.2f" % cc[q][0], (ltq, yp1), ha='left', va='top', fontsize = 8)
     ax[1].annotate("\n\n   TAU: %.2f" % cc[q][1], (ltq, yp1), ha='left', va='top', fontsize = 8)
-    ax[1].annotate("\n\n\n   PER: %.2f" % cc[q][2], (ltq, yp1), ha='left', va='top', fontsize = 8)
+    ax[1].annotate("\n\n\n   AMP: %.2f" % cc[q][2], (ltq, yp1), ha='left', va='top', fontsize = 8)
+    ax[1].annotate("\n\n\n\n   TAU: %.2f" % cc[q][3], (ltq, yp1), ha='left', va='top', fontsize = 8)
     
     # Optimization info
     if wf[q] == "":
