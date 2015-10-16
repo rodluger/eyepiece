@@ -119,6 +119,11 @@ def Decorrelate(koi, q, kernel, init, bounds, maxfun = 15000, pld = False):
   all_pmod = []
   all_gpmu = []
   all_ferr = []
+  all_yerr = []
+  
+  nkpars = len(kernel.pars)
+  kernel.pars = coeffs[:nkpars]
+  gp = george.GP(kernel)
   
   for time, fsum, fpix, perr in zip(quarter['time'], quarter['fsum'], quarter['fpix'], quarter['perr']):
 
@@ -191,13 +196,14 @@ class Worker(object):
       init = np.append(self.kinit, [np.median(quarter['fsum'][0])] * npix)
       bounds = np.concatenate([self.kbounds, [[-np.inf, np.inf]] * npix])
     else:
-      init = self.kinit
-      bounds = self.kbounds
+      init = np.array(self.kinit)
+      bounds = np.array(self.kbounds)
   
     # Perturb initial conditions by sigma
     np.random.seed(tag)
-    foo = bounds[:][0]
-    while np.any(foo <= bounds[:][0]) or np.any(foo >= bounds[:][1]):
+    foo = bounds[:,0]
+    
+    while np.any(foo <= bounds[:,0]) or np.any(foo >= bounds[:,1]):
       foo = init * (1 + self.sigma * np.random.randn(len(init)))
     init = foo
     
