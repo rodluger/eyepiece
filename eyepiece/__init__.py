@@ -8,27 +8,11 @@ import matplotlib.pyplot as pl
 from .inspect import *
 from .transits import *
 from .download import *
-import eyepiece.pld
 
 # Info
 __version__ = "0.0.1"
 __author__ = "Rodrigo Luger (rodluger@uw.edu)"
 __copyright__ = "Copyright 2015 Rodrigo Luger"
-
-# Disable MPL keyboard shortcuts
-pl.rcParams['toolbar'] = 'None'
-pl.rcParams['keymap.all_axes'] = ''
-pl.rcParams['keymap.back'] = ''
-pl.rcParams['keymap.forward'] = ''
-pl.rcParams['keymap.fullscreen'] = ''
-pl.rcParams['keymap.grid'] = ''
-pl.rcParams['keymap.home'] = ''
-pl.rcParams['keymap.pan'] = ''
-pl.rcParams['keymap.quit'] = ''
-pl.rcParams['keymap.save'] = ''
-pl.rcParams['keymap.xscale'] = ''
-pl.rcParams['keymap.yscale'] = ''
-pl.rcParams['keymap.zoom'] = ''
 
 # Kepler cadences
 KEPLONGEXP =              (1765.5/86400.)

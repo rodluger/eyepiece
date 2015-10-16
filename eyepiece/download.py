@@ -8,7 +8,7 @@ download.py
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
-import eyepiece.config as config
+from .config import datadir, ttvpath
 from .utils import GitHash
 import os
 import kplr
@@ -57,7 +57,7 @@ def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = T
   if ttvs:
     # Get transit times (courtesy Ethan Kruse)
     try:
-      with open(os.path.join(config.ttvpath, "KOI%.2f.ttv" % koi), "r") as f:
+      with open(os.path.join(ttvpath, "KOI%.2f.ttv" % koi), "r") as f:
         lines = [l for l in f.readlines() if ('#' not in l) and (len(l) > 1)]
         tcads = np.array([int(l.split('\t')[1]) for l in lines], dtype = 'int32')
     except IOError:
@@ -88,7 +88,7 @@ def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = T
 
 def GetTPFData(koi, long_cadence = True, clobber = False, 
                bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 2.0,
-               aperture = 'optimal', quarters = range(18), datadir = config.datadir,
+               aperture = 'optimal', quarters = range(18), datadir = datadir,
                ttvs = False, quiet = False):
   '''
   
@@ -167,7 +167,7 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
     
   return data, tN, per, tdur
 
-def GetData(koi, data_type = 'proc', blind = False, datadir = config.datadir):
+def GetData(koi, data_type = 'proc', blind = False, datadir = datadir):
   '''
   
   '''
@@ -179,7 +179,7 @@ def GetData(koi, data_type = 'proc', blind = False, datadir = config.datadir):
 
   return data
 
-def GetInfo(koi, datadir = config.datadir):
+def GetInfo(koi, datadir = datadir):
   '''
   
   '''

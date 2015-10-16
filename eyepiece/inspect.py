@@ -16,7 +16,7 @@ from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
 from .utils import Bold, GitHash
 from .download import GetTPFData, GetData, EmptyData
-import eyepiece.config as config
+from .config import datadir, ttvpath
 import matplotlib.pyplot as pl
 from matplotlib.widgets import RectangleSelector, Cursor
 import numpy as np
@@ -30,6 +30,8 @@ if sys.version_info >= (3,0):
 	prompt = input
 else:
   prompt = raw_input
+  
+rcParams = dict(pl.rcParams)
 
 # Keyboard shortcuts
 ZOOM = 'z'
@@ -48,6 +50,35 @@ NEXT = 'right'
 SUBT = 'alt'
 TPAD = 'w'
 ERRB = 'e'
+
+def DisableShortcuts():
+  '''
+  Disable MPL keyboard shortcuts and the plot toolbar.
+  Returns a copy of the original pl.rcParams
+  
+  '''
+    
+  pl.rcParams['toolbar'] = 'None'
+  pl.rcParams['keymap.all_axes'] = ''
+  pl.rcParams['keymap.back'] = ''
+  pl.rcParams['keymap.forward'] = ''
+  pl.rcParams['keymap.fullscreen'] = ''
+  pl.rcParams['keymap.grid'] = ''
+  pl.rcParams['keymap.home'] = ''
+  pl.rcParams['keymap.pan'] = ''
+  pl.rcParams['keymap.quit'] = ''
+  pl.rcParams['keymap.save'] = ''
+  pl.rcParams['keymap.xscale'] = ''
+  pl.rcParams['keymap.yscale'] = ''
+  pl.rcParams['keymap.zoom'] = ''
+
+def EnableShortcuts():
+  '''
+  Resets pl.rcParams to its original state.
+  
+  '''
+  print("Re-enabling shortcuts...")
+  pl.rcParams.update(rcParams)
 
 def ShowHelp():
   '''
@@ -143,7 +174,7 @@ class Selector(object):
   '''
   
   def __init__(self, fig, ax, koi, quarter, data, tN, cptbkg, cpttrn, split_cads = [], 
-               cad_tol = 10, min_sz = 300, datadir = config.datadir):
+               cad_tol = 10, min_sz = 300, datadir = datadir):
     self.fig = fig
     self.ax = ax    
     self.cad = data['cad']
@@ -639,12 +670,14 @@ class Selector(object):
 def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], padbkg = 2.0,
             padtrn = 5.0, aperture = 'optimal', quarters = range(18), min_sz = 300,
-            dt_tol = 0.5, split_cads = [4472, 6717], datadir = config.datadir, ttvs = False,
+            dt_tol = 0.5, split_cads = [4472, 6717], datadir = datadir, ttvs = False,
             quiet = False, blind = False):
       '''
   
       '''
-
+      
+      orig = DisableShortcuts()
+      
       # Grab the data
       if not quiet: print("Retrieving target data...")
       data, tN, per, tdur = GetTPFData(koi, long_cadence = long_cadence, 
@@ -759,8 +792,10 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             # Re-plot
             continue
           elif sel.info == "quit":
+            EnableShortcuts()
             return
           else:
+            EnableShortcuts()
             return
           
           jumps = sel.jumps
@@ -837,4 +872,5 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
       np.savez_compressed(os.path.join(datadir, str(koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
       np.savez_compressed(os.path.join(datadir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
 
+      EnableShortcuts()
       return
