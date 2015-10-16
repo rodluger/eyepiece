@@ -166,9 +166,9 @@ class Worker(object):
   def __init__(self, koi, kernel, kinit, sigma, kbounds, maxfun, pld):
     self.koi = koi
     self.kernel = kernel
-    self.init = init
+    self.kinit = kinit
     self.sigma = sigma
-    self.bounds = bounds
+    self.kbounds = kbounds
     self.maxfun = maxfun
     self.pld = pld
   
@@ -186,13 +186,13 @@ class Worker(object):
     if quarter['time'] == []:
       return False
   
-    if pld:
+    if self.pld:
       npix = quarter['fpix'][0].shape[1]
       init = np.append(self.kinit, [np.median(quarter['fsum'][0])] * npix)
       bounds = np.concatenate([self.kbounds, [[-np.inf, np.inf]] * npix])
     else:
       init = self.kinit
-      bounds = self.bounds
+      bounds = self.kbounds
   
     # Perturb initial conditions by sigma
     np.random.seed(tag)
@@ -211,9 +211,9 @@ class Worker(object):
   
     return True  
   
-def Run(koi = 254.01, kernel = 1. * george.kernels.MaternKernel(1.), 
+def Run(koi = 254.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
         quarters = list(range(18)), tag = 0, maxfun = 15000, pld = False, 
-        sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8]], [1.e-4, 1.e8]], pool = None):
+        sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], pool = None):
   '''
   
   '''

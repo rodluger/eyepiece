@@ -9,7 +9,7 @@ decorr.py
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
 import matplotlib; matplotlib.use('Agg')
-from eyepiece.pld import Run, Plot
+from eyepiece.detrend import Run, Plot
 from eyepiece.interruptible_pool import InterruptiblePool
 import sys
 
