@@ -330,8 +330,8 @@ def Plot(koi = 254.01, quarters = list(range(18))):
     # Best GP param values
     ax[1].annotate("\n   AMP2: %.2f" % cc[q][0], (ltq, yp1), ha='left', va='top', fontsize = 8)
     ax[1].annotate("\n\n   TAU2: %.2f" % cc[q][1], (ltq, yp1), ha='left', va='top', fontsize = 8)
-    ax[1].annotate("\n\n\n   AMP2: %.2f" % cc[q][2], (ltq, yp1), ha='left', va='top', fontsize = 8)
-    ax[1].annotate("\n\n\n\n   TAU2: %.2f" % cc[q][3], (ltq, yp1), ha='left', va='top', fontsize = 8)
+    #ax[1].annotate("\n\n\n   AMP2: %.2f" % cc[q][2], (ltq, yp1), ha='left', va='top', fontsize = 8)
+    #ax[1].annotate("\n\n\n\n   TAU2: %.2f" % cc[q][3], (ltq, yp1), ha='left', va='top', fontsize = 8)
     
     # Optimization info
     if wf[q] == "":
