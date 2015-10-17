@@ -8,7 +8,7 @@
 #
 
 python -c "import eyepiece; eyepiece.Inspect(koi = float(${1-17.01}), blind = bool(${3-1}))"
-for i in {1..${2-10}}
+for i in $(seq 1 ${2-10})
 do
     qsub -vTAG=$i,KOI=${1-17.01} detrend.pbs
 done
