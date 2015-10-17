@@ -77,7 +77,6 @@ def EnableShortcuts():
   Resets pl.rcParams to its original state.
   
   '''
-  print("Re-enabling shortcuts...")
   pl.rcParams.update(rcParams)
 
 def ShowHelp():
