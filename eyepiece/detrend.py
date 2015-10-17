@@ -136,7 +136,7 @@ def Decorrelate(koi, q, kernel, init, bounds, maxfun = 15000, pld = False):
       T = np.ones_like(fsum)
       ferr = np.zeros_like(fsum)
       for k, _ in enumerate(ferr):
-        ferr[k] = np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2)
+        ferr[k] = np.sqrt(np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2))
     
     else:
       

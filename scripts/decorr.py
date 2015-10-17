@@ -18,15 +18,15 @@ koi = 17.01
 pool = InterruptiblePool()
 
 # Tag number
-#try:
-tag = sys.argv[1]
-if tag == '-p':
-  Plot(koi = koi)
-  sys.exit()
-else:
-  tag = int(tag)
-# except IndexError:
-tag = 0
+try:
+  tag = sys.argv[1]
+  if tag == '-p':
+    Plot(koi = koi)
+    sys.exit()
+  else:
+    tag = int(tag)
+except IndexError:
+  tag = 0
 
 # Run!
 Run(koi = koi, tag = tag, pool = pool)
