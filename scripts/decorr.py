@@ -30,4 +30,5 @@ except IndexError:
   tag = 0
 
 # Run!
-Run(koi = koi, tag = tag, pool = pool, pld = pld)
+Run(koi = koi, tag = tag, pool = pool, pld = True, kernel = None,
+    kinit = [10., 10., 10.], kbounds = [[-1.e10, 1.e10], [-1.e10, 1.e10], [-1.e10, 1.e10]])

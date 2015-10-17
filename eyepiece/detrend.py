@@ -34,10 +34,17 @@ def NegLnLike(coeffs, koi, q, kernel, pld = False):
     data = GetData(koi, data_type = 'bkg')
   quarter = data[q]
 
-  # Our quasi-periodic kernel
-  nkpars = len(kernel.pars)
-  kernel.pars = coeffs[:nkpars]
-  gp = george.GP(kernel)
+  
+  if kernel is not None:
+    # Our quasi-periodic kernel
+    nkpars = len(kernel.pars)
+    kernel.pars = coeffs[:nkpars]
+    gp = george.GP(kernel)
+  
+  else:
+    # We're just going to fit a quadratic
+    nkpars = 3
+    a, b, c = coeffs[:nkpars]
   
   # The log-likelihood
   ll = 0
@@ -58,23 +65,35 @@ def NegLnLike(coeffs, koi, q, kernel, pld = False):
       for k, _ in enumerate(ferr):
         ferr[k] = np.sqrt(np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2))
     
+      if kernel is None:
+        pmod += a * time ** 2 + b * time + c
+    
     else:
       
       ferr = np.sqrt(np.sum(perr ** 2, axis = 1))
-      pmod = np.ones_like(fsum) * np.median(fsum)
+      
+      if kernel is not None:
+        pmod = np.ones_like(fsum) * np.median(fsum)
+      else:
+        pmod = a * time ** 2 + b * time + c
     
     # Evaluate the model
     try:      
 
-      # Compute the likelihood
-      gp.compute(time, ferr)
-      ll += gp.lnlikelihood(fsum - pmod)
+      if kernel is not None:
+        # Compute the likelihood
+        gp.compute(time, ferr)
+        ll += gp.lnlikelihood(fsum - pmod)
       
-      # If we're only doing GP, compute the gradient
-      # Note that george return d (ln Like) / d (ln X), so we need to divide by X
-      if not pld:
-        grad_ll += gp.grad_lnlikelihood(fsum - pmod) / kernel.pars
-
+        # If we're only doing GP, compute the gradient
+        # Note that george return d (ln Like) / d (ln X), so we need to divide by X
+        if not pld:
+          grad_ll += gp.grad_lnlikelihood(fsum - pmod) / kernel.pars
+      
+      else:
+      
+        ll += -0.5 * np.sum( (fsum - pmod) ** 2 / (ferr) ** 2 )
+      
     except Exception as e:
 
       # Return a low likelihood
@@ -82,10 +101,7 @@ def NegLnLike(coeffs, koi, q, kernel, pld = False):
       grad_ll = np.zeros_like(coeffs, dtype = float)
       break
 
-  # DEBUG
-  print(ll)
-
-  if not pld:
+  if not pld and kernel is not None:
     return (-ll, -grad_ll)
   else:
     return -ll
@@ -118,9 +134,16 @@ def Decorrelate(koi, q, kernel, init, bounds, maxfun = 15000, pld = False):
   all_ferr = []
   all_yerr = []
   
-  nkpars = len(kernel.pars)
-  kernel.pars = coeffs[:nkpars]
-  gp = george.GP(kernel)
+  if kernel is not None:
+    # Our quasi-periodic kernel
+    nkpars = len(kernel.pars)
+    kernel.pars = coeffs[:nkpars]
+    gp = george.GP(kernel)
+  
+  else:
+    # We're just going to fit a quadratic
+    nkpars = 3
+    a, b, c = coeffs[:nkpars]
   
   for time, fsum, fpix, perr in zip(quarter['time'], quarter['fsum'], quarter['fpix'], quarter['perr']):
 
@@ -135,14 +158,25 @@ def Decorrelate(koi, q, kernel, init, bounds, maxfun = 15000, pld = False):
       for k, _ in enumerate(ferr):
         ferr[k] = np.sqrt(np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2))
     
+      if kernel is None:
+        pmod += a * time ** 2 + b * time + c
+    
     else:
       
       ferr = np.sqrt(np.sum(perr ** 2, axis = 1))
-      pmod = np.ones_like(fsum) * np.median(fsum)
+      
+      if kernel is not None:
+        pmod = np.ones_like(fsum) * np.median(fsum)
+      else:
+        pmod = a * time ** 2 + b * time + c
     
-    gp.compute(time, ferr)
-    mu, cov = gp.predict(fsum - pmod, time)
-    yerr = np.sqrt(np.diag(cov))
+    if kernel is not None:
+      gp.compute(time, ferr)
+      mu, cov = gp.predict(fsum - pmod, time)
+      yerr = np.sqrt(np.diag(cov))
+    else:
+      mu = fsum - pmod
+      yerr = ferr
     
     all_time.extend(time)
     all_fsum.extend(fsum)
