@@ -175,7 +175,7 @@ def Decorrelate(koi, q, kernel, init, bounds, maxfun = 15000, pld = False):
       mu, cov = gp.predict(fsum - pmod, time)
       yerr = np.sqrt(np.diag(cov))
     else:
-      mu = fsum - pmod
+      mu = np.zeros_like(time)
       yerr = ferr
     
     all_time.extend(time)
@@ -268,10 +268,16 @@ def Run(koi = 254.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
   # Run!
   return list(M(W, tags))
 
-def Plot(koi = 254.01, quarters = list(range(18))):
+def Plot(koi = 254.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
   '''
   
   '''
+  
+  #
+  if kernel is not None:
+    nkpars = len(kernel.pars)
+  else:
+    nkpars = 3
   
   # Plot the decorrelated data
   fig, ax = pl.subplots(3, 1, figsize = (48, 16)) 
@@ -355,15 +361,13 @@ def Plot(koi = 254.01, quarters = list(range(18))):
     ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
     
     # Best coeff values
-    for i, c in enumerate(cc[q][4:]):
+    for i, c in enumerate(cc[q][nkpars:]):
       ax[0].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
-      
-    # Best GP param values
-    ax[1].annotate("\n   AMP2: %.2f" % cc[q][0], (ltq, yp1), ha='left', va='top', fontsize = 8)
-    ax[1].annotate("\n\n   TAU2: %.2f" % cc[q][1], (ltq, yp1), ha='left', va='top', fontsize = 8)
-    #ax[1].annotate("\n\n\n   AMP2: %.2f" % cc[q][2], (ltq, yp1), ha='left', va='top', fontsize = 8)
-    #ax[1].annotate("\n\n\n\n   TAU2: %.2f" % cc[q][3], (ltq, yp1), ha='left', va='top', fontsize = 8)
     
+    # Best GP param values
+    for i, c in enumerate(cc[q][:nkpars]):
+      ax[1].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp1), ha='left', va='top', fontsize = 8)
+      
     # Optimization info
     if wf[q] == "":
       ax[2].annotate("\n   SUCCESS", (ltq, yp2), ha='left', va='top', fontsize = 8, color = 'b')
