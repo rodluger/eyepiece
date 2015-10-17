@@ -227,7 +227,7 @@ class Worker(object):
   
     return True  
   
-def Detrend(koi = 254.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
+def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
             quarters = list(range(18)), tag = 0, maxfun = 15000, pld = True, 
             sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], 
             pool = InterruptiblePool()):
@@ -248,7 +248,7 @@ def Detrend(koi = 254.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
       # Run and save
       return list(M(W, tags))
 
-def PlotDetrended(koi = 254.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
+def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
   '''
   
   '''
