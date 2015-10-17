@@ -11,16 +11,17 @@ from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
 from .download import GetData
 from .config import datadir
+from .interruptible_pool import InterruptiblePool
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 import matplotlib.pyplot as pl
 import george
 import os
 
-__all__ = ['Run', 'Plot']
+__all__ = ['Detrend', 'PlotDetrended']
 data = None
 
-def NegLnLike(coeffs, koi, q, kernel, pld = False):
+def NegLnLike(coeffs, koi, q, kernel, pld = True):
   '''
   Returns the negative log-likelihood for the model with coefficients ``coeffs``.
   If PLD is False, also returns the gradient of the log-likelihood with respect
@@ -34,17 +35,10 @@ def NegLnLike(coeffs, koi, q, kernel, pld = False):
     data = GetData(koi, data_type = 'bkg')
   quarter = data[q]
 
-  
-  if kernel is not None:
-    # Our quasi-periodic kernel
-    nkpars = len(kernel.pars)
-    kernel.pars = coeffs[:nkpars]
-    gp = george.GP(kernel)
-  
-  else:
-    # We're just going to fit a quadratic
-    nkpars = 3
-    a, b, c = coeffs[:nkpars]
+  # Our quasi-periodic kernel
+  nkpars = len(kernel.pars)
+  kernel.pars = coeffs[:nkpars]
+  gp = george.GP(kernel)
   
   # The log-likelihood
   ll = 0
@@ -65,34 +59,25 @@ def NegLnLike(coeffs, koi, q, kernel, pld = False):
       for k, _ in enumerate(ferr):
         ferr[k] = np.sqrt(np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2))
     
-      if kernel is None:
-        pmod += a * time ** 2 + b * time + c
-    
     else:
       
+      # The error is just the sum in quadrature of the pixel errors
       ferr = np.sqrt(np.sum(perr ** 2, axis = 1))
-      
-      if kernel is not None:
-        pmod = np.ones_like(fsum) * np.median(fsum)
-      else:
-        pmod = a * time ** 2 + b * time + c
+
+      # Our "pixel model" is just the median flux
+      pmod = np.ones_like(fsum) * np.median(fsum)
     
     # Evaluate the model
     try:      
 
-      if kernel is not None:
-        # Compute the likelihood
-        gp.compute(time, ferr)
-        ll += gp.lnlikelihood(fsum - pmod)
-      
-        # If we're only doing GP, compute the gradient
-        # Note that george return d (ln Like) / d (ln X), so we need to divide by X
-        if not pld:
-          grad_ll += gp.grad_lnlikelihood(fsum - pmod) / kernel.pars
-      
-      else:
-      
-        ll += -0.5 * np.sum( (fsum - pmod) ** 2 / (ferr) ** 2 )
+      # Compute the likelihood
+      gp.compute(time, ferr)
+      ll += gp.lnlikelihood(fsum - pmod)
+    
+      # If we're only doing GP, compute the gradient
+      # Note that george return d (ln Like) / d (ln X), so we need to divide by X
+      if not pld:
+        grad_ll += gp.grad_lnlikelihood(fsum - pmod) / kernel.pars
       
     except Exception as e:
 
@@ -101,12 +86,12 @@ def NegLnLike(coeffs, koi, q, kernel, pld = False):
       grad_ll = np.zeros_like(coeffs, dtype = float)
       break
 
-  if not pld and kernel is not None:
+  if not pld:
     return (-ll, -grad_ll)
   else:
     return -ll
     
-def Decorrelate(koi, q, kernel, init, bounds, maxfun = 15000, pld = False):
+def QuarterDetrend(koi, q, kernel, init, bounds, maxfun = 15000, pld = True):
   '''
   
   '''
@@ -157,26 +142,19 @@ def Decorrelate(koi, q, kernel, init, bounds, maxfun = 15000, pld = False):
       ferr = np.zeros_like(fsum)
       for k, _ in enumerate(ferr):
         ferr[k] = np.sqrt(np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2))
-    
-      if kernel is None:
-        pmod += a * time ** 2 + b * time + c
-    
+
     else:
       
+      # The error is just the sum in quadrature of the pixel errors
       ferr = np.sqrt(np.sum(perr ** 2, axis = 1))
-      
-      if kernel is not None:
-        pmod = np.ones_like(fsum) * np.median(fsum)
-      else:
-        pmod = a * time ** 2 + b * time + c
-    
-    if kernel is not None:
-      gp.compute(time, ferr)
-      mu, cov = gp.predict(fsum - pmod, time)
-      yerr = np.sqrt(np.diag(cov))
-    else:
-      mu = np.zeros_like(time)
-      yerr = ferr
+
+      # Our "pixel model" is just the median flux
+      pmod = np.ones_like(fsum) * np.median(fsum)
+
+    # Model prediction (for plotting)
+    gp.compute(time, ferr)
+    mu, cov = gp.predict(fsum - pmod, time)
+    yerr = np.sqrt(np.diag(cov))
     
     all_time.extend(time)
     all_fsum.extend(fsum)
@@ -220,6 +198,8 @@ class Worker(object):
     quarter = data[q]
   
     if quarter['time'] == []:
+    
+      # No data this quarter
       return False
   
     if self.pld:
@@ -233,13 +213,12 @@ class Worker(object):
     # Perturb initial conditions by sigma
     np.random.seed(tag)
     foo = bounds[:,0]
-    
     while np.any(foo <= bounds[:,0]) or np.any(foo >= bounds[:,1]):
       foo = init * (1 + self.sigma * np.random.randn(len(init)))
     init = foo
     
-    # Decorrelate
-    res = Decorrelate(self.koi, q, self.kernel, init, bounds, maxfun = self.maxfun, pld = self.pld)
+    # Detrend
+    res = QuarterDetrend(self.koi, q, self.kernel, init, bounds, maxfun = self.maxfun, pld = self.pld)
   
     # Save
     if not os.path.exists(os.path.join(datadir, str(self.koi), 'pld')):
@@ -248,27 +227,28 @@ class Worker(object):
   
     return True  
   
-def Run(koi = 254.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
-        quarters = list(range(18)), tag = 0, maxfun = 15000, pld = False, 
-        sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], pool = None):
-  '''
-  
-  '''
-  
-  # Multiprocess?
-  if pool is None:
-    M = map
-  else:
-    M = pool.map
-  
-  # Set up our list of runs  
-  tags = [(tag, q) for q in quarters]
-  W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
-  
-  # Run!
-  return list(M(W, tags))
+def Detrend(koi = 254.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
+            quarters = list(range(18)), tag = 0, maxfun = 15000, pld = True, 
+            sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], 
+            pool = InterruptiblePool()):
+      '''
 
-def Plot(koi = 254.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
+      '''
+
+      # Multiprocess?
+      if pool is None:
+        M = map
+      else:
+        M = pool.map
+
+      # Set up our list of runs  
+      tags = [(tag, q) for q in quarters]
+      W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
+
+      # Run and save
+      return list(M(W, tags))
+
+def PlotDetrended(koi = 254.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
   '''
   
   '''
@@ -361,12 +341,14 @@ def Plot(koi = 254.01, quarters = list(range(18)), kernel = 1. * george.kernels.
     ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
     
     # Best coeff values
+    ax[0].annotate("\n   PLD COEFFS", (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
     for i, c in enumerate(cc[q][nkpars:]):
-      ax[0].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
+      ax[0].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
     
     # Best GP param values
+    ax[0].annotate("\n   GP PARAMS", (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
     for i, c in enumerate(cc[q][:nkpars]):
-      ax[1].annotate("\n" * (i + 1) + "   %.1f" % c, (ltq, yp1), ha='left', va='top', fontsize = 8)
+      ax[1].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp1), ha='left', va='top', fontsize = 8)
       
     # Optimization info
     if wf[q] == "":
@@ -379,5 +361,8 @@ def Plot(koi = 254.01, quarters = list(range(18)), kernel = 1. * george.kernels.
     for axis in ax:
       axis.axvline(lt[q], color='k', ls = '--')
     ltq = lt[q]
-    
+  
+  ax[0].set_title('Raw Background Flux', fontsize = 16) 
+  ax[1].set_title('PLD-Decorrelated Flux', fontsize = 16)  
+  ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 16)   
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')

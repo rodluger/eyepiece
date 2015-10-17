@@ -1,0 +1,18 @@
+#!/bin/sh
+#PBS -l nodes=1:ppn=12,feature=12core,mem=40gb,walltime=10:00:00
+#PBS -o /usr/lusers/rodluger/src/eyepiece/scripts/tmp_o.txt
+#PBS -e /usr/lusers/rodluger/src/eyepiece/scripts/tmp_e.txt
+#PBS -M rodluger@uw.edu
+#PBS -m abe
+#
+# This is a PBS script for running detrending on a given KOI.
+# Please supply a koi and a tag when running this script:
+#
+# >>> qsub -vKOI=17.01,TAG=0 detrend.pbs
+#
+#
+
+# Run the job.
+mkdir -p /usr/lusers/rodluger/src/templar/output/$KOI/pld
+cd /usr/lusers/rodluger/src/templar/output/$KOI/pld
+python -c "import eyepiece; eyepiece.Detrend(koi = float($KOI), tag = int($TAG))" &> pld_$TAG.log
