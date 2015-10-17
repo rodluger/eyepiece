@@ -56,7 +56,7 @@ def NegLnLike(coeffs, koi, q, kernel, pld = False):
       T = np.ones_like(fsum)
       ferr = np.zeros_like(fsum)
       for k, _ in enumerate(ferr):
-        ferr[k] = np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2)
+        ferr[k] = np.sqrt(np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2))
     
     else:
       
@@ -76,10 +76,7 @@ def NegLnLike(coeffs, koi, q, kernel, pld = False):
         grad_ll += gp.grad_lnlikelihood(fsum - pmod) / kernel.pars
 
     except Exception as e:
-      
-      # DEBUG
-      print(str(e))
-      
+
       # Return a low likelihood
       ll = -1.e10
       grad_ll = np.zeros_like(coeffs, dtype = float)
@@ -106,7 +103,7 @@ def Decorrelate(koi, q, kernel, init, bounds, maxfun = 15000, pld = False):
   
   # Run the optimizer. We compute the gradient numerically if pld is True.
   res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = pld,
-                      args = [koi, q, kernel, pld], bounds = bounds,
+                      args = (koi, q, kernel, pld), bounds = bounds,
                       m = 10, factr = 1.e1, epsilon = 1e-8,
                       pgtol = 1e-05, maxfun = maxfun)
   
