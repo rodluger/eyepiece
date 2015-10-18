@@ -243,7 +243,7 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
     M = pool.map
 
   # Set up our list of runs  
-  tags = itertools.product(np.atleast_1d(tags), quarters)
+  tags = list(itertools.product(np.atleast_1d(tags), quarters))
   W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
   
   # Run and save
