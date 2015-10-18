@@ -1,7 +1,7 @@
 #!/bin/sh
 #PBS -l nodes=5:ppn=12,feature=12core,mem=40gb,walltime=2:00:00
-#PBS -o /usr/lusers/rodluger/src/eyepiece/scripts/tmp_o.txt
-#PBS -e /usr/lusers/rodluger/src/eyepiece/scripts/tmp_e.txt
+#PBS -o /usr/lusers/rodluger/tmp/tmp_o.txt
+#PBS -e /usr/lusers/rodluger/tmp/tmp_e.txt
 #PBS -M rodluger@uw.edu
 #PBS -m abe
 #
