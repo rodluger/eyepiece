@@ -17,6 +17,7 @@ from scipy.optimize import fmin_l_bfgs_b
 import matplotlib.pyplot as pl
 import george
 import os
+import itertools
 
 __all__ = ['Detrend', 'PlotDetrended']
 data = None
@@ -200,7 +201,7 @@ class Worker(object):
     if quarter['time'] == []:
     
       # No data this quarter
-      return False
+      return (tag, False)
   
     if self.pld:
       npix = quarter['fpix'][0].shape[1]
@@ -225,10 +226,10 @@ class Worker(object):
       os.makedirs(os.path.join(datadir, str(self.koi), 'pld'))
     np.savez(os.path.join(datadir, str(self.koi), 'pld', '%02d.%02d.npz' % (q, i)), **res)
   
-    return True  
+    return (tag, True) 
   
 def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
-            quarters = list(range(18)), tag = 0, maxfun = 15000, pld = True, 
+            quarters = list(range(18)), tags = 0, maxfun = 15000, pld = True, 
             sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], 
             pool = InterruptiblePool(), quiet = False):
   '''
@@ -242,15 +243,15 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
     M = pool.map
 
   # Set up our list of runs  
-  tags = [(tag, q) for q in quarters]
+  tags = itertools.product(np.atleast_1d(tags), quarters)
   W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
   
   # Run and save
-  res = list(M(W, tags))
+  for res in M(W, tags):
+    if not quiet: 
+      print("Detrending complete for tag %d." % res[0])
   
-  if not quiet: print("Detrending complete for tag %d." % tag)
-  
-  return res
+  return
 
 def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
   '''

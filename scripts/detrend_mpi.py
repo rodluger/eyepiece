@@ -11,6 +11,6 @@ if not pool.is_master():
   pool.wait()
   sys.exit(0)
 
-Detrend(koi = 17.01, pool = pool)
+Detrend(koi = 17.01, pool = pool, tags = range(10))
 
 pool.close()
