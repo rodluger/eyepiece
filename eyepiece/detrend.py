@@ -21,7 +21,7 @@ import os
 __all__ = ['Detrend', 'PlotDetrended']
 data = None
 
-def NegLnLike(coeffs, koi, q, kernel, pld = True):
+def NegLnLike(coeffs, koi, q, kernel, pld):
   '''
   Returns the negative log-likelihood for the model with coefficients ``coeffs``.
   If PLD is False, also returns the gradient of the log-likelihood with respect
@@ -91,7 +91,7 @@ def NegLnLike(coeffs, koi, q, kernel, pld = True):
   else:
     return -ll
     
-def QuarterDetrend(koi, q, kernel, init, bounds, maxfun = 15000, pld = True):
+def QuarterDetrend(koi, q, kernel, init, bounds, maxfun, pld):
   '''
   
   '''
@@ -218,7 +218,7 @@ class Worker(object):
     init = foo
     
     # Detrend
-    res = QuarterDetrend(self.koi, q, self.kernel, init, bounds, maxfun = self.maxfun, pld = self.pld)
+    res = QuarterDetrend(self.koi, q, self.kernel, init, bounds, self.maxfun, self.pld)
   
     # Save
     if not os.path.exists(os.path.join(datadir, str(self.koi), 'pld')):
@@ -230,7 +230,7 @@ class Worker(object):
 def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
             quarters = list(range(18)), tag = 0, maxfun = 15000, pld = True, 
             sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], 
-            pool = InterruptiblePool()):
+            pool = InterruptiblePool(), quiet = False):
   '''
 
   '''
@@ -245,7 +245,7 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
   tags = [(tag, q) for q in quarters]
   W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
   
-  print("Detrending complete for tag %d." % tag)
+  if not quiet: print("Detrending complete for tag %d." % tag)
   
   # Run and save
   return list(M(W, tags))

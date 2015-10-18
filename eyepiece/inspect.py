@@ -24,7 +24,7 @@ import os
 
 __all__ = ["Inspect"]
 
-# Python 2/3 compatibility. TODO: Verify
+# Python 2/3 compatibility.
 import sys
 if sys.version_info >= (3,0):
 	prompt = input
@@ -668,14 +668,12 @@ class Selector(object):
   
 def Inspect(koi = 17.01, long_cadence = True, clobber = False,
             bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], padbkg = 2.0,
-            padtrn = 5.0, aperture = 'optimal', quarters = range(18), min_sz = 300,
+            padtrn = 5.0, aperture = 'optimal', quarters = list(range(18)), min_sz = 300,
             dt_tol = 0.5, split_cads = [4472, 6717], datadir = datadir, ttvs = False,
             quiet = False, blind = False):
       '''
   
       '''
-      
-      orig = DisableShortcuts()
       
       # Grab the data
       if not quiet: print("Retrieving target data...")
@@ -718,6 +716,9 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           cpttrn = tdur * padtrn / tpc
         
         if not blind:
+        
+          # Disable toolbar and shortcuts
+          orig = DisableShortcuts()
         
           # Set up the plot
           fig, ax = pl.subplots(1, 1, figsize = (16, 6))
@@ -858,6 +859,7 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
           for i in range(len(tN)):
             ti = transits_wide[np.where(transits_wide_tag == i)]
             ti = [foo for foo in ti if foo not in outliers]
+            
             # We're discarding transits that span two chunks
             if len(list(set(jumps).intersection(ti))) == 0 and len(ti) > 0:
               data_trn[q][arr].append(data[q][arr][ti])
@@ -870,6 +872,9 @@ def Inspect(koi = 17.01, long_cadence = True, clobber = False,
       np.savez_compressed(os.path.join(datadir, str(koi), 'data_proc.npz'), data = data_new, hash = GitHash())
       np.savez_compressed(os.path.join(datadir, str(koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
       np.savez_compressed(os.path.join(datadir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
-
-      EnableShortcuts()
+      
+      # Re-enable toolbar and shortcuts
+      if not blind:
+        EnableShortcuts()
+      
       return

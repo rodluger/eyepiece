@@ -1,0 +1,15 @@
+#!/bin/sh
+#PBS -l nodes=2:ppn=12,feature=12core,mem=40gb,walltime=2:00:00
+#PBS -o /usr/lusers/rodluger/src/eyepiece/scripts/tmp_o.txt
+#PBS -e /usr/lusers/rodluger/src/eyepiece/scripts/tmp_e.txt
+#PBS -M rodluger@uw.edu
+#PBS -m abe
+#
+
+# Set up directory
+export PLDDIR=/usr/lusers/rodluger/src/templar/output/$KOI/pld
+mkdir -p $PLDDIR
+cd $PLDDIR
+
+# Run the job.
+mpiexec -np 24 python detrend_mpi.py &>> detrend_mpi.log

@@ -12,9 +12,10 @@ export PLDDIR=/usr/lusers/rodluger/src/templar/output/${1-17.01}/pld
 rm -f $PLDDIR/*
 
 # Submit the jobs
-python -c "import eyepiece; eyepiece.Inspect(koi = float(${1-17.01}), blind = bool(${3-1}))" >> $PLDDIR/detrend.log
+python -c "import eyepiece; eyepiece.Inspect(koi = float(${1-17.01}), blind = bool(${3-1}))" >>$PLDDIR/detrend.log 2>&1
 for i in $(seq 1 ${2-10}); do
-    qsub -vTAG=$i,KOI=${1-17.01} detrend.pbs >> $PLDDIR/detrend.log
+    qsub -vTAG=$i,KOI=${1-17.01} detrend.pbs >>$PLDDIR/detrend.log 2>&1
+    touch $PLDDIR/pld_$i.log
 done
 
 # Check for completion
@@ -36,8 +37,8 @@ done
 
 # Plot if successful
 if ((success)); then
-    python -c "import eyepiece; eyepiece.PlotDetrended(koi = float(${1-17.01}))"
-    echo "Detrending succesful." >> $PLDDIR/detrend.log
+    python -c "import eyepiece; eyepiece.PlotDetrended(koi = float(${1-17.01}))" >>$PLDDIR/detrend.log 2>&1
+    echo "Detrending succesful." >>$PLDDIR/detrend.log 2>&1
 else
-    echo "An error occurred while detrending." >> $PLDDIR/detrend.log
+    echo "An error occurred while detrending." >>$PLDDIR/detrend.log 2>&1
 fi
