@@ -260,7 +260,7 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
     nkpars = 3
   
   # Plot the decorrelated data
-  fig, ax = pl.subplots(3, 1, figsize = (48, 16)) 
+  fig, ax = pl.subplots(3, 1, figsize = (36, 16)) 
   lt = [None] * (quarters[-1] + 1)
   wf = [""] * (quarters[-1] + 1)
   fc = np.zeros(quarters[-1] + 1)
