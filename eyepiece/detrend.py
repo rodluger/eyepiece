@@ -361,7 +361,8 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
     for axis in ax:
       axis.axvline(lt[q], color='k', ls = '--')
     ltq = lt[q]
-   
-  ax[1].set_title('PLD-Decorrelated Flux', fontsize = 18)  
-  ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 18)   
+  
+  #ax[0].set_title('Raw Background Flux', fontsize = 16) 
+  ax[1].set_title('PLD-Decorrelated Flux', fontsize = 16)  
+  ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 16)   
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
