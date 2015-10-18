@@ -7,4 +7,6 @@
 #
 
 # Run the job.
+cd /usr/lusers/rodluger/src/eyepiece/scripts
+
 mpiexec -np 24 python detrend_mpi.py &>> detrend_mpi.log
