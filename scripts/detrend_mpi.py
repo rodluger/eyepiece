@@ -7,7 +7,7 @@ from eyepiece import Detrend
 
 pool = MPIPool()
 
-if not pool.is_master:
+if not pool.is_master():
   pool.wait()
   sys.exit(0)
 

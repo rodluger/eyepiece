@@ -245,10 +245,12 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
   tags = [(tag, q) for q in quarters]
   W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
   
+  # Run and save
+  res = list(M(W, tags))
+  
   if not quiet: print("Detrending complete for tag %d." % tag)
   
-  # Run and save
-  return list(M(W, tags))
+  return res
 
 def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
   '''
