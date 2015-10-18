@@ -9,7 +9,7 @@
 
 # Set up the directory
 export PLDDIR=/usr/lusers/rodluger/src/templar/output/${1-17.01}/pld
-rm -f PLDDIR/*.npz
+rm -f $PLDDIR/*
 
 # Submit the jobs
 python -c "import eyepiece; eyepiece.Inspect(koi = float(${1-17.01}), blind = bool(${3-1}))"
