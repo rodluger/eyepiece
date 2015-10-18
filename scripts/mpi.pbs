@@ -9,4 +9,4 @@
 # Run the job.
 cd /usr/lusers/rodluger/src/eyepiece/scripts
 
-mpiexec -np $PBS_NP python detrend_mpi.py &>> detrend_mpi.log
+mpiexec -np $PBS_NP python mpi.py &>> mpi.log
