@@ -260,7 +260,7 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
     nkpars = 3
   
   # Plot the decorrelated data
-  fig, ax = pl.subplots(3, 1, figsize = (48, 16)) 
+  fig, ax = pl.subplots(3, 1, figsize = (45, 15)) 
   lt = [None] * (quarters[-1] + 1)
   wf = [""] * (quarters[-1] + 1)
   fc = np.zeros(quarters[-1] + 1)
@@ -362,7 +362,7 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
       axis.axvline(lt[q], color='k', ls = '--')
     ltq = lt[q]
   
-  pl.suptitle('Raw Background Flux', fontsize = 24) 
+  ax[0].set_title('Raw Background Flux', fontsize = 24, y = 1.01) 
   ax[1].set_title('PLD-Decorrelated Flux', fontsize = 24)  
   ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 24)   
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
