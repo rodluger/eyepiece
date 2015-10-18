@@ -14,7 +14,7 @@ rm -f $PLDDIR/*
 # Submit the jobs
 python -c "import eyepiece; eyepiece.Inspect(koi = float(${1-17.01}), blind = bool(${3-1}))"
 for i in $(seq 1 ${2-10}); do
-    qsub -vTAG=$i,KOI=${1-17.01} detrend.pbs
+    qsub -vTAG=$i,KOI=${1-17.01} detrend.pbs > /dev/null
 done
 
 # Check for completion
