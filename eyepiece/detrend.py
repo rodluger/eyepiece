@@ -231,22 +231,24 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
             quarters = list(range(18)), tag = 0, maxfun = 15000, pld = True, 
             sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], 
             pool = InterruptiblePool()):
-      '''
+  '''
 
-      '''
+  '''
 
-      # Multiprocess?
-      if pool is None:
-        M = map
-      else:
-        M = pool.map
+  # Multiprocess?
+  if pool is None:
+    M = map
+  else:
+    M = pool.map
 
-      # Set up our list of runs  
-      tags = [(tag, q) for q in quarters]
-      W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
-
-      # Run and save
-      return list(M(W, tags))
+  # Set up our list of runs  
+  tags = [(tag, q) for q in quarters]
+  W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
+  
+  print("Detrending complete for tag %d." % tag)
+  
+  # Run and save
+  return list(M(W, tags))
 
 def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
   '''
