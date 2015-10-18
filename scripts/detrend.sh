@@ -37,7 +37,4 @@ done
 # Plot if successful
 if ((success)); then
     python -c "import eyepiece; eyepiece.PlotDetrended(koi = float(${1-17.01}))"
-    echo "Detrending complete."
-else
-    echo "An error occurred during detrending."
 fi
