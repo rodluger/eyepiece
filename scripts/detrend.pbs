@@ -18,4 +18,5 @@ mkdir -p $PLDDIR
 cd $PLDDIR
 
 # Run the job.
-python -c "import eyepiece; eyepiece.Detrend(koi = float($KOI), tag = int($TAG))" &> pld_$TAG.log
+touch pld_$TAG.log
+python -c "import eyepiece; eyepiece.Detrend(koi = float($KOI), tag = int($TAG))" &>> pld_$TAG.log
