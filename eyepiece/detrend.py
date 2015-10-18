@@ -346,7 +346,7 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
       ax[0].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
     
     # Best GP param values
-    ax[1].annotate("\n   GP PARAMS", (ltq, yp0), ha='left', va='top', fontsize = 8)
+    ax[1].annotate("\n   GP PARAMS", (ltq, yp1), ha='left', va='top', fontsize = 8)
     for i, c in enumerate(cc[q][:nkpars]):
       ax[1].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp1), ha='left', va='top', fontsize = 8)
       
@@ -362,7 +362,7 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
       axis.axvline(lt[q], color='k', ls = '--')
     ltq = lt[q]
   
-  ax[0].set_title('Raw Background Flux', fontsize = 16, y = 1.01) 
-  ax[1].set_title('PLD-Decorrelated Flux', fontsize = 16)  
-  ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 16)   
+  ax[0].set_title('Raw Background Flux', fontsize = 24, y = 1.01) 
+  ax[1].set_title('PLD-Decorrelated Flux', fontsize = 24)  
+  ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 24)   
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight', dpi = 300)
