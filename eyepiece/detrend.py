@@ -337,27 +337,31 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
     if lt[q] is None:
       continue
     
-    # Quarter number
-    ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
+    # If the data spans more than 20 days, plot some info (otherwise, it won't fit!)
+    if lt[q] - ltq > 20:
     
-    # Best coeff values
-    ax[0].annotate("\n   PLD COEFFS", (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
-    for i, c in enumerate(cc[q][nkpars:]):
-      ax[0].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
+      # Quarter number
+      ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
     
-    # Best GP param values
-    ax[1].annotate("\n   GP PARAMS", (ltq, yp1), ha='left', va='top', fontsize = 8)
-    for i, c in enumerate(cc[q][:nkpars]):
-      ax[1].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp1), ha='left', va='top', fontsize = 8)
+      # Best coeff values
+      ax[0].annotate("\n   PLD COEFFS", (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
+      for i, c in enumerate(cc[q][nkpars:]):
+        ax[0].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
+    
+      # Best GP param values
+      ax[1].annotate("\n   GP PARAMS", (ltq, yp1), ha='left', va='top', fontsize = 8)
+      for i, c in enumerate(cc[q][:nkpars]):
+        ax[1].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp1), ha='left', va='top', fontsize = 8)
       
-    # Optimization info
-    if wf[q] == "":
-      ax[2].annotate("\n   SUCCESS", (ltq, yp2), ha='left', va='top', fontsize = 8, color = 'b')
-    else:
-      ax[2].annotate("\n   ERROR: %s" % wf[q], (ltq, yp2), ha='left', va='top', fontsize = 8, color = 'r')
-    ax[2].annotate("\n\n   CALLS: %d" % fc[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
-    ax[2].annotate("\n\n\n   NITR: %d" % ni[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
-    ax[2].annotate("\n\n\n\n   LNLK: %.2f" % ll[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
+      # Optimization info
+      if wf[q] == "":
+        ax[2].annotate("\n   SUCCESS", (ltq, yp2), ha='left', va='top', fontsize = 8, color = 'b')
+      else:
+        ax[2].annotate("\n   ERROR: %s" % wf[q], (ltq, yp2), ha='left', va='top', fontsize = 8, color = 'r')
+      ax[2].annotate("\n\n   CALLS: %d" % fc[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
+      ax[2].annotate("\n\n\n   NITR: %d" % ni[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
+      ax[2].annotate("\n\n\n\n   LNLK: %.2f" % ll[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
+    
     for axis in ax:
       axis.axvline(lt[q], color='k', ls = '--')
     ltq = lt[q]
