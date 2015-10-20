@@ -249,7 +249,7 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
   # Run and save
   for res in M(W, tags):
     if not quiet: 
-      print("Detrending complete for tag %d." % res[0])
+      print("Detrending complete for tag " + res[0])
   
   return
 
