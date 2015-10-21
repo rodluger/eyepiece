@@ -11,8 +11,8 @@ from __future__ import (division, print_function, absolute_import,
 import numpy as np
 import george
 
-def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
-           kernel = 1. * george.kernels.Matern32Kernel(1.)):
+def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True, 
+           predict = False, kernel = 1. * george.kernels.Matern32Kernel(1.)):
   '''
   Returns the *Ln(Likelihood)* of the model given an array of parameters ``x``,
   as well as its gradient (computed analytically) with respect to ``x``.
@@ -46,7 +46,12 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
                 the gradient. This contribution is usually small and may be \
                 neglected in some cases to speed up the computation. Default is \
                 ``True``
-  :type fpix: :type:``bool``, optional
+  :type fpix: ``bool``, optional
+  
+  :param predict: If ``True``, also returns the PLD-detrended flux ``y``, the GP \
+                  mean flux ``mu`` and the GP errors ``gperr`` for the \
+                  GP prediction given the set of parameters ``x``. Default ``False``
+  :type predict: ``bool``, optional
   
   :param kernel: The kernel to use in the GP computation. Default is a *Matern 3/2* \
                  kernel
@@ -86,8 +91,15 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
 
   # Compute the likelihood
   gp = george.GP(kernel)
-  gp.compute(time, yerr)
-  ll = gp.lnlikelihood(y)
+  try:
+    gp.compute(time, yerr)
+    ll = gp.lnlikelihood(y)
+  except:
+    # If something went wrong, return zero likelihood and zero gradient
+    if predict:
+      return (-np.inf, np.zeros_like(x), y, np.zeros_like(y), np.zeros_like(y))
+    else:
+      return (-np.inf, np.zeros_like(x))
 
   # Compute the gradient of the likelihood with respect to the PLD coefficients
   # First, the gradient assuming the covariance is independent of the coeffs
@@ -116,12 +128,18 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
     # The covariance term
     grad_pld[m] += 0.5 * np.dot(A.T, np.dot(dS2dC, A))
     
+    # The small ln(det) term
     if lndet:
-      # The small ln(det) term
       grad_pld[m] -= np.dot(KID, np.diag(dS2dC))
   
   # Append the PLD gradient to the GP gradient
   # Note that george returns dLnLike/dLnX, so we divide by X to get dLnLike/dX.
   grad_ll = np.append(gp.grad_lnlikelihood(y) / kernel.pars, grad_pld)
   
-  return (ll, grad_ll)
+  # Should we return a sample prediction?
+  if predict:
+    mu, cov = gp.predict(y, time)
+    gperr = np.sqrt(np.diag(cov)); del cov
+    return (ll, grad_ll, y, mu, gperr)
+  else:
+    return (ll, grad_ll)

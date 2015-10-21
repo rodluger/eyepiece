@@ -12,6 +12,7 @@ from __future__ import (division, print_function, absolute_import,
 from .download import GetData
 from .config import datadir
 from .interruptible_pool import InterruptiblePool
+from .lnlike import LnLike
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 import matplotlib.pyplot as pl
@@ -22,11 +23,10 @@ import itertools
 __all__ = ['Detrend', 'PlotDetrended']
 data = None
 
-def NegLnLike(coeffs, koi, q, kernel, pld):
+def NegLnLike(x, koi, q, kernel, debug):
   '''
-  Returns the negative log-likelihood for the model with coefficients ``coeffs``.
-  If PLD is False, also returns the gradient of the log-likelihood with respect
-  to the kernel parameters.
+  Returns the negative log-likelihood for the model with coefficients ``x``,
+  as well as its gradient with respect to ``x``.
   
   '''
 
@@ -34,65 +34,25 @@ def NegLnLike(coeffs, koi, q, kernel, pld):
   global data
   if data is None:
     data = GetData(koi, data_type = 'bkg')
-  quarter = data[q]
-
-  # Our quasi-periodic kernel
-  nkpars = len(kernel.pars)
-  kernel.pars = coeffs[:nkpars]
-  gp = george.GP(kernel)
+  dq = data[q]
   
-  # The log-likelihood
+  # The log-likelihood and its gradient
   ll = 0
+  grad_ll = np.zeros_like(x, dtype = float)
   
-  # Its gradient
-  grad_ll = np.zeros_like(coeffs, dtype = float)
+  # Loop over each chunk in this quarter individually
+  for time, fsum, fpix, perr in zip(dq['time'], dq['fsum'], dq['fpix'], dq['perr']):
+    res = LnLike(x, time, fpix, perr, fsum = fsum, kernel = kernel)
+    ll += res[0]
+    grad_ll += res[1]
   
-  for time, fsum, fpix, perr in zip(quarter['time'], quarter['fsum'], quarter['fpix'], quarter['perr']):
+  # Check the progress by printing to the screen
+  if debug:
+    print(q, ll)
   
-    if pld:
+  return (-ll, -grad_ll)
     
-      # The pixel model
-      pmod = np.sum(fpix * np.outer(1. / fsum, coeffs[nkpars:]), axis = 1)
-    
-      # Propagate errors correctly. ``T`` is the transit model, which is all 1's here since we're masking the transits
-      T = np.ones_like(fsum)
-      ferr = np.zeros_like(fsum)
-      for k, _ in enumerate(ferr):
-        ferr[k] = np.sqrt(np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2))
-    
-    else:
-      
-      # The error is just the sum in quadrature of the pixel errors
-      ferr = np.sqrt(np.sum(perr ** 2, axis = 1))
-
-      # Our "pixel model" is just the median flux
-      pmod = np.ones_like(fsum) * np.median(fsum)
-    
-    # Evaluate the model
-    try:      
-
-      # Compute the likelihood
-      gp.compute(time, ferr)
-      ll += gp.lnlikelihood(fsum - pmod)
-    
-      # If we're only doing GP, compute the gradient
-      # Note that george return d (ln Like) / d (ln X), so we need to divide by X
-      if not pld:
-        grad_ll += gp.grad_lnlikelihood(fsum - pmod) / kernel.pars
-      
-    except Exception as e:
-
-      # Return a low likelihood
-      ll = -1.e10
-      grad_ll = np.zeros_like(coeffs, dtype = float)
-      break
-
-  if not pld:
-    return (-ll, -grad_ll)
-  else:
-    return -ll
-    
-def QuarterDetrend(koi, q, kernel, init, bounds, maxfun, pld):
+def QuarterDetrend(koi, q, kernel, init, bounds, maxfun, debug):
   '''
   
   '''
@@ -101,91 +61,49 @@ def QuarterDetrend(koi, q, kernel, init, bounds, maxfun, pld):
   global data
   if data is None:
     data = GetData(koi, data_type = 'bkg')
-  quarter = data[q]
+  qd = data[q]
   
-  # Run the optimizer. We compute the gradient numerically if pld is True.
-  res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = pld,
-                      args = (koi, q, kernel, pld), bounds = bounds,
-                      m = 10, factr = 1.e1, epsilon = 1e-8,
-                      pgtol = 1e-05, maxfun = maxfun)
+  # Run the optimizer.
+  res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
+                      args = (koi, q, kernel, debug), bounds = bounds,
+                      m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = maxfun)
   
-  coeffs = res[0]
+  # Grab some info
+  x = res[0]
   lnlike = -res[1]
   info = res[2]       
 
-  all_time = []
-  all_fsum = []
-  all_pmod = []
-  all_gpmu = []
-  all_ferr = []
-  all_yerr = []
+  # Compute a GP prediction
+  time = np.array([], dtype = float)
+  fsum = np.array([], dtype = float)
+  ypld = np.array([], dtype = float)
+  gpmu = np.array([], dtype = float)
+  gperr = np.array([], dtype = float)
   
-  if kernel is not None:
-    # Our quasi-periodic kernel
-    nkpars = len(kernel.pars)
-    kernel.pars = coeffs[:nkpars]
-    gp = george.GP(kernel)
-  
-  else:
-    # We're just going to fit a quadratic
-    nkpars = 3
-    a, b, c = coeffs[:nkpars]
-  
-  for time, fsum, fpix, perr in zip(quarter['time'], quarter['fsum'], quarter['fpix'], quarter['perr']):
+  for t, fs, fp, pe in zip(qd['time'], qd['fsum'], qd['fpix'], qd['perr']):
+    res = LnLike(x, t, fp, pe, fsum = fs, kernel = kernel, predict = True)
+    time = np.append(time, t)
+    fsum = np.append(fsum, fs)
+    ypld = np.append(ypld, res[2])
+    gpmu = np.append(gpmu, res[3])
+    gperr = np.append(gperr, res[4])
 
-    if pld:
-    
-      # The pixel model
-      pmod = np.sum(fpix * np.outer(1. / fsum, coeffs[nkpars:]), axis = 1)
-    
-      # Propagate errors correctly. ``T`` is the transit model, which is all 1's here since we're masking the transits
-      T = np.ones_like(fsum)
-      ferr = np.zeros_like(fsum)
-      for k, _ in enumerate(ferr):
-        ferr[k] = np.sqrt(np.sum(((1. / T[k]) + (pmod[k] / fsum[k]) - (coeffs[nkpars:] / fsum[k])) ** 2 * perr[k] ** 2))
-
-    else:
-      
-      # The error is just the sum in quadrature of the pixel errors
-      ferr = np.sqrt(np.sum(perr ** 2, axis = 1))
-
-      # Our "pixel model" is just the median flux
-      pmod = np.ones_like(fsum) * np.median(fsum)
-
-    # Model prediction (for plotting)
-    gp.compute(time, ferr)
-    mu, cov = gp.predict(fsum - pmod, time)
-    yerr = np.sqrt(np.diag(cov))
-    
-    all_time.extend(time)
-    all_fsum.extend(fsum)
-    all_pmod.extend(pmod)
-    all_gpmu.extend(mu)
-    all_ferr.extend(ferr)
-    all_yerr.extend(yerr)
-    
-  time = np.array(all_time)
-  fsum = np.array(all_fsum)
-  pmod = np.array(all_pmod)
-  gpmu = np.array(all_gpmu)
-  ferr = np.array(all_ferr)  
-  yerr = np.array(all_yerr) 
-  
-  return {'time': time, 'fsum': fsum, 'pmod': pmod, 'gpmu': gpmu, 'ferr': ferr, 'yerr': yerr, 'coeffs': coeffs, 'lnlike': lnlike, 'info': info, 'init': init}
+  return {'time': time, 'fsum': fsum, 'ypld': ypld, 'gpmu': gpmu, 'gperr': gperr,
+          'x': x, 'lnlike': lnlike, 'info': info, 'init': init}
   
 class Worker(object):
   '''
   
   '''
   
-  def __init__(self, koi, kernel, kinit, sigma, kbounds, maxfun, pld):
+  def __init__(self, koi, kernel, kinit, sigma, kbounds, maxfun, debug):
     self.koi = koi
     self.kernel = kernel
     self.kinit = kinit
     self.sigma = sigma
     self.kbounds = kbounds
     self.maxfun = maxfun
-    self.pld = pld
+    self.debug = debug
   
   def __call__(self, tag):
     
@@ -193,25 +111,22 @@ class Worker(object):
     global data
     if data is None:
       data = GetData(self.koi, data_type = 'bkg')
-  
+    
+    # Tags: i is the iteration number; q is the quarter number
     i = tag[0]
     q = tag[1]
-    quarter = data[q]
+    qd = data[q]
   
-    if quarter['time'] == []:
-    
-      # No data this quarter
+    # Is there data for this quarter?
+    if qd['time'] == []:
       return (tag, False)
   
-    if self.pld:
-      npix = quarter['fpix'][0].shape[1]
-      init = np.append(self.kinit, [np.median(quarter['fsum'][0])] * npix)
-      bounds = np.concatenate([self.kbounds, [[-np.inf, np.inf]] * npix])
-    else:
-      init = np.array(self.kinit)
-      bounds = np.array(self.kbounds)
+    # Set our initial guess
+    npix = qd['fpix'][0].shape[1]
+    init = np.append(self.kinit, [np.median(qd['fsum'][0])] * npix)
+    bounds = np.concatenate([self.kbounds, [[-np.inf, np.inf]] * npix])
   
-    # Perturb initial conditions by sigma
+    # Perturb initial conditions by sigma, and ensure within bounds
     np.random.seed(tag)
     foo = bounds[:,0]
     while np.any(foo <= bounds[:,0]) or np.any(foo >= bounds[:,1]):
@@ -219,7 +134,7 @@ class Worker(object):
     init = foo
     
     # Detrend
-    res = QuarterDetrend(self.koi, q, self.kernel, init, bounds, self.maxfun, self.pld)
+    res = QuarterDetrend(self.koi, q, self.kernel, init, bounds, self.maxfun, self.debug)
   
     # Save
     if not os.path.exists(os.path.join(datadir, str(self.koi), 'pld')):
@@ -229,9 +144,9 @@ class Worker(object):
     return (tag, True) 
   
 def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
-            quarters = list(range(18)), tags = 0, maxfun = 15000, pld = True, 
+            quarters = list(range(18)), tags = 0, maxfun = 15000, 
             sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], 
-            pool = InterruptiblePool(), quiet = False):
+            pool = InterruptiblePool(), quiet = False, debug = False):
   '''
 
   '''
@@ -244,12 +159,12 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
 
   # Set up our list of runs  
   tags = list(itertools.product(np.atleast_1d(tags), quarters))
-  W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, pld)
+  W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, debug)
   
   # Run and save
   for res in M(W, tags):
-    if not quiet: 
-      print("Detrending complete for tag " + res[0])
+    if not quiet:
+      print("Detrending complete for tag " + str(res[0]))
   
   return
 
@@ -258,14 +173,13 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
   
   '''
   
-  #
-  if kernel is not None:
-    nkpars = len(kernel.pars)
-  else:
-    nkpars = 3
+  # Number of kernel params
+  nkpars = len(kernel.pars)
   
   # Plot the decorrelated data
   fig, ax = pl.subplots(3, 1, figsize = (48, 16)) 
+  
+  # Some miscellaneous info
   lt = [None] * (quarters[-1] + 1)
   wf = [""] * (quarters[-1] + 1)
   fc = np.zeros(quarters[-1] + 1)
@@ -279,24 +193,26 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
     
       # Look at the likelihoods of all runs for this quarter
       pldpath = os.path.join(datadir, str(koi), 'pld')
-      files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) if f.startswith('%02d.' % q) and f.endswith('.npz')]
+      files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) 
+               if f.startswith('%02d.' % q) and f.endswith('.npz')]
       
+      # Is there data this quarter?
       if len(files) == 0:
         continue
       
+      # Grab the highest likelihood run
       lnl = np.zeros_like(files, dtype = float)
       for i, f in enumerate(files):
         lnl[i] = float(np.load(f)['lnlike'])
-      
-      # Grab the highest likelihood run
       res = np.load(files[np.argmax(lnl)])
       
+      # Grab the detrending info
       time = res['time']
       fsum = res['fsum']
-      pmod = res['pmod']
+      ypld = res['ypld']
       gpmu = res['gpmu']
-      yerr = res['yerr']
-      coeffs = res['coeffs']
+      gperr = res['gperr']
+      x = res['x']
       lnlike = res['lnlike']
       info = res['info'][()]
       init = res['init']
@@ -308,13 +224,13 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
     ax[0].plot(time, fsum, 'k.', alpha = 0.3)
     
     # The PLD-detrended SAP flux (blue) and the GP (red)
-    ax[1].plot(time, fsum - pmod, 'b.', alpha = 0.3)
+    ax[1].plot(time, ypld, 'b.', alpha = 0.3)
     ax[1].plot(time, gpmu, 'r-')
   
     # The fully detrended flux
-    y = fsum - pmod - gpmu
-    ax[2].plot(time, y, 'b.', alpha = 0.3)
-    ax[2].fill_between(time, y - yerr, y + yerr, alpha = 0.1, lw = 0, color = 'r')
+    f = ypld - gpmu
+    ax[2].plot(time, f, 'b.', alpha = 0.3)
+    ax[2].fill_between(time, f - gperr, f + gperr, alpha = 0.1, lw = 0, color = 'r')
     
     # Appearance
     ax[0].set_xticklabels([])
@@ -332,13 +248,16 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
       if len(wf[q]) > 20:
         wf[q] = "%s..." % wf[q][:20]
     ll[q] = lnlike
-    cc[q] = coeffs
+    cc[q] = x
       
   ltq = ax[0].get_xlim()[0]  
   yp0 = ax[0].get_ylim()[1]
   yp1 = ax[1].get_ylim()[1]
   yp2 = ax[2].get_ylim()[1]
-  for q in quarters:  
+  
+  for q in quarters:
+    
+    # This stores the last timestamp of the quarter
     if lt[q] is None:
       continue
     
@@ -369,9 +288,13 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
     
     for axis in ax:
       axis.axvline(lt[q], color='k', ls = '--')
+    
     ltq = lt[q]
   
   ax[0].set_title('Raw Background Flux', fontsize = 24, y = 1.1) 
   ax[1].set_title('PLD-Decorrelated Flux', fontsize = 24)  
   ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 24)   
+  
   fig.savefig(os.path.join(datadir, str(koi), 'pld', 'decorr.png'), bbox_inches = 'tight')
+  
+  return fig, ax
