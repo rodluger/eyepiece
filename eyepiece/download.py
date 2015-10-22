@@ -8,7 +8,6 @@ download.py
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
-from .config import datadir, ttvpath
 from .utils import GitHash
 import os
 import kplr
@@ -44,7 +43,8 @@ def GetKoi(koi):
     raise ValueError("No KOI found with the number: '{0}'".format(koi))
   return kois[0]
 
-def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = True):
+def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = True,
+                    ttvpath = ''):
   '''
   
   '''
@@ -88,8 +88,8 @@ def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = T
 
 def GetTPFData(koi, long_cadence = True, clobber = False, 
                bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 2.0,
-               aperture = 'optimal', quarters = range(18), datadir = datadir,
-               ttvs = False, quiet = False):
+               aperture = 'optimal', quarters = range(18), datadir = '',
+               ttvpath = '', ttvs = False, quiet = False):
   '''
   
   '''
@@ -162,12 +162,12 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   
   # Now get the transit info
   tN, per, tdur = GetTransitTimes(koi, tstart, tend, pad = pad, ttvs = ttvs, 
-                                  long_cadence = long_cadence)
+                                  long_cadence = long_cadence, ttvpath = ttvpath)
   np.savez_compressed(os.path.join(datadir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur, hash = GitHash())
     
   return data, tN, per, tdur
 
-def GetData(koi, data_type = 'proc', datadir = datadir):
+def GetData(koi, data_type = 'proc', datadir = ''):
   '''
   
   '''
@@ -179,7 +179,7 @@ def GetData(koi, data_type = 'proc', datadir = datadir):
 
   return data
 
-def GetInfo(koi, datadir = datadir):
+def GetInfo(koi, datadir = ''):
   '''
   
   '''

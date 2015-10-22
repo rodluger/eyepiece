@@ -6,8 +6,37 @@ utils.py
 
 '''
 
+from . import defaults
 import os
 import subprocess
+
+__all__ = ['Input', 'GitHash', 'Bold', 'RowCol']
+
+def Input(input_file = None):
+  '''
+  
+  '''
+  
+  if input_file is None:
+    return defaults
+  
+  input = imp.load_source("input", input_file)                                       
+
+  for key, val in list(input.__dict__.items()):
+    if key.startswith('_'):
+      input.__dict__.pop(key, None)
+    else:
+      # Check if user provided something they shouldn't have
+      if key not in defaults.__dict__.keys():                                  
+        raise Exception("Invalid input parameter %s." % key)
+    
+  # Update default conf with user values     
+  defaults.__dict__.update(input.__dict__)   
+  
+  # Finally, update conf                                
+  input.__dict__.update(defaults.__dict__)
+
+  return input
 
 def GitHash():
   '''

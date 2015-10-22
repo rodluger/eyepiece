@@ -14,9 +14,8 @@ Download and visually inspect, split, and correct Kepler lightcurves.
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
-from .utils import Bold, GitHash
+from .utils import Bold, GitHash, Input
 from .download import GetTPFData, GetData, EmptyData
-from .config import datadir, ttvpath
 import matplotlib.pyplot as pl
 from matplotlib.widgets import RectangleSelector, Cursor
 import numpy as np
@@ -172,8 +171,8 @@ class Selector(object):
   
   '''
   
-  def __init__(self, fig, ax, koi, quarter, data, tN, cptbkg, cpttrn, split_cads = [], 
-               cad_tol = 10, min_sz = 300, datadir = datadir):
+  def __init__(self, fig, ax, koi, quarter, data, tN, cptbkg, cpttrn, datadir, 
+               split_cads = [], cad_tol = 10, min_sz = 300):
     self.fig = fig
     self.ax = ax    
     self.cad = data['cad']
@@ -666,215 +665,216 @@ class Selector(object):
   def jumps(self):
     return np.array(sorted(self._jumps), dtype = int)
   
-def Inspect(koi = 17.01, long_cadence = True, clobber = False,
-            bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], padbkg = 2.0,
-            padtrn = 5.0, aperture = 'optimal', quarters = list(range(18)), min_sz = 300,
-            dt_tol = 0.5, split_cads = [4472, 6717], datadir = datadir, ttvs = False,
-            quiet = False, blind = False):
-      '''
-  
-      '''
-      
-      # Grab the data
-      if not quiet: print("Retrieving target data...")
-      data, tN, per, tdur = GetTPFData(koi, long_cadence = long_cadence, 
-                            clobber = clobber, datadir = datadir, bad_bits = bad_bits, 
-                            aperture = aperture, quarters = quarters,
-                            quiet = quiet, pad = padbkg, ttvs = ttvs)
-      data_new = EmptyData(quarters)
-      data_trn = EmptyData(quarters)
-      data_bkg = EmptyData(quarters)
-  
-      # Loop over all quarters
-      if not quiet: print("Inspecting...")
-      uo = [[] for q in quarters]
-      uj = [[] for q in quarters]
-      utn = [[] for q in quarters]
-      utw = [[] for q in quarters]
-      q = quarters[0]
-      dq = 1
-      cpttrn = None
-      cptbkg = None
+def Inspect(input_file = None):
+  '''
 
-      while q in quarters:
-        
-        if blind and not quiet: print("Quarter %d" % q)
+  '''
+
+  # Load inputs
+  input = Input(input_file)
+
+  # Grab the data
+  if not input.quiet: print("Retrieving target data...")
+  data, tN, per, tdur = GetTPFData(input.koi, long_cadence = input.long_cadence, 
+                        clobber = input.clobber, datadir = input.datadir, 
+                        bad_bits = input.bad_bits, aperture = input.aperture, 
+                        quarters = input.quarters, quiet = input.quiet, 
+                        pad = input.padbkg, ttvs = input.ttvs, ttvpath = input.ttvpath)
+  data_new = EmptyData(input.quarters)
+  data_trn = EmptyData(input.quarters)
+  data_bkg = EmptyData(input.quarters)
+
+  # Loop over all input.quarters
+  if not input.quiet: print("Inspecting...")
+  uo = [[] for q in input.quarters]
+  uj = [[] for q in input.quarters]
+  utn = [[] for q in input.quarters]
+  utw = [[] for q in input.quarters]
+  q = input.quarters[0]
+  dq = 1
+  cpttrn = None
+  cptbkg = None
+
+  while q in input.quarters:
   
-        # Empty quarter?
-        if data[q]['time'] == []:
-          q += dq
-          continue
-      
-        # Gap tolerance in cadences  
-        tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
-        cad_tol = dt_tol / tpc
-        
-        # Cadences per transit
-        if cptbkg is None:
-          cptbkg = tdur * padbkg / tpc
-        if cpttrn is None:
-          cpttrn = tdur * padtrn / tpc
-        
-        if not blind:
-        
-          # Disable toolbar and shortcuts
-          orig = DisableShortcuts()
-        
-          # Set up the plot
-          fig, ax = pl.subplots(1, 1, figsize = (16, 6))
-          fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
-          sel = Selector(fig, ax, koi, q, data[q], tN, cptbkg, cpttrn, 
-                         split_cads = split_cads, cad_tol = cad_tol, min_sz = min_sz)
-                    
-          # If user is re-visiting this quarter, update with their selections 
-          if len(uj[q]): 
-            sel._jumps = list(uj[q])
-          if len(uo[q]): 
-            sel._outliers = list(uo[q])
-          if len(utn[q]): 
-            sel._transits_narrow = list(utn[q])
-          if len(utw[q]): 
-            sel._transits_wide = list(utw[q])
+    if not input.interactive_inspect and not input.quiet: print("Quarter %d" % q)
 
-          fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (koi, q)) 
-          sel.UpdateTransits()
-          sel.redraw()
+    # Empty quarter?
+    if data[q]['time'] == []:
+      q += dq
+      continue
 
-          # Bring window to the front and fullscreen it
-          fig.canvas.manager.window.attributes('-topmost', 1)
-          fig.canvas.manager.window.attributes('-fullscreen', 1) 
-          
-          pl.show()
-          pl.close()
+    # Gap tolerance in cadences  
+    tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
+    cad_tol = input.dt_tol / tpc
+  
+    # Cadences per transit
+    if cptbkg is None:
+      cptbkg = tdur * input.padbkg / tpc
+    if cpttrn is None:
+      cpttrn = tdur * input.padtrn / tpc
+  
+    if input.interactive_inspect:
+  
+      # Disable toolbar and shortcuts
+      orig = DisableShortcuts()
+  
+      # Set up the plot
+      fig, ax = pl.subplots(1, 1, figsize = (16, 6))
+      fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
+      sel = Selector(fig, ax, koi, q, data[q], tN, cptbkg, cpttrn, input.datadir,
+                     input.split_cads = input.split_cads, cad_tol = cad_tol, 
+                     input.min_sz = input.min_sz)
+              
+      # If user is re-visiting this quarter, update with their selections 
+      if len(uj[q]): 
+        sel._jumps = list(uj[q])
+      if len(uo[q]): 
+        sel._outliers = list(uo[q])
+      if len(utn[q]): 
+        sel._transits_narrow = list(utn[q])
+      if len(utw[q]): 
+        sel._transits_wide = list(utw[q])
+
+      fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (koi, q)) 
+      sel.UpdateTransits()
+      sel.redraw()
+
+      # Bring window to the front and fullscreen it
+      fig.canvas.manager.window.attributes('-topmost', 1)
+      fig.canvas.manager.window.attributes('-fullscreen', 1) 
     
-          # What will we do next time?
-          if sel.info == "next":
-            dq = 1
-          elif sel.info == "prev":
-            dq = -1
-          elif sel.info == "reset":
-            continue
-          elif sel.info == "help":
-            ShowHelp()
-            # Save user selections
-            uo[q] = sel.outliers
-            uj[q] = sel.jumps
-            utn[q] = sel.transits_narrow
-            utw[q] = sel.transits_wide
-            tN = sel.tN
-            cptbkg = sel.cptbkg
-            cpttrn = sel.cpttrn
-            # Re-plot
-            continue
-          elif sel.info == "tpad":
-            try:
-              cptbkg = float(prompt("Cadences per transit (background) [%.2f]: " % sel.cptbkg))
-              if cptbkg <= 0:
-                raise Exception("")
-              sel.cptbkg = cptbkg
-            except:
-              pass
-            try:
-              cpttrn = float(prompt("Cadences per transit (transits) [%.2f]: " % sel.cpttrn))
-              if cpttrn <= 0:
-                raise Exception("")
-              sel.cpttrn = cpttrn
-            except:
-              pass
-            # Save user selections
-            uo[q] = sel.outliers
-            uj[q] = sel.jumps
-            utn[q] = sel.transits_narrow
-            utw[q] = sel.transits_wide
-            tN = sel.tN
-            cptbkg = sel.cptbkg
-            cpttrn = sel.cpttrn
-            # Re-plot
-            continue
-          elif sel.info == "quit":
-            EnableShortcuts()
-            return
-          else:
-            EnableShortcuts()
-            return
-          
-          jumps = sel.jumps
-          transits_narrow = sel.transits_narrow
-          transits_wide = sel.transits_wide
-          transits_wide_tag = sel.transits_wide_tag
-          outliers = sel.outliers
-          tN = sel.tN
-          cptbkg = sel.cptbkg
-          cpttrn = sel.cpttrn
-        
-        # Blind
-        else:
-          
-          # Process the data
-          jumps = GetJumps(data[q]['time'], data[q]['cad'], cad_tol = cad_tol, 
-                           min_sz = min_sz, split_cads = split_cads)
-          # Time per cadence
-          tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
-          
-          # Cadences per transit
-          cptbkg = (padbkg * tdur / tpc)
-          cpttrn = (padtrn * tdur / tpc)
-         
-          # Transit indices. TODO: Verify
-          transits_narrow = []
-          transits_wide = []
-          transits_wide_tag = []
-          tNc = data[q]['cad'][0] + (data[q]['cad'][-1] - data[q]['cad'][0])/(data[q]['time'][-1] - data[q]['time'][0]) * (tN - data[q]['time'][0])
-          for j, tc in enumerate(tNc):
-            i = np.where(np.abs(data[q]['cad'] - tc) <= cptbkg / 2.)[0]
-            transits_narrow.extend(i) 
-            i = np.where(np.abs(data[q]['cad'] - tc) <= cpttrn / 2.)[0]
-            transits_wide.extend(i) 
-            transits_wide_tag.extend([j for k in i])
+      pl.show()
+      pl.close()
 
-          jumps = np.array(sorted(jumps), dtype = int)
-          transits_narrow = np.array(sorted(transits_narrow), dtype = int)
-          transits_wide = np.array(sorted(transits_wide), dtype = int)
-          transits_wide_tag = np.array(sorted(transits_wide_tag), dtype = int)
-          outliers = np.array([], dtype = int)
-        
-        # Store the user-defined outliers, jumps, and transits
-        uo[q] = outliers
-        uj[q] = jumps
-        utn[q] = transits_narrow
-        utw[q] = transits_wide
-  
-        # Split the data
-        j = np.concatenate([[0], jumps, [len(data[q]['time']) - 1]])
-        for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
-      
-          # All data and background data
-          for a, b in zip(j[:-1], j[1:]):
-            ai = [i for i in range(a, b) if i not in outliers]
-            bi = [i for i in range(a, b) if i not in np.append(outliers, transits_narrow)]
-            data_new[q][arr].append(np.array(data[q][arr][ai]))
-            data_bkg[q][arr].append(np.array(data[q][arr][bi]))
-          
-          # Transit-only data        
-          for i in range(len(tN)):
-            ti = transits_wide[np.where(transits_wide_tag == i)]
-            ti = [foo for foo in ti if foo not in outliers]
-            
-            # We're discarding transits that span two chunks
-            if len(list(set(jumps).intersection(ti))) == 0 and len(ti) > 0:
-              data_trn[q][arr].append(data[q][arr][ti])
-          
-        # Increment and loop
-        q += dq
-  
-      # Save the data
-      if not quiet: print("Saving data to disk...")
-      np.savez_compressed(os.path.join(datadir, str(koi), 'data_proc.npz'), data = data_new, hash = GitHash())
-      np.savez_compressed(os.path.join(datadir, str(koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
-      np.savez_compressed(os.path.join(datadir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
-      
-      # Re-enable toolbar and shortcuts
-      if not blind:
+      # What will we do next time?
+      if sel.info == "next":
+        dq = 1
+      elif sel.info == "prev":
+        dq = -1
+      elif sel.info == "reset":
+        continue
+      elif sel.info == "help":
+        ShowHelp()
+        # Save user selections
+        uo[q] = sel.outliers
+        uj[q] = sel.jumps
+        utn[q] = sel.transits_narrow
+        utw[q] = sel.transits_wide
+        tN = sel.tN
+        cptbkg = sel.cptbkg
+        cpttrn = sel.cpttrn
+        # Re-plot
+        continue
+      elif sel.info == "tpad":
+        try:
+          cptbkg = float(prompt("Cadences per transit (background) [%.2f]: " % sel.cptbkg))
+          if cptbkg <= 0:
+            raise Exception("")
+          sel.cptbkg = cptbkg
+        except:
+          pass
+        try:
+          cpttrn = float(prompt("Cadences per transit (transits) [%.2f]: " % sel.cpttrn))
+          if cpttrn <= 0:
+            raise Exception("")
+          sel.cpttrn = cpttrn
+        except:
+          pass
+        # Save user selections
+        uo[q] = sel.outliers
+        uj[q] = sel.jumps
+        utn[q] = sel.transits_narrow
+        utw[q] = sel.transits_wide
+        tN = sel.tN
+        cptbkg = sel.cptbkg
+        cpttrn = sel.cpttrn
+        # Re-plot
+        continue
+      elif sel.info == "quit":
         EnableShortcuts()
+        return
+      else:
+        EnableShortcuts()
+        return
+    
+      jumps = sel.jumps
+      transits_narrow = sel.transits_narrow
+      transits_wide = sel.transits_wide
+      transits_wide_tag = sel.transits_wide_tag
+      outliers = sel.outliers
+      tN = sel.tN
+      cptbkg = sel.cptbkg
+      cpttrn = sel.cpttrn
+  
+    # Not input.interactive_inspect
+    else:
+    
+      # Process the data
+      jumps = GetJumps(data[q]['time'], data[q]['cad'], cad_tol = cad_tol, 
+                       input.min_sz = input.min_sz, input.split_cads = input.split_cads)
+      # Time per cadence
+      tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
+    
+      # Cadences per transit
+      cptbkg = (input.padbkg * tdur / tpc)
+      cpttrn = (input.padtrn * tdur / tpc)
+   
+      # Transit indices. TODO: Verify
+      transits_narrow = []
+      transits_wide = []
+      transits_wide_tag = []
+      tNc = data[q]['cad'][0] + (data[q]['cad'][-1] - data[q]['cad'][0])/(data[q]['time'][-1] - data[q]['time'][0]) * (tN - data[q]['time'][0])
+      for j, tc in enumerate(tNc):
+        i = np.where(np.abs(data[q]['cad'] - tc) <= cptbkg / 2.)[0]
+        transits_narrow.extend(i) 
+        i = np.where(np.abs(data[q]['cad'] - tc) <= cpttrn / 2.)[0]
+        transits_wide.extend(i) 
+        transits_wide_tag.extend([j for k in i])
+
+      jumps = np.array(sorted(jumps), dtype = int)
+      transits_narrow = np.array(sorted(transits_narrow), dtype = int)
+      transits_wide = np.array(sorted(transits_wide), dtype = int)
+      transits_wide_tag = np.array(sorted(transits_wide_tag), dtype = int)
+      outliers = np.array([], dtype = int)
+  
+    # Store the user-defined outliers, jumps, and transits
+    uo[q] = outliers
+    uj[q] = jumps
+    utn[q] = transits_narrow
+    utw[q] = transits_wide
+
+    # Split the data
+    j = np.concatenate([[0], jumps, [len(data[q]['time']) - 1]])
+    for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
+
+      # All data and background data
+      for a, b in zip(j[:-1], j[1:]):
+        ai = [i for i in range(a, b) if i not in outliers]
+        bi = [i for i in range(a, b) if i not in np.append(outliers, transits_narrow)]
+        data_new[q][arr].append(np.array(data[q][arr][ai]))
+        data_bkg[q][arr].append(np.array(data[q][arr][bi]))
+    
+      # Transit-only data        
+      for i in range(len(tN)):
+        ti = transits_wide[np.where(transits_wide_tag == i)]
+        ti = [foo for foo in ti if foo not in outliers]
       
-      return
+        # We're discarding transits that span two chunks
+        if len(list(set(jumps).intersection(ti))) == 0 and len(ti) > 0:
+          data_trn[q][arr].append(data[q][arr][ti])
+    
+    # Increment and loop
+    q += dq
+
+  # Save the data
+  if not input.quiet: print("Saving data to disk...")
+  np.savez_compressed(os.path.join(input.datadir, str(koi), 'data_proc.npz'), data = data_new, hash = GitHash())
+  np.savez_compressed(os.path.join(input.datadir, str(koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
+  np.savez_compressed(os.path.join(input.datadir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
+
+  # Re-enable toolbar and shortcuts
+  if input.interactive_inspect:
+    EnableShortcuts()
+
+  return

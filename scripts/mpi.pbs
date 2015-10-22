@@ -5,8 +5,14 @@
 #PBS -M rodluger@uw.edu
 #PBS -m abe
 #
+#
+# Please provide an input file when running this script:
+#
+# >>> qsub -vINPUTFILE=input.py mpi.pbs
+#
+#
 
 # Run the job.
 cd /usr/lusers/rodluger/src/eyepiece/scripts
 
-mpiexec -np $PBS_NP python mpi.py &>> mpi.log
+mpiexec -np $PBS_NP python mpi.py $INPUTFILE &>> mpi.log

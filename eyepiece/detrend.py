@@ -13,6 +13,7 @@ from .download import GetData
 from .config import datadir
 from .interruptible_pool import InterruptiblePool
 from .lnlike import LnLike
+from .utils import Input
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 import matplotlib.pyplot as pl
@@ -143,13 +144,14 @@ class Worker(object):
   
     return (tag, True) 
   
-def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.), 
-            quarters = list(range(18)), tags = 0, maxfun = 15000, 
-            sigma = 0.25, kinit = [100., 100.], kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]], 
-            pool = InterruptiblePool(), quiet = False, debug = False):
+def Detrend(input_file = None, pool = InterruptiblePool(), tags = 0):
+
   '''
 
   '''
+  
+  # Load inputs
+  input = Input(input_file)
 
   # Multiprocess?
   if pool is None:
@@ -158,8 +160,9 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
     M = pool.map
 
   # Set up our list of runs  
-  tags = list(itertools.product(np.atleast_1d(tags), quarters))
-  W = Worker(koi, kernel, kinit, sigma, kbounds, maxfun, debug)
+  tags = list(itertools.product(np.atleast_1d(tags), input.quarters))
+  W = Worker(input.koi, input.kernel, input.kinit, input.pert_sigma, 
+             input.kbounds, input.maxfun, input.debug)
   
   # Run and save
   for res in M(W, tags):
@@ -168,31 +171,34 @@ def Detrend(koi = 17.01, kernel = 1. * george.kernels.Matern32Kernel(1.),
   
   return
 
-def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.kernels.Matern32Kernel(1.)):
+def PlotDetrended(input_file = None):
   '''
   
   '''
+  
+  # Load inputs
+  input = Input(input_file)
   
   # Number of kernel params
-  nkpars = len(kernel.pars)
+  nkpars = len(input.kernel.pars)
   
   # Plot the decorrelated data
-  fig, ax = pl.subplots(3, 1, figsize = (48, 16)) 
+  fig, ax = pl.subplots(3, 1, figsize = input.detrend_figsize) 
   
   # Some miscellaneous info
-  lt = [None] * (quarters[-1] + 1)
-  wf = [""] * (quarters[-1] + 1)
-  fc = np.zeros(quarters[-1] + 1)
-  ni = np.zeros(quarters[-1] + 1)
-  ll = np.zeros(quarters[-1] + 1)
-  cc = [None] * (quarters[-1] + 1)
-  for q in quarters:
+  lt = [None] * (input.quarters[-1] + 1)
+  wf = [""] * (input.quarters[-1] + 1)
+  fc = np.zeros(input.quarters[-1] + 1)
+  ni = np.zeros(input.quarters[-1] + 1)
+  ll = np.zeros(input.quarters[-1] + 1)
+  cc = [None] * (input.quarters[-1] + 1)
+  for q in input.quarters:
     
     # Load the decorrelated data
     try:
     
       # Look at the likelihoods of all runs for this quarter
-      pldpath = os.path.join(datadir, str(koi), 'pld')
+      pldpath = os.path.join(datadir, str(input.koi), 'pld')
       files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) 
                if f.startswith('%02d.' % q) and f.endswith('.npz')]
       
@@ -255,7 +261,7 @@ def PlotDetrended(koi = 17.01, quarters = list(range(18)), kernel = 1. * george.
   yp1 = ax[1].get_ylim()[1]
   yp2 = ax[2].get_ylim()[1]
   
-  for q in quarters:
+  for q in input.quarters:
     
     # This stores the last timestamp of the quarter
     if lt[q] is None:

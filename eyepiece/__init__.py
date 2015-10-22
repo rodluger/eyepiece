@@ -10,6 +10,7 @@ from .inspect import *
 from .transits import *
 from .download import *
 from .detrend import *
+from .utils import *
 
 # Info
 __version__ = "0.0.1"

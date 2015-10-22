@@ -6,27 +6,19 @@ import os
 import sys
 import subprocess
 
-str_config = \
-"""#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-'''
-config.py
----------
-
-Config file for :py:mod:``eyepiece.py``. Set default values here.
-
-'''
-
-datadir =             '%s'
-ttvpath =             '%s'"""
+# Python 2/3 compatibility.
+if sys.version_info >= (3,0):
+	inp = input
+else:
+  inp = raw_input
 
 def prompt(msg, string, default = ''):
   if msg != "":
     print(msg)
   if default != "":
-    x = raw_input("\x1b[35m> %s [%s]: \x1b[39;49;00m" % (string, default))
+    x = inp("\x1b[35m> %s [%s]: \x1b[39;49;00m" % (string, default))
   else:
-    x = raw_input("\x1b[35m> %s: \x1b[39;49;00m" % (string))
+    x = inp("\x1b[35m> %s: \x1b[39;49;00m" % (string))
   print("")
   return x
 
@@ -66,9 +58,11 @@ if __name__ == '__main__':
                                    "Path to transit times", ""))
   
   # Save the options
-  config = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eyepiece', 'config.py')  
-  with open(config, 'w') as f:
-    print(str_config % (datadir, ttvpath), file = f)
+  defaults = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eyepiece', 'defaults.py')  
+  with open(defaults, 'r') as f:
+    foo = f.read()
+  with open(defaults, 'w') as f:
+    print(foo.replace("'/Users/rodrigo/src/templar/output'", "'%s'" % datadir).replace("'/Users/rodrigo/src/templar/ttvs'", "'%s'" % ttvpath), file = f)
 
-  print("All done! These options were stored in the file \x1b[01mconfig.py\x1b[39;49;00m.")
+  print("All done! These options were stored in the file \x1b[01mdefaults.py\x1b[39;49;00m.")
   print("")

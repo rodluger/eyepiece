@@ -2,12 +2,27 @@
 # -*- coding: utf-8 -*-
 
 import subprocess
-from eyepiece import Inspect, GetData
+from eyepiece import Inspect, GetData, Input
+import argparse
+import os
 
-# Try to load the data
-try:
-  GetData(koi = 17.01, data_type = 'bkg')
-except:
-  Inspect(koi = 17.01, blind = True)
+if __name__ == '__main__':
+  
+  parser = argparse.ArgumentParser(prog = 'launcher')
+  parser.add_argument("-i", "--input", default = None, help = 'Input file for this run')
+  args = parser.parse_args()
+  
+  if args.input_file is not None:
+    input_file = os.path.abspath(args.input_file)
+    input = Input(input_file)
+  else:
+    input_file = "none"
+    input = Input()
+  
+  # Try to load the data
+  try:
+    GetData(koi = input.koi, data_type = 'bkg', datadir = input.datadir)
+  except:
+    Inspect(input_file)
 
-subprocess.call(['qsub', 'mpi.pbs'])
+  subprocess.call(['qsub', '-vINPUT=%s' % input_file, 'mpi.pbs'])
