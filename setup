@@ -62,7 +62,7 @@ if __name__ == '__main__':
   with open(defaults, 'r') as f:
     foo = f.read()
   with open(defaults, 'w') as f:
-    print(foo.replace("'/Users/rodrigo/src/templar/output'", "'%s'" % datadir).replace("'/Users/rodrigo/src/templar/ttvs'", "'%s'" % ttvpath), file = f)
+    print(foo.replace("'/Users/rodrigo/src/eyepiece/lightcurves'", "'%s'" % datadir).replace("'/Users/rodrigo/src/templar/ttvs'", "'%s'" % ttvpath), file = f)
 
   print("All done! These options were stored in the file \x1b[01mdefaults.py\x1b[39;49;00m.")
   print("")
