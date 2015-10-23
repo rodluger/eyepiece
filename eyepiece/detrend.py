@@ -370,7 +370,7 @@ def GetWhitenedTransits(input_file = None):
 
     # Load coefficients for this quarter
     try:
-      x = np.load(os.path.join(inp.datadir, 'detrend', '%02d.00.npz' % q))['x']
+      x = np.load(os.path.join(inp.datadir, inp.koi, 'detrend', '%02d.00.npz' % q))['x']
     except:
       if not inp.quiet:
         print("WARNING: No decorrelation info found for quarter %d." % q)
