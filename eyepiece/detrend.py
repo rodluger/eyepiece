@@ -180,20 +180,20 @@ class Worker(object):
     res = QuarterDetrend(self.koi, q, self.kernel, init, bounds, self.maxfun, self.debug)
   
     # Save
-    if not os.path.exists(os.path.join(self.datadir, str(self.koi), 'pld')):
-      os.makedirs(os.path.join(self.datadir, str(self.koi), 'pld'))
-    np.savez(os.path.join(self.datadir, str(self.koi), 'pld', '%02d.%02d.npz' % (q, i)), **res)
+    if not os.path.exists(os.path.join(self.datadir, str(self.koi), 'detrend')):
+      os.makedirs(os.path.join(self.datadir, str(self.koi), 'detrend'))
+    np.savez(os.path.join(self.datadir, str(self.koi), 'detrend', '%02d.%02d.npz' % (q, i)), **res)
   
     return (tag, True) 
   
-def Detrend(input_file = None, pool = None, tags = 0):
+def Detrend(input_file = None, pool = None):
 
   '''
 
   '''
   
   # Load inputs
-  input = Input(input_file)
+  inp = Input(input_file)
 
   # Multiprocess?
   if pool is None:
@@ -202,13 +202,13 @@ def Detrend(input_file = None, pool = None, tags = 0):
     M = pool.map
 
   # Set up our list of runs  
-  tags = list(itertools.product(np.atleast_1d(tags), input.quarters))
-  W = Worker(input.koi, input.kernel, input.kinit, input.pert_sigma, 
-             input.kbounds, input.maxfun, input.debug, input.datadir)
+  tags = list(itertools.product(range(inp.niter), inp.quarters))
+  W = Worker(inp.koi, inp.kernel, inp.kinit, inp.pert_sigma, 
+             inp.kbounds, inp.maxfun, inp.debug, inp.datadir)
   
   # Run and save
   for res in M(W, tags):
-    if not input.quiet:
+    if not inp.quiet:
       print("Detrending complete for tag " + str(res[0]))
   
   return
@@ -219,28 +219,28 @@ def PlotDetrended(input_file = None):
   '''
   
   # Load inputs
-  input = Input(input_file)
+  inp = Input(input_file)
   
   # Number of kernel params
-  nkpars = len(input.kernel.pars)
+  nkpars = len(inp.kernel.pars)
   
   # Plot the decorrelated data
-  fig, ax = pl.subplots(3, 1, figsize = input.detrend_figsize) 
+  fig, ax = pl.subplots(3, 1, figsize = inp.detrend_figsize) 
   
   # Some miscellaneous info
-  lt = [None] * (input.quarters[-1] + 1)
-  wf = [""] * (input.quarters[-1] + 1)
-  fc = np.zeros(input.quarters[-1] + 1)
-  ni = np.zeros(input.quarters[-1] + 1)
-  ll = np.zeros(input.quarters[-1] + 1)
-  cc = [None] * (input.quarters[-1] + 1)
-  for q in input.quarters:
+  lt = [None] * (inp.quarters[-1] + 1)
+  wf = [""] * (inp.quarters[-1] + 1)
+  fc = np.zeros(inp.quarters[-1] + 1)
+  ni = np.zeros(inp.quarters[-1] + 1)
+  ll = np.zeros(inp.quarters[-1] + 1)
+  cc = [None] * (inp.quarters[-1] + 1)
+  for q in inp.quarters:
     
     # Load the decorrelated data
     try:
     
       # Look at the likelihoods of all runs for this quarter
-      pldpath = os.path.join(input.datadir, str(input.koi), 'pld')
+      pldpath = os.path.join(inp.datadir, str(inp.koi), 'detrend')
       files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) 
                if f.startswith('%02d.' % q) and f.endswith('.npz')]
       
@@ -303,7 +303,7 @@ def PlotDetrended(input_file = None):
   yp1 = ax[1].get_ylim()[1]
   yp2 = ax[2].get_ylim()[1]
   
-  for q in input.quarters:
+  for q in inp.quarters:
     
     # This stores the last timestamp of the quarter
     if lt[q] is None:
@@ -343,7 +343,7 @@ def PlotDetrended(input_file = None):
   ax[1].set_title('PLD-Decorrelated Flux', fontsize = 24)  
   ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 24)   
   
-  fig.savefig(os.path.join(input.datadir, str(input.koi), 'detrended.png'), bbox_inches = 'tight')
+  fig.savefig(os.path.join(inp.datadir, str(inp.koi), 'detrended.png'), bbox_inches = 'tight')
   
   return fig, ax
 
@@ -353,33 +353,33 @@ def GetWhitenedTransits(input_file = None):
   '''
   
   # Input file
-  input = Input(input_file)
+  inp = Input(input_file)
   
   # Number of kernel params
-  nkpars = len(input.kernel.pars)
+  nkpars = len(inp.kernel.pars)
 
   # Load the data
-  bkg = GetData(input.koi, data_type = 'bkg', datadir = input.datadir)
-  prc = GetData(input.koi, data_type = 'prc', datadir = input.datadir)
-  tN, per, tdur, hash = GetInfo(input.koi, datadir = input.datadir)
+  bkg = GetData(inp.koi, data_type = 'bkg', datadir = inp.datadir)
+  prc = GetData(inp.koi, data_type = 'prc', datadir = inp.datadir)
+  tN, per, tdur, hash = GetInfo(inp.koi, datadir = inp.datadir)
 
   # Whiten
   t = np.array([], dtype = float)
   f = np.array([], dtype = float)
-  for q in input.quarters:
+  for q in inp.quarters:
 
     # Load coefficients for this quarter
     try:
-      x = np.load('../lightcurves/17.01/pld/%02d.00.npz' % q)['x']
+      x = np.load(os.path.join(inp.datadir, 'detrend', '%02d.00.npz' % q))['x']
     except:
-      if not input.quiet:
+      if not inp.quiet:
         print("WARNING: No decorrelation info found for quarter %d." % q)
       continue
     
     for b_time, b_fpix, b_perr, time, fpix in zip(bkg[q]['time'], bkg[q]['fpix'], bkg[q]['perr'], prc[q]['time'], prc[q]['fpix']):
     
       # Whiten the flux
-      flux = Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = input.kernel, crowding = prc[q]['crowding'])
+      flux = Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = inp.kernel, crowding = prc[q]['crowding'])
     
       # Fold the time
       time -= [tN[np.argmin(np.abs(tN - t))] for t in time]
@@ -396,17 +396,17 @@ def PlotTransits(input_file = None):
   '''
   
   # Input file
-  input = Input(input_file)
+  inp = Input(input_file)
 
   # Load the info
-  tN, per, tdur, hash = GetInfo(input.koi, datadir = input.datadir)
+  tN, per, tdur, hash = GetInfo(inp.koi, datadir = inp.datadir)
   t, f = GetWhitenedTransits(input_file)
 
   # Plot
-  fig, ax = pl.subplots(1, 1, figsize = input.transits_figsize)
+  fig, ax = pl.subplots(1, 1, figsize = inp.transits_figsize)
   ax.plot(t, f, 'k.', alpha = 0.1)
-  ax.set_xlim(-input.padtrn * tdur / 2., input.padtrn * tdur / 2.)  
+  ax.set_xlim(-inp.padtrn * tdur / 2., inp.padtrn * tdur / 2.)  
   ax.set_title('Folded Whitened Transits', fontsize = 24)
-  fig.savefig(os.path.join(input.datadir, str(input.koi), 'folded.png'), bbox_inches = 'tight')
+  fig.savefig(os.path.join(inp.datadir, str(inp.koi), 'folded.png'), bbox_inches = 'tight')
   
   return fig, ax

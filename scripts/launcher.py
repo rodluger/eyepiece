@@ -23,14 +23,14 @@ if __name__ == '__main__':
   
   if args.input is not None:
     input_file = os.path.abspath(args.input)
-    input = Input(input_file)
+    inp = Input(input_file)
   else:
     input_file = "none"
-    input = Input()
+    inp = Input()
   
   # Try to load the data
   try:
-    GetData(koi = input.koi, data_type = 'bkg', datadir = input.datadir)
+    GetData(koi = inp.koi, data_type = 'bkg', datadir = inp.datadir)
   except:
     Inspect(input_file)
 

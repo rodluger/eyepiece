@@ -671,33 +671,33 @@ def Inspect(input_file = None):
   '''
 
   # Load inputs
-  input = Input(input_file)
+  inp = Input(input_file)
 
   # Grab the data
-  if not input.quiet: print("Retrieving target data...")
-  data, tN, per, tdur = GetTPFData(input.koi, long_cadence = input.long_cadence, 
-                        clobber = input.clobber, datadir = input.datadir, 
-                        bad_bits = input.bad_bits, aperture = input.aperture, 
-                        quarters = input.quarters, quiet = input.quiet, 
-                        pad = input.padbkg, ttvs = input.ttvs, ttvpath = input.ttvpath)
-  data_new = EmptyData(input.quarters)
-  data_trn = EmptyData(input.quarters)
-  data_bkg = EmptyData(input.quarters)
+  if not inp.quiet: print("Retrieving target data...")
+  data, tN, per, tdur = GetTPFData(inp.koi, long_cadence = inp.long_cadence, 
+                        clobber = inp.clobber, datadir = inp.datadir, 
+                        bad_bits = inp.bad_bits, aperture = inp.aperture, 
+                        quarters = inp.quarters, quiet = inp.quiet, 
+                        pad = inp.padbkg, ttvs = inp.ttvs, ttvpath = inp.ttvpath)
+  data_new = EmptyData(inp.quarters)
+  data_trn = EmptyData(inp.quarters)
+  data_bkg = EmptyData(inp.quarters)
 
-  # Loop over all input.quarters
-  if not input.quiet: print("Inspecting...")
-  uo = [[] for q in input.quarters]
-  uj = [[] for q in input.quarters]
-  utn = [[] for q in input.quarters]
-  utw = [[] for q in input.quarters]
-  q = input.quarters[0]
+  # Loop over all inp.quarters
+  if not inp.quiet: print("Inspecting...")
+  uo = [[] for q in inp.quarters]
+  uj = [[] for q in inp.quarters]
+  utn = [[] for q in inp.quarters]
+  utw = [[] for q in inp.quarters]
+  q = inp.quarters[0]
   dq = 1
   cpttrn = None
   cptbkg = None
 
-  while q in input.quarters:
+  while q in inp.quarters:
   
-    if not input.interactive_inspect and not input.quiet: print("Quarter %d" % q)
+    if not inp.interactive_inspect and not inp.quiet: print("Quarter %d" % q)
 
     # Empty quarter?
     if data[q]['time'] == []:
@@ -706,15 +706,15 @@ def Inspect(input_file = None):
 
     # Gap tolerance in cadences  
     tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
-    cad_tol = input.dt_tol / tpc
+    cad_tol = inp.dt_tol / tpc
   
     # Cadences per transit
     if cptbkg is None:
-      cptbkg = tdur * input.padbkg / tpc
+      cptbkg = tdur * inp.padbkg / tpc
     if cpttrn is None:
-      cpttrn = tdur * input.padtrn / tpc
+      cpttrn = tdur * inp.padtrn / tpc
   
-    if input.interactive_inspect:
+    if inp.interactive_inspect:
   
       # Disable toolbar and shortcuts
       orig = DisableShortcuts()
@@ -722,9 +722,9 @@ def Inspect(input_file = None):
       # Set up the plot
       fig, ax = pl.subplots(1, 1, figsize = (16, 6))
       fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
-      sel = Selector(fig, ax, input.koi, q, data[q], tN, cptbkg, cpttrn, input.datadir,
-                     split_cads = input.split_cads, cad_tol = cad_tol, 
-                     min_sz = input.min_sz)
+      sel = Selector(fig, ax, inp.koi, q, data[q], tN, cptbkg, cpttrn, inp.datadir,
+                     split_cads = inp.split_cads, cad_tol = cad_tol, 
+                     min_sz = inp.min_sz)
               
       # If user is re-visiting this quarter, update with their selections 
       if len(uj[q]): 
@@ -736,7 +736,7 @@ def Inspect(input_file = None):
       if len(utw[q]): 
         sel._transits_wide = list(utw[q])
 
-      fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (input.koi, q)) 
+      fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (inp.koi, q)) 
       sel.UpdateTransits()
       sel.redraw()
 
@@ -807,18 +807,18 @@ def Inspect(input_file = None):
       cptbkg = sel.cptbkg
       cpttrn = sel.cpttrn
   
-    # Not input.interactive_inspect
+    # Not inp.interactive_inspect
     else:
     
       # Process the data
       jumps = GetJumps(data[q]['time'], data[q]['cad'], cad_tol = cad_tol, 
-                       min_sz = input.min_sz, split_cads = input.split_cads)
+                       min_sz = inp.min_sz, split_cads = inp.split_cads)
       # Time per cadence
       tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
     
       # Cadences per transit
-      cptbkg = (input.padbkg * tdur / tpc)
-      cpttrn = (input.padtrn * tdur / tpc)
+      cptbkg = (inp.padbkg * tdur / tpc)
+      cpttrn = (inp.padtrn * tdur / tpc)
    
       # Transit indices. TODO: Verify
       transits_narrow = []
@@ -873,13 +873,13 @@ def Inspect(input_file = None):
     q += dq
 
   # Save the data
-  if not input.quiet: print("Saving data to disk...")
-  np.savez_compressed(os.path.join(input.datadir, str(input.koi), 'data_prc.npz'), data = data_new, hash = GitHash())
-  np.savez_compressed(os.path.join(input.datadir, str(input.koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
-  np.savez_compressed(os.path.join(input.datadir, str(input.koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
+  if not inp.quiet: print("Saving data to disk...")
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.koi), 'data_prc.npz'), data = data_new, hash = GitHash())
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
 
   # Re-enable toolbar and shortcuts
-  if input.interactive_inspect:
+  if inp.interactive_inspect:
     EnableShortcuts()
 
   return
