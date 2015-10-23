@@ -4,7 +4,7 @@
 import matplotlib; matplotlib.use('Agg')
 import sys
 from eyepiece.mpi_pool import MPIPool
-from eyepiece import Detrend, PlotDetrended
+from eyepiece.detrend import Detrend, PlotDetrended
 
 if __name__ == '__main__':
 
@@ -23,6 +23,7 @@ if __name__ == '__main__':
   # Detrend and plot
   Detrend(input_file = input_file, pool = pool, tags = range(5))
   PlotDetrended(input_file)
+  PlotTransits(input_file)
 
   # Close the pool
   pool.close()

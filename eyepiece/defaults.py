@@ -64,6 +64,7 @@ quiet = False
 split_cads = [4472, 6717]
 
 # T
+transits_figsize = (14, 6)
 ttvpath = '/Users/rodrigo/src/templar/ttvs'
 ttvs = False
 
@@ -96,7 +97,7 @@ class _Docs(object):
     # D
     self.datadir = 'Directory to store lightcurve processing data in'
     self.debug = 'Debug mode?'
-    self.detrend_figsize = 'Size of figure returned by ``PlotDetrend`` in inches'
+    self.detrend_figsize = 'Size of figure returned by ``detrend.PlotDetrend`` in inches'
     self.dt_tol = 'Transit gap tolerance in days'
     
     # I
@@ -129,6 +130,7 @@ class _Docs(object):
     self.split_cads = 'Cadences at which to split the data'
     
     # T
+    self.transits_figsize = 'Size of figure returned by ``detrend.PlotTransits`` in inches'
     self.ttvpath = 'Path to folder containing KOI ttv information'
     self.ttvs = 'Analyze this system assuming ttvs?'
 

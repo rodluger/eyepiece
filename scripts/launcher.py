@@ -1,8 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+'''
+lnlike.py
+---------
+
+>>> python launcher.py -i /path/to/input/script.py
+
+'''
 
 import subprocess
-from eyepiece import Inspect, GetData, Input
+from eyepiece.inspect import Inspect
+from eyepiece.download import GetData
+from eyepiece.utils import Input
 import argparse
 import os
 

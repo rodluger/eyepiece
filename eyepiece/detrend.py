@@ -21,6 +21,7 @@ import os
 import itertools
 
 __all__ = ['Detrend', 'PlotDetrended', 'Whiten', 'PlotTransits', 'GetWhitenedTransits']
+
 data = None
 
 def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.Matern32Kernel(1.), crowding = None):
@@ -402,9 +403,9 @@ def PlotTransits(input_file = None):
   t, f = GetWhitenedTransits(input_file)
 
   # Plot
-  fig, ax = pl.subplots(1, 1, figsize = (14, 6))
+  fig, ax = pl.subplots(1, 1, figsize = input.transits_figsize)
   ax.plot(t, f, 'k.', alpha = 0.1)
-  ax.set_xlim(- input.padtrn * tdur / 2., input.padtrn * tdur / 2.)  
+  ax.set_xlim(-input.padtrn * tdur / 2., input.padtrn * tdur / 2.)  
   ax.set_title('Folded Whitened Transits', fontsize = 24)
   fig.savefig(os.path.join(input.datadir, str(input.koi), 'folded.png'), bbox_inches = 'tight')
   

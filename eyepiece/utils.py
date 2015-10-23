@@ -9,6 +9,7 @@ utils.py
 from . import defaults
 import os
 import subprocess
+import imp
 
 __all__ = ['Input', 'GitHash', 'Bold', 'RowCol']
 
