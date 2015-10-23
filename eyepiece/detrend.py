@@ -388,7 +388,10 @@ def GetWhitenedTransits(input_file = None):
       flux = Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = inp.kernel, crowding = prc[q]['crowding'])
     
       # Fold the time
-      time -= [tN[np.argmin(np.abs(tN - t))] for t in time]
+      time -= np.array([tN[np.argmin(np.abs(tN - t))] for t in time])
+    
+      # DEBUG
+      import pdb; pdb.set_trace()
     
       # Plot
       t = np.append(t, time)
@@ -407,9 +410,6 @@ def PlotTransits(input_file = None):
   # Load the info
   tN, per, tdur, hash = GetInfo(inp.koi, datadir = inp.datadir)
   t, f = GetWhitenedTransits(input_file)
-
-  # debug
-  import pdb; pdb.set_trace()
 
   # Plot
   fig, ax = pl.subplots(1, 1, figsize = inp.transits_figsize)
