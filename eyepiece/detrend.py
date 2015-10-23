@@ -388,10 +388,7 @@ def GetWhitenedTransits(input_file = None):
       flux = Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = inp.kernel, crowding = prc[q]['crowding'])
     
       # Fold the time
-      time -= np.array([tN[np.argmin(np.abs(tN - t))] for t in time])
-    
-      # DEBUG
-      import pdb; pdb.set_trace()
+      time -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in time])
     
       # Plot
       t = np.append(t, time)
