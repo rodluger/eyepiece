@@ -50,14 +50,17 @@ long_cadence = True
 # M
 maxfun = 15000
 min_sz = 300
+mpn = 40
 
 # N
 niter = 5
+nodes = 5
 
 # P
 padbkg = 2.0
 padtrn = 5.0
 pert_sigma = 0.25
+ppn = 12
 
 # Q
 quarters = range(18)
@@ -70,6 +73,9 @@ split_cads = [4472, 6717]
 transits_figsize = (14, 6)
 ttvpath = '/Users/rodrigo/src/templar/ttvs'
 ttvs = False
+
+# W
+walltime = 2
 
 # -------
 # CLEANUP
@@ -119,14 +125,17 @@ class _Docs(object):
     # M
     self.maxfun = 'Maximum number of ln-like function calls in ``l_bfgs_b``'
     self.min_sz = 'Minimum chunk size in cadences when splitting the lightcurve'
+    self.mpn = 'Memory per node in GB when submitting a job with ``qsub``'
     
     # N
     self.niter = 'Number of iterations when detrending in parallel.'
+    self.nodes = 'Number of nodes to use when submitting a job with ``qsub``'
     
     # P
     self.padbkg = 'Padding in units of the transit duration for masking transits in background data'
     self.padtrn = 'Padding in units of the transit duration for selecting transits for the transit-only data'
     self.pert_sigma = 'Perturb the initial conditions by this many sigma'
+    self.ppn = 'Number of processors per node for a ``qsub`` job'
     
     # Q
     self.quarters = 'List of quarters to process (if data is present)'
@@ -139,4 +148,7 @@ class _Docs(object):
     self.transits_figsize = 'Size of figure returned by ``detrend.PlotTransits`` in inches'
     self.ttvpath = 'Path to folder containing KOI ttv information'
     self.ttvs = 'Analyze this system assuming ttvs?'
+    
+    # W
+    self.walltime = 'Walltime in hours for a ``qsub`` job'
 

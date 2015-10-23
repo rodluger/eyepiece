@@ -1,5 +1,4 @@
 #!/bin/sh
-#PBS -l nodes=5:ppn=12,feature=12core,mem=40gb,walltime=2:00:00
 #PBS -o /usr/lusers/rodluger/tmp/tmp_o.txt
 #PBS -e /usr/lusers/rodluger/tmp/tmp_e.txt
 #PBS -M rodluger@uw.edu
@@ -8,7 +7,7 @@
 #
 # Please provide an input file when running this script:
 #
-# >>> qsub -vINPUTFILE=input.py mpi.pbs
+# >>> qsub -vINPUTFILE=input.py -l nodes=5:ppn=12,feature=12core,mem=40gb,walltime=2:00:00 mpi.pbs
 #
 #
 

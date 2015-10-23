@@ -26,4 +26,10 @@ if __name__ == '__main__':
   except:
     Inspect(input_file)
 
-  subprocess.call(['qsub', '-vINPUTFILE=%s' % input_file, 'mpi.pbs'])
+  # Set options
+  vars = '-vINPUTFILE=%s' % input_file
+  resources = '-l nodes=%(N)d:ppn=%(PPN)d,feature=%(PPN)dcore,mem=%(M)dgb,walltime=%(W)d:00:00' % \
+              {'N': inp.nodes, 'PPN': inp.ppn, 'M': inp.nodes * inp.mpn, 'W': inp.walltime}
+  
+  # QSUB
+  subprocess.call(['qsub', vars, resources, 'mpi.pbs'])
