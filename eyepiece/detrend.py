@@ -5,6 +5,9 @@ detrend.py
 ----------
 
 
+.. todo::
+   - Use highest likelihood run to whiten transits
+
 '''
 
 from __future__ import (division, print_function, absolute_import,
@@ -254,6 +257,9 @@ def PlotDetrended(input_file = None):
         lnl[i] = float(np.load(f)['lnlike'])
       res = np.load(files[np.argmax(lnl)])
       
+      # Save this as the best one
+      np.savez(os.path.join(pldpath, "%02d.npz" % q), **res)
+      
       # Grab the detrending info
       time = res['time']
       fsum = res['fsum']
@@ -370,7 +376,7 @@ def GetWhitenedTransits(input_file = None):
 
     # Load coefficients for this quarter
     try:
-      x = np.load(os.path.join(inp.datadir, inp.koi, 'detrend', '%02d.00.npz' % q))['x']
+      x = np.load(os.path.join(inp.datadir, str(inp.koi), 'detrend', '%02d.npz' % q))['x']
     except:
       if not inp.quiet:
         print("WARNING: No decorrelation info found for quarter %d." % q)
