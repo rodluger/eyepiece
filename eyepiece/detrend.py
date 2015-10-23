@@ -408,6 +408,9 @@ def PlotTransits(input_file = None):
   tN, per, tdur, hash = GetInfo(inp.koi, datadir = inp.datadir)
   t, f = GetWhitenedTransits(input_file)
 
+  # debug
+  import pdb; pdb.set_trace()
+
   # Plot
   fig, ax = pl.subplots(1, 1, figsize = inp.transits_figsize)
   ax.plot(t, f, 'k.', alpha = 0.1)
