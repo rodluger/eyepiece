@@ -12,7 +12,7 @@ import matplotlib; matplotlib.use('Agg')
 import sys
 import os
 from eyepiece.mpi_pool import MPIPool
-from eyepiece.detrend import Detrend, PlotDetrended
+from eyepiece.detrend import Detrend
 
 if __name__ == '__main__':
 
@@ -25,10 +25,8 @@ if __name__ == '__main__':
     pool.wait()
     sys.exit(0)
 
-  # Detrend and plot
+  # Detrend
   Detrend(input_file = input_file, pool = pool)
-  PlotDetrended(input_file)
-  PlotTransits(input_file)
 
   # Close the pool
   pool.close()
