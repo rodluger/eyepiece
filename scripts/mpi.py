@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-lnlike.py
----------
+mpi.py
+------
 
->>> python launcher.py /path/to/input/script.py
+>>> python mpi.py /path/to/input/script.py
 
 '''
 

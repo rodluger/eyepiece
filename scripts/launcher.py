@@ -26,4 +26,4 @@ if __name__ == '__main__':
   except:
     Inspect(input_file)
 
-  subprocess.call(['qsub', '-vINPUT=%s' % input_file, 'mpi.pbs'])
+  subprocess.call(['qsub', '-vINPUTFILE=%s' % input_file, 'mpi.pbs'])
