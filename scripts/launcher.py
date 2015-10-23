@@ -21,8 +21,8 @@ if __name__ == '__main__':
   parser.add_argument("-i", "--input", default = None, help = 'Input file for this run')
   args = parser.parse_args()
   
-  if args.input_file is not None:
-    input_file = os.path.abspath(args.input_file)
+  if args.input is not None:
+    input_file = os.path.abspath(args.input)
     input = Input(input_file)
   else:
     input_file = "none"
