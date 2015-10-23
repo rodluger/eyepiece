@@ -87,3 +87,19 @@ def RowCol(N):
     cols = rows
     rows = tmp
   return cols, rows
+
+def Help(param = None):
+  '''
+  
+  '''
+  
+  helpstr = '\x1b[1mOptions:\x1b[0m ' + ', '.join(sorted([k for k in defaults.__dict__.keys() if not k.startswith('_')]))
+  
+  if param is not None:
+    try:
+      docstring = defaults._Docs().__dict__[param]
+      print("\x1b[1m%s:\x1b[0m %s. \x1b[1mDefault:\x1b[0m %s" % (param, docstring, str(defaults.__dict__[param])))
+    except:
+      print("\x1b[1m%s:\x1b[0m No docstring available." % param)
+  else:
+    print(helpstr)

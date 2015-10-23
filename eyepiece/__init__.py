@@ -10,6 +10,8 @@ from . import (detrend, download, lnlike, defaults,
                inspect, mpi_pool, interruptible_pool,
                utils)
 
+from .utils import Help
+
 # Info
 __version__ = "0.0.1"
 __author__ = "Rodrigo Luger (rodluger@uw.edu)"
