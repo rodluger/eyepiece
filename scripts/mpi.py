@@ -1,18 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+'''
+lnlike.py
+---------
+
+>>> python launcher.py /path/to/input/script.py
+
+'''
 
 import matplotlib; matplotlib.use('Agg')
 import sys
+import os
 from eyepiece.mpi_pool import MPIPool
 from eyepiece.detrend import Detrend, PlotDetrended
 
 if __name__ == '__main__':
 
   # Grab input file from args
-  try:
-    input_file = os.path.abspath(str(sys.argv[1]))
-  except:
-    input_file = None
+  input_file = os.path.abspath(str(sys.argv[1]))
 
   # Set up MPI
   pool = MPIPool()
