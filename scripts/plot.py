@@ -19,5 +19,5 @@ if __name__ == '__main__':
   input_file = os.path.abspath(str(sys.argv[1]))
   
   # Plot
-  PlotDetrended(input_file = input_file, pool = pool)
-  PlotTransits(input_file = input_file, pool = pool)
+  PlotDetrended(input_file = input_file)
+  PlotTransits(input_file = input_file)
