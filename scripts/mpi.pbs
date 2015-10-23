@@ -14,7 +14,7 @@
 
 # Run the job.
 cd /usr/lusers/rodluger/src/eyepiece/scripts
-#mpiexec -np $PBS_NP python mpi.py $INPUTFILE &>> mpi.log
+mpiexec -np $PBS_NP python mpi.py $INPUTFILE &>> mpi.log
 
 # Plot results.
-python -c "import eyepiece; eyepiece.detrend.PlotDetrended('$INPUTFILE'); eyepiece.detrend.PlotTransits('$INPUTFILE')" &>> mpi.log
+python plot.py $INPUTFILE &>> mpi.log
