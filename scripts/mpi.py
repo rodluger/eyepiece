@@ -21,7 +21,7 @@ if __name__ == '__main__':
     sys.exit(0)
 
   # Detrend and plot
-  Detrend(input_file = input_file, pool = pool, tags = range(5))
+  Detrend(input_file = input_file, pool = pool, tags = range(input.niter))
   PlotDetrended(input_file)
   PlotTransits(input_file)
 

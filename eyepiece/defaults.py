@@ -51,6 +51,9 @@ long_cadence = True
 maxfun = 15000
 min_sz = 300
 
+# N
+niter = 5
+
 # P
 padbkg = 2.0
 padtrn = 5.0
@@ -116,6 +119,9 @@ class _Docs(object):
     # M
     self.maxfun = 'Maximum number of ln-like function calls in ``l_bfgs_b``'
     self.min_sz = 'Minimum chunk size in cadences when splitting the lightcurve'
+    
+    # N
+    self.niter = 'Number of iterations when detrending in parallel.'
     
     # P
     self.padbkg = 'Padding in units of the transit duration for masking transits in background data'
