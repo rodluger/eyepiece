@@ -167,7 +167,7 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
     
   return data, tN, per, tdur
 
-def GetData(koi, data_type = 'proc', datadir = ''):
+def GetData(koi, data_type = 'prc', datadir = ''):
   '''
   
   '''

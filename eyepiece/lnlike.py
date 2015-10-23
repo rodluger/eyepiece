@@ -11,6 +11,8 @@ from __future__ import (division, print_function, absolute_import,
 import numpy as np
 import george
 
+__all__ = ['LnLike']
+
 def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True, 
            predict = False, kernel = 1. * george.kernels.Matern32Kernel(1.)):
   '''
@@ -61,7 +63,7 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
   
   # Calculate fsum if not provided
   if fsum is None:
-    fsum = np.array(fpix, axis = 1)
+    fsum = np.sum(fpix, axis = 1)
   
   # PLD coefficients
   c = x[len(kernel.pars):]

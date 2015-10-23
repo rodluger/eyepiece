@@ -6,11 +6,9 @@ from __future__ import (division, print_function, absolute_import,
 import matplotlib; matplotlib.use('TkAgg', warn = False)
 import matplotlib.pyplot as pl
 
-from .inspect import *
-from .transits import *
-from .download import *
-from .detrend import *
-from .utils import *
+from . import (detrend, download, lnlike, defaults, 
+               inspect, mpi_pool, interruptible_pool,
+               utils)
 
 # Info
 __version__ = "0.0.1"

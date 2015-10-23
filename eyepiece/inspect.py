@@ -722,9 +722,9 @@ def Inspect(input_file = None):
       # Set up the plot
       fig, ax = pl.subplots(1, 1, figsize = (16, 6))
       fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
-      sel = Selector(fig, ax, koi, q, data[q], tN, cptbkg, cpttrn, input.datadir,
-                     input.split_cads = input.split_cads, cad_tol = cad_tol, 
-                     input.min_sz = input.min_sz)
+      sel = Selector(fig, ax, input.koi, q, data[q], tN, cptbkg, cpttrn, input.datadir,
+                     split_cads = input.split_cads, cad_tol = cad_tol, 
+                     min_sz = input.min_sz)
               
       # If user is re-visiting this quarter, update with their selections 
       if len(uj[q]): 
@@ -736,7 +736,7 @@ def Inspect(input_file = None):
       if len(utw[q]): 
         sel._transits_wide = list(utw[q])
 
-      fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (koi, q)) 
+      fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (input.koi, q)) 
       sel.UpdateTransits()
       sel.redraw()
 
@@ -812,7 +812,7 @@ def Inspect(input_file = None):
     
       # Process the data
       jumps = GetJumps(data[q]['time'], data[q]['cad'], cad_tol = cad_tol, 
-                       input.min_sz = input.min_sz, input.split_cads = input.split_cads)
+                       min_sz = input.min_sz, split_cads = input.split_cads)
       # Time per cadence
       tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
     
@@ -864,14 +864,19 @@ def Inspect(input_file = None):
         if len(list(set(jumps).intersection(ti))) == 0 and len(ti) > 0:
           data_trn[q][arr].append(data[q][arr][ti])
     
+    # Add the crowding
+    data_new[q]['crowding'] = data[q]['crowding']
+    data_trn[q]['crowding'] = data[q]['crowding']
+    data_bkg[q]['crowding'] = data[q]['crowding']
+    
     # Increment and loop
     q += dq
 
   # Save the data
   if not input.quiet: print("Saving data to disk...")
-  np.savez_compressed(os.path.join(input.datadir, str(koi), 'data_proc.npz'), data = data_new, hash = GitHash())
-  np.savez_compressed(os.path.join(input.datadir, str(koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
-  np.savez_compressed(os.path.join(input.datadir, str(koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
+  np.savez_compressed(os.path.join(input.datadir, str(input.koi), 'data_prc.npz'), data = data_new, hash = GitHash())
+  np.savez_compressed(os.path.join(input.datadir, str(input.koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
+  np.savez_compressed(os.path.join(input.datadir, str(input.koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
 
   # Re-enable toolbar and shortcuts
   if input.interactive_inspect:

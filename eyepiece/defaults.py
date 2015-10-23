@@ -65,6 +65,13 @@ split_cads = [4472, 6717]
 
 # T
 ttvpath = '/Users/rodrigo/src/templar/ttvs'
+ttvs = False
+
+# -------
+# CLEANUP
+# -------
+
+del george
 
 # ----
 # DOCS
@@ -106,7 +113,7 @@ class _Docs(object):
     self.long_cadence = 'Use Kepler long cadence data?'
     
     # M
-    self.maxfun = 'Maximum number of ln-like function calls in ``l_bfgs_b``
+    self.maxfun = 'Maximum number of ln-like function calls in ``l_bfgs_b``'
     self.min_sz = 'Minimum chunk size in cadences when splitting the lightcurve'
     
     # P
@@ -123,4 +130,5 @@ class _Docs(object):
     
     # T
     self.ttvpath = 'Path to folder containing KOI ttv information'
+    self.ttvs = 'Analyze this system assuming ttvs?'
 
