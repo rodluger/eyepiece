@@ -742,7 +742,8 @@ def Inspect(input_file = None):
 
       # Bring window to the front and fullscreen it
       fig.canvas.manager.window.attributes('-topmost', 1)
-      fig.canvas.manager.window.attributes('-fullscreen', 1) 
+      if inp.fullscreen:
+        fig.canvas.manager.window.attributes('-fullscreen', 1) 
     
       pl.show()
       pl.close()

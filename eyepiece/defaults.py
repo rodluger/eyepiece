@@ -34,6 +34,9 @@ debug = False
 detrend_figsize = (48, 16)
 dt_tol = 0.5
 
+# F
+fullscreen = True
+
 # I
 interactive_inspect = True
 interactive_detrend = False
@@ -108,6 +111,9 @@ class _Docs(object):
     self.debug = 'Debug mode?'
     self.detrend_figsize = 'Size of figure returned by ``detrend.PlotDetrend`` in inches'
     self.dt_tol = 'Transit gap tolerance in days'
+    
+    # F
+    self.fullscreen = 'Fullscreen the plot when inspecting?'
     
     # I
     self.interactive_inspect = 'Process data in interactive mode when inspecting?'
