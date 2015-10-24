@@ -15,6 +15,10 @@ import numpy as np
 
 __all__ = ['GetData', 'GetInfo']
 
+# Kepler cadences
+KEPLONGEXP =              (1765.5/86400.)
+KEPSHRTEXP =              (58.89/86400.)
+
 def EmptyData(quarters):
   '''
   

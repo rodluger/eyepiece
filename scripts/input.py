@@ -9,6 +9,7 @@ Custom settings for ``eyepiece``.
 '''
 
 koi = 142.01
+ttvs = True
 interactive_inspect = True
 niter = 5
 nodes = 5

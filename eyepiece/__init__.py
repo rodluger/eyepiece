@@ -16,7 +16,3 @@ from .utils import Help
 __version__ = "0.0.1"
 __author__ = "Rodrigo Luger (rodluger@uw.edu)"
 __copyright__ = "Copyright 2015 Rodrigo Luger"
-
-# Kepler cadences
-KEPLONGEXP =              (1765.5/86400.)
-KEPSHRTEXP =              (58.89/86400.)
