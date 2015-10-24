@@ -49,6 +49,7 @@ NEXT = 'right'
 SUBT = 'alt'
 TPAD = 'w'
 ERRB = 'e'
+BLND = 'b'
 
 def DisableShortcuts():
   '''
@@ -100,7 +101,8 @@ def ShowHelp():
               QUIT: 'Quit (without saving)',
               SAVE: 'Save current plot to disk',
               TPAD: 'Adjust transit padding',
-              ERRB: 'Show/hide error bars'
+              ERRB: 'Show/hide error bars',
+              BLND: 'Continue in blind mode'
               }
   for key, descr in sorted(commands.items()):
     print('%s%s' % (Bold(key + ':').ljust(30), descr))
@@ -562,6 +564,10 @@ class Selector(object):
     elif event.key == TPAD:
       self.info = "tpad"
       pl.close()
+    
+    elif event.key == BLND:
+      self.info = "blind"
+      pl.close()
   
   def on_mouse_release(self, event):
     if self.Transits.active:
@@ -795,6 +801,9 @@ def Inspect(input_file = None):
       elif sel.info == "quit":
         EnableShortcuts()
         return False
+      elif sel.info == "blind":
+        EnableShortcuts()
+        inp.interactive_inspect = False
       else:
         EnableShortcuts()
         return False
