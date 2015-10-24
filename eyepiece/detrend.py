@@ -5,9 +5,6 @@ detrend.py
 ----------
 
 
-.. todo::
-   - Use highest likelihood run to whiten transits
-
 '''
 
 from __future__ import (division, print_function, absolute_import,
@@ -216,6 +213,37 @@ def Detrend(input_file = None, pool = None):
   
   return
 
+def LoadBestRun(inp, q):
+  '''
+  
+  '''
+  
+  try:
+  
+    # Look at the likelihoods of all runs for this quarter
+    pldpath = os.path.join(inp.datadir, str(inp.koi), 'detrend')
+    files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) 
+             if f.startswith('%02d.' % q) and f.endswith('.npz')]
+
+    # Is there data this quarter?
+    if len(files) == 0:
+      return None
+
+    # Grab the highest likelihood run
+    lnl = np.zeros_like(files, dtype = float)
+    for i, f in enumerate(files):
+      lnl[i] = float(np.load(f)['lnlike'])
+    res = np.load(files[np.argmax(lnl)])
+
+    # Save this as the best one
+    np.savez(os.path.join(pldpath, "%02d.npz" % q), **res)
+    
+    # Return
+    return res
+    
+  except IOError:
+    return None
+
 def PlotDetrended(input_file = None):
   '''
   
@@ -240,39 +268,20 @@ def PlotDetrended(input_file = None):
   for q in inp.quarters:
     
     # Load the decorrelated data
-    try:
-    
-      # Look at the likelihoods of all runs for this quarter
-      pldpath = os.path.join(inp.datadir, str(inp.koi), 'detrend')
-      files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) 
-               if f.startswith('%02d.' % q) and f.endswith('.npz')]
-      
-      # Is there data this quarter?
-      if len(files) == 0:
-        continue
-      
-      # Grab the highest likelihood run
-      lnl = np.zeros_like(files, dtype = float)
-      for i, f in enumerate(files):
-        lnl[i] = float(np.load(f)['lnlike'])
-      res = np.load(files[np.argmax(lnl)])
-      
-      # Save this as the best one
-      np.savez(os.path.join(pldpath, "%02d.npz" % q), **res)
-      
-      # Grab the detrending info
-      time = res['time']
-      fsum = res['fsum']
-      ypld = res['ypld']
-      gpmu = res['gpmu']
-      gperr = res['gperr']
-      x = res['x']
-      lnlike = res['lnlike']
-      info = res['info'][()]
-      init = res['init']
-    
-    except IOError:
+    res = LoadBestRun(inp, q)
+    if res is None: 
       continue
+  
+    # Grab the detrending info
+    time = res['time']
+    fsum = res['fsum']
+    ypld = res['ypld']
+    gpmu = res['gpmu']
+    gperr = res['gperr']
+    x = res['x']
+    lnlike = res['lnlike']
+    info = res['info'][()]
+    init = res['init']
     
     # The SAP flux
     ax[0].plot(time, fsum, 'k.', alpha = 0.3)
@@ -375,12 +384,13 @@ def GetWhitenedTransits(input_file = None):
   for q in inp.quarters:
 
     # Load coefficients for this quarter
-    try:
-      x = np.load(os.path.join(inp.datadir, str(inp.koi), 'detrend', '%02d.npz' % q))['x']
-    except:
+    res = LoadBestRun(inp, q)
+    if res is None:
       if not inp.quiet:
         print("WARNING: No decorrelation info found for quarter %d." % q)
       continue
+    else:
+      x = res['x']
     
     for b_time, b_fpix, b_perr, time, fpix in zip(bkg[q]['time'], bkg[q]['fpix'], bkg[q]['perr'], prc[q]['time'], prc[q]['fpix']):
     
@@ -410,9 +420,27 @@ def PlotTransits(input_file = None):
 
   # Plot
   fig, ax = pl.subplots(1, 1, figsize = inp.transits_figsize)
-  ax.plot(t, f, 'k.', alpha = 0.1)
-  ax.set_xlim(-inp.padtrn * tdur / 2., inp.padtrn * tdur / 2.)  
+  xlim = (-inp.padtrn * tdur / 2., inp.padtrn * tdur / 2.)
+  fvis = f[np.where((t > xlim[0]) & (t < xlim[1]))]
+  minf = np.min(fvis)
+  maxf = np.max(fvis)
+  padf = 0.1 * (maxf - minf)
+  ylim = (minf - padf, maxf + padf)
+  ax.plot(t, f, 'k.', alpha = min(1.0, max(0.05, 375. / len(fvis))))
+  
+  # Bin to median
+  bins = np.linspace(xlim[0], xlim[1], inp.tbins)
+  delta = bins[1] - bins[0]
+  idx  = np.digitize(t, bins)
+  med = [np.median(f[idx == k]) for k in range(inp.tbins)]
+  ax.plot(bins - delta / 2., med, 'ro', alpha = 0.5)
+  ax.plot(bins - delta / 2., med, 'r-', lw = 2, alpha = 0.5)
+  
+  ax.set_xlim(xlim)  
+  ax.set_ylim(ylim)
   ax.set_title('Folded Whitened Transits', fontsize = 24)
+  ax.set_xlabel('Time (days)', fontsize = 22)
+  ax.set_ylabel('Flux', fontsize = 22)
   fig.savefig(os.path.join(inp.datadir, str(inp.koi), 'folded.png'), bbox_inches = 'tight')
   
   return fig, ax

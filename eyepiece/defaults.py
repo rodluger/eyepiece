@@ -73,6 +73,7 @@ quiet = False
 split_cads = [4472, 6717]
 
 # T
+tbins = 20
 transits_figsize = (14, 6)
 ttvpath = '/Users/rodrigo/src/templar/ttvs'
 ttvs = False
@@ -151,6 +152,7 @@ class _Docs(object):
     self.split_cads = 'Cadences at which to split the data'
     
     # T
+    self.tbins = 'Number of bins when plotting folded transits'
     self.transits_figsize = 'Size of figure returned by ``detrend.PlotTransits`` in inches'
     self.ttvpath = 'Path to folder containing KOI ttv information'
     self.ttvs = 'Analyze this system assuming ttvs?'

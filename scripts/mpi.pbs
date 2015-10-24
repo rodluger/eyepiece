@@ -4,7 +4,8 @@
 #PBS -M rodluger@uw.edu
 #PBS -m abe
 #
-#
+# 
+# A PBS job for running ``eyepiece`` detrending on Hyak.
 # Please provide an input file when running this script:
 #
 # >>> qsub -vINPUTFILE=input.py -l nodes=5:ppn=12,feature=12core,mem=40gb,walltime=2:00:00 mpi.pbs
@@ -15,5 +16,5 @@
 cd /usr/lusers/rodluger/src/eyepiece/scripts
 mpiexec -np $PBS_NP python mpi.py $INPUTFILE &> mpi.log
 
-# Plot results.
-python plot.py $INPUTFILE &>> mpi.log
+# Plot results. Not currently working on Hyak...
+# python plot.py $INPUTFILE &>> mpi.log

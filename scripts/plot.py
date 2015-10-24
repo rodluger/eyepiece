@@ -4,6 +4,8 @@
 plot.py
 -------
 
+Plot the results of a detrending run.
+
 >>> python plot.py /path/to/input/script.py
 
 '''

@@ -794,10 +794,10 @@ def Inspect(input_file = None):
         continue
       elif sel.info == "quit":
         EnableShortcuts()
-        return
+        return False
       else:
         EnableShortcuts()
-        return
+        return False
     
       jumps = sel.jumps
       transits_narrow = sel.transits_narrow
@@ -883,4 +883,4 @@ def Inspect(input_file = None):
   if inp.interactive_inspect:
     EnableShortcuts()
 
-  return
+  return True

@@ -4,6 +4,8 @@
 mpi.py
 ------
 
+This script is meant to be called from within a PBS job. Call syntax:
+
 >>> python mpi.py /path/to/input/script.py
 
 '''

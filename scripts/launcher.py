@@ -4,6 +4,8 @@
 lnlike.py
 ---------
 
+Runs full detrending on a given KOI.
+
 >>> python launcher.py /path/to/input/script.py
 
 '''
@@ -24,7 +26,11 @@ if __name__ == '__main__':
   try:
     GetData(koi = inp.koi, data_type = 'bkg', datadir = inp.datadir)
   except:
-    Inspect(input_file)
+    success = Inspect(input_file)
+    if not success:
+      if not inp.quiet:
+        print("Detrending aborted!")
+      sys.exit()
 
   # Set options
   vars = '-vINPUTFILE=%s' % input_file
