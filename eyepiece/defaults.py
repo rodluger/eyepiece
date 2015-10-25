@@ -38,13 +38,16 @@ dt_tol = 0.5
 fullscreen = True
 
 # I
+id = None
+info = {}
 interactive_inspect = True
 interactive_detrend = False
 
 # K
 kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]]
-kinit = [100., 100.]
 kernel = 1. * george.kernels.Matern32Kernel(1.)
+kic = None
+kinit = [100., 100.]
 koi = 17.01
 
 # L
@@ -117,13 +120,16 @@ class _Docs(object):
     self.fullscreen = 'Fullscreen the plot when inspecting?'
     
     # I
+    self.id = '[READ-ONLY] Kepler identifier'
+    self.info = 'Override the database values for the KOI\'s ``per``, ``tdur`` and the transit times ``tN`` by setting values for those in this dict'
     self.interactive_inspect = 'Process data in interactive mode when inspecting?'
     self.interactive_detrend = 'Process data in interactive mode when detrending?'
     
     # K
     self.kbounds = 'Bounds on the kernel parameters'
-    self.kinit = 'Initial values for the kernel parameters'
     self.kernel = 'The kernel to use for GP detrending'
+    self.kic = 'Kepler KIC identifier'
+    self.kinit = 'Initial values for the kernel parameters'
     self.koi = 'Kepler KOI number'
     
     # L

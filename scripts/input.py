@@ -8,9 +8,9 @@ Custom settings for ``eyepiece``.
 
 '''
 
-koi = 4087.01
+kic = 757076
 ttvs = True
-interactive_inspect = False
-niter = 5
-nodes = 5
+interactive_inspect = True
+niter = 1
+nodes = 1
 fullscreen = False

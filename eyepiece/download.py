@@ -13,7 +13,7 @@ import os
 import kplr
 import numpy as np
 
-__all__ = ['GetData', 'GetInfo']
+__all__ = ['GetData', 'GetTPFData', 'GetInfo']
 
 # Kepler cadences
 KEPLONGEXP =              (1765.5/86400.)
@@ -90,7 +90,7 @@ def GetTransitTimes(koi, tstart, tend, pad = 2.0, ttvs = False, long_cadence = T
 
   return tN, per, tdur
 
-def GetTPFData(koi, long_cadence = True, clobber = False, 
+def GetTPFData(id, long_cadence = True, clobber = False, 
                bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17], pad = 2.0,
                aperture = 'optimal', quarters = range(18), datadir = '',
                ttvpath = '', ttvs = False, quiet = False):
@@ -100,20 +100,28 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
   
   if not clobber:
     try:
-      data = np.load(os.path.join(datadir, str(koi), 'data_raw.npz'))['data'][()]     # For some reason, numpy saved it as a 0-d array! See http://stackoverflow.com/questions/8361561/recover-dict-from-0-d-numpy-array
-      foo = np.load(os.path.join(datadir, str(koi), 'transits.npz'))
+      data = np.load(os.path.join(datadir, str(id), 'data_raw.npz'))['data'][()]      # For some reason, numpy saved it as a 0-d array! See http://stackoverflow.com/questions/8361561/recover-dict-from-0-d-numpy-array
+      foo = np.load(os.path.join(datadir, str(id), 'transits.npz'))
       tN = foo['tN']
       per = foo['per']
       tdur = foo['tdur']
       if not quiet: print("Loading saved TPF data...")
-      return data, tN, per, tdur
+      return {'data': data, 'tN': tN, 'per': per, 'tdur': tdur}
     except:
       pass
   
   if not quiet: print("Downloading TPF data...")
-  planet = GetKoi(koi)  
+  if type(id) is float:
+    obj = GetKoi(id)  
+  elif type(id) is int:
+    try:
+      obj = kplr.API().star(id)
+    except:
+      raise Exception("Invalid KIC number!")
+  else:
+    raise Exception("Invalid identifier type!")
   data = EmptyData(quarters)
-  tpf = planet.get_target_pixel_files(short_cadence = not long_cadence)
+  tpf = obj.get_target_pixel_files(short_cadence = not long_cadence)
   if len(tpf) == 0:
     raise Exception("No pixel files for selected object!")
   tstart = np.inf
@@ -160,40 +168,47 @@ def GetTPFData(koi, long_cadence = True, clobber = False,
     if time[0] < tstart: tstart = time[0]
     if time[-1] > tend: tend = time[-1]
   
-  if not os.path.exists(os.path.join(datadir, str(koi))):
-    os.makedirs(os.path.join(datadir, str(koi)))
-  np.savez_compressed(os.path.join(datadir, str(koi), 'data_raw.npz'), data = data, hash = GitHash())
+  if not os.path.exists(os.path.join(datadir, str(id))):
+    os.makedirs(os.path.join(datadir, str(id)))
+  np.savez_compressed(os.path.join(datadir, str(id), 'data_raw.npz'), data = data, hash = GitHash())
   
   # Now get the transit info
-  tN, per, tdur = GetTransitTimes(koi, tstart, tend, pad = pad, ttvs = ttvs, 
-                                  long_cadence = long_cadence, ttvpath = ttvpath)
-  np.savez_compressed(os.path.join(datadir, str(koi), 'transits.npz'), tN = tN, per = per, tdur = tdur, hash = GitHash())
+  if type(id) is float:
+    tN, per, tdur = GetTransitTimes(id, tstart, tend, pad = pad, ttvs = ttvs, 
+                                    long_cadence = long_cadence, ttvpath = ttvpath)
+  else:
+    tN = np.array([], dtype = int)
+    per = 0.
+    tdur = 0.
+  np.savez_compressed(os.path.join(datadir, str(id), 'transits.npz'), tN = tN, 
+                      per = per, tdur = tdur, hash = GitHash())
     
-  return data, tN, per, tdur
+  return {'data': data, 'tN': tN, 'per': per, 'tdur': tdur}
 
-def GetData(koi, data_type = 'prc', datadir = ''):
+def GetData(id, data_type = 'prc', datadir = ''):
   '''
   
   '''
 
   try:
-    data = np.load(os.path.join(datadir, str(koi), 'data_%s.npz' % data_type))['data'][()]
+    data = np.load(os.path.join(datadir, str(id), 'data_%s.npz' % data_type))['data'][()]
   except IOError:
-    raise Exception("File ``data_%s.npz`` not found." % data_type)
+    raise IOError("File ``data_%s.npz`` not found." % data_type)
 
   return data
 
-def GetInfo(koi, datadir = ''):
+def GetInfo(id, datadir = ''):
   '''
   
   '''
   
   try:
-    tN = np.load(os.path.join(datadir, str(koi), 'transits.npz'))['tN'][()]
-    per = np.load(os.path.join(datadir, str(koi), 'transits.npz'))['per'][()]
-    tdur = np.load(os.path.join(datadir, str(koi), 'transits.npz'))['tdur'][()]
-    hash = np.load(os.path.join(datadir, str(koi), 'transits.npz'))['hash'][()]
+    data = np.load(os.path.join(datadir, str(id), 'transits.npz'))
+    tN = data['tN'][()]
+    per = data['per'][()]
+    tdur = data['tdur'][()]
+    hash = data['hash'][()]
   except IOError:
-    raise Exception("File ``transits.npz`` not found.")
+    raise IOError("File ``transits.npz`` not found.")
   
-  return tN, per, tdur, hash
+  return {'tN': tN, 'per': per, 'tdur': tdur, 'hash': hash}

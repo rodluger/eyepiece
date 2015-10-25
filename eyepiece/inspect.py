@@ -173,7 +173,7 @@ class Selector(object):
   
   '''
   
-  def __init__(self, fig, ax, koi, quarter, data, tN, cptbkg, cpttrn, datadir, 
+  def __init__(self, fig, ax, id, quarter, data, tN, cptbkg, cpttrn, datadir, 
                split_cads = [], cad_tol = 10, min_sz = 300):
     self.fig = fig
     self.ax = ax    
@@ -184,7 +184,7 @@ class Selector(object):
     self.perr = data['perr']
     self.fpix = data['fpix']
     self.tNc = self.cad[0] + (self.cad[-1] - self.cad[0])/(self.time[-1] - self.time[0]) * (tN - self.time[0])
-    self.koi = koi
+    self.id = id
     self.datadir = datadir
     self.quarter = quarter
     
@@ -473,7 +473,7 @@ class Selector(object):
   
     # Save
     if event.key == SAVE:
-      figname = os.path.join(self.datadir, str(self.koi), "Q%02d_%s.png" % (self.quarter, self.state[0]))
+      figname = os.path.join(self.datadir, str(self.id), "Q%02d_%s.png" % (self.quarter, self.state[0]))
       self.fig.savefig(figname, bbox_inches = 'tight')
       print("Saved to file %s." % figname)
   
@@ -681,11 +681,15 @@ def Inspect(input_file = None):
 
   # Grab the data
   if not inp.quiet: print("Retrieving target data...")
-  data, tN, per, tdur = GetTPFData(inp.koi, long_cadence = inp.long_cadence, 
-                        clobber = inp.clobber, datadir = inp.datadir, 
-                        bad_bits = inp.bad_bits, aperture = inp.aperture, 
-                        quarters = inp.quarters, quiet = inp.quiet, 
-                        pad = inp.padbkg, ttvs = inp.ttvs, ttvpath = inp.ttvpath)
+  foo = GetTPFData(inp.id, long_cadence = inp.long_cadence, 
+                   clobber = inp.clobber, datadir = inp.datadir, 
+                   bad_bits = inp.bad_bits, aperture = inp.aperture, 
+                   quarters = inp.quarters, quiet = inp.quiet, 
+                   pad = inp.padbkg, ttvs = inp.ttvs, ttvpath = inp.ttvpath)
+  data = foo['data']
+  tN = foo['tN']
+  per = foo['per']
+  tdur = foo['tdur']
   data_new = EmptyData(inp.quarters)
   data_trn = EmptyData(inp.quarters)
   data_bkg = EmptyData(inp.quarters)
@@ -702,8 +706,6 @@ def Inspect(input_file = None):
   cptbkg = None
 
   while q in inp.quarters:
-  
-    if not inp.interactive_inspect and not inp.quiet: print("Quarter %d" % q)
 
     # Empty quarter?
     if data[q]['time'] == []:
@@ -728,7 +730,7 @@ def Inspect(input_file = None):
       # Set up the plot
       fig, ax = pl.subplots(1, 1, figsize = (16, 6))
       fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
-      sel = Selector(fig, ax, inp.koi, q, data[q], tN, cptbkg, cpttrn, inp.datadir,
+      sel = Selector(fig, ax, inp.id, q, data[q], tN, cptbkg, cpttrn, inp.datadir,
                      split_cads = inp.split_cads, cad_tol = cad_tol, 
                      min_sz = inp.min_sz)
               
@@ -742,7 +744,7 @@ def Inspect(input_file = None):
       if len(utw[q]): 
         sel._transits_wide = list(utw[q])
 
-      fig.canvas.set_window_title('KOI %.2f: Quarter %02d' % (inp.koi, q)) 
+      fig.canvas.set_window_title('KEPLER %.2f: Quarter %02d' % (inp.id, q)) 
       sel.UpdateTransits()
       sel.redraw()
 
@@ -884,9 +886,9 @@ def Inspect(input_file = None):
 
   # Save the data
   if not inp.quiet: print("Saving data to disk...")
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.koi), 'data_prc.npz'), data = data_new, hash = GitHash())
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.koi), 'data_trn.npz'), data = data_trn, hash = GitHash())
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.koi), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), 'data_prc.npz'), data = data_new, hash = GitHash())
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), 'data_trn.npz'), data = data_trn, hash = GitHash())
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
 
   # Re-enable toolbar and shortcuts
   if inp.interactive_inspect:

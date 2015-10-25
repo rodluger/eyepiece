@@ -20,16 +20,22 @@ import sys
 
 if __name__ == '__main__':
   
-  try:
+  # Did the user specify an input file?
+  if len(sys.argv) == 2:
     input_file = os.path.abspath(str(sys.argv[1]))
+  else:
+    # Assume it's in the cwd
+    input_file = 'input.py'
+  # Let's try to load it
+  try:
     inp = Input(input_file)
   except (IndexError, FileNotFoundError):
     raise Exception("Please provide a valid input file!")
     
   # Try to load the data. If it fails, run ``Inspect``
   try:
-    GetData(koi = inp.koi, data_type = 'bkg', datadir = inp.datadir)
-  except Exception:
+    GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
+  except IOError:
     success = Inspect(input_file)
     if not success:
       if not inp.quiet:

@@ -21,34 +21,47 @@ def Input(input_file = None):
   if input_file is None:
     return defaults
   
-  input = imp.load_source("input", input_file)                                       
+  inp = imp.load_source("input", input_file)                                       
 
-  for key, val in list(input.__dict__.items()):
+  # Let's check that the user didn't specify both a KIC and a KOI number
+  if ('kic' in inp.__dict__.keys()) and ('koi' in inp.__dict__.keys()):
+    if (inp.kic is not None) and (inp.koi is not None):
+      raise Exception("Please specify either a KOI or a KIC id, but not both!")
+
+  for key, val in list(inp.__dict__.items()):
     if key.startswith('_'):
-      input.__dict__.pop(key, None)
+      inp.__dict__.pop(key, None)
     else:
       # Check if user provided something they shouldn't have
       if key not in defaults.__dict__.keys():                                  
         raise Exception("Invalid input parameter %s." % key)
     
   # Update default conf with user values     
-  defaults.__dict__.update(input.__dict__)   
+  defaults.__dict__.update(inp.__dict__)   
   
   # Finally, update conf                                
-  input.__dict__.update(defaults.__dict__)
+  inp.__dict__.update(defaults.__dict__)
 
-  return input
+  # Set the id
+  if inp.kic is not None:
+    inp.koi = None
+    inp.id = inp.kic
+  elif inp.koi is not None:
+    inp.id = inp.koi
+
+  return inp
 
 def GitHash():
   '''
   Get current git commit hash
+  
   '''
   
   try:
-    _wrktree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    _gitpath = os.path.join(_wrktree, '.git')
-    GITHASH = subprocess.check_output(['git', '--git-dir=%s' % _gitpath, 
-                                       '--work-tree=%s' % _wrktree, 'rev-parse', 'HEAD'], 
+    wrktree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    gitpath = os.path.join(wrktree, '.git')
+    GITHASH = subprocess.check_output(['git', '--git-dir=%s' % gitpath, 
+                                       '--work-tree=%s' % wrktree, 'rev-parse', 'HEAD'], 
                                        stderr = subprocess.STDOUT)
     if GITHASH.endswith('\n'): GITHASH = GITHASH[:-1]
   except:

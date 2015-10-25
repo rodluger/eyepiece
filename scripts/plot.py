@@ -14,11 +14,21 @@ import matplotlib; matplotlib.use('Agg')
 import sys
 import os
 from eyepiece.detrend import PlotDetrended, PlotTransits
+from eyepiece.utils import Input
 
 if __name__ == '__main__':
 
-  # Grab input file from args
-  input_file = os.path.abspath(str(sys.argv[1]))
+  # Did the user specify an input file?
+  if len(sys.argv) == 2:
+    input_file = os.path.abspath(str(sys.argv[1]))
+  else:
+    # Assume it's in the cwd
+    input_file = 'input.py'
+  # Let's try to load it
+  try:
+    inp = Input(input_file)
+  except (IndexError, FileNotFoundError):
+    raise Exception("Please provide a valid input file!")
   
   # Plot
   PlotDetrended(input_file = input_file)

@@ -20,7 +20,7 @@ import george
 import os
 import itertools
 
-__all__ = ['Detrend', 'PlotDetrended', 'Whiten', 'PlotTransits', 'GetWhitenedTransits']
+__all__ = ['Detrend', 'PlotDetrended', 'Whiten', 'PlotTransits', 'GetWhitenedData']
 
 data = None
 
@@ -65,7 +65,7 @@ def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.M
   
   return dflux
 
-def NegLnLike(x, koi, q, kernel, debug):
+def NegLnLike(x, id, q, kernel, debug):
   '''
   Returns the negative log-likelihood for the model with coefficients ``x``,
   as well as its gradient with respect to ``x``.
@@ -75,7 +75,7 @@ def NegLnLike(x, koi, q, kernel, debug):
   # Load the data (if necessary)
   global data
   if data is None:
-    data = GetData(koi, data_type = 'bkg')
+    data = GetData(id, data_type = 'bkg')
   dq = data[q]
   
   # The log-likelihood and its gradient
@@ -94,7 +94,7 @@ def NegLnLike(x, koi, q, kernel, debug):
   
   return (-ll, -grad_ll)
     
-def QuarterDetrend(koi, q, kernel, init, bounds, maxfun, debug):
+def QuarterDetrend(id, q, kernel, init, bounds, maxfun, debug):
   '''
   
   '''
@@ -102,12 +102,12 @@ def QuarterDetrend(koi, q, kernel, init, bounds, maxfun, debug):
   # Load the data (if necessary)
   global data
   if data is None:
-    data = GetData(koi, data_type = 'bkg')
+    data = GetData(id, data_type = 'bkg')
   qd = data[q]
   
   # Run the optimizer.
   res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
-                      args = (koi, q, kernel, debug), bounds = bounds,
+                      args = (id, q, kernel, debug), bounds = bounds,
                       m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = maxfun)
   
   # Grab some info
@@ -138,8 +138,8 @@ class Worker(object):
   
   '''
   
-  def __init__(self, koi, kernel, kinit, sigma, kbounds, maxfun, debug, datadir):
-    self.koi = koi
+  def __init__(self, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadir):
+    self.id = id
     self.kernel = kernel
     self.kinit = kinit
     self.sigma = sigma
@@ -153,7 +153,7 @@ class Worker(object):
     # Load the data (if necessary)
     global data
     if data is None:
-      data = GetData(self.koi, data_type = 'bkg', datadir = self.datadir)
+      data = GetData(self.id, data_type = 'bkg', datadir = self.datadir)
     
     # Tags: i is the iteration number; q is the quarter number
     i = tag[0]
@@ -177,12 +177,12 @@ class Worker(object):
     init = foo
     
     # Detrend
-    res = QuarterDetrend(self.koi, q, self.kernel, init, bounds, self.maxfun, self.debug)
+    res = QuarterDetrend(self.id, q, self.kernel, init, bounds, self.maxfun, self.debug)
   
     # Save
-    if not os.path.exists(os.path.join(self.datadir, str(self.koi), 'detrend')):
-      os.makedirs(os.path.join(self.datadir, str(self.koi), 'detrend'))
-    np.savez(os.path.join(self.datadir, str(self.koi), 'detrend', '%02d.%02d.npz' % (q, i)), **res)
+    if not os.path.exists(os.path.join(self.datadir, str(self.id), 'detrend')):
+      os.makedirs(os.path.join(self.datadir, str(self.id), 'detrend'))
+    np.savez(os.path.join(self.datadir, str(self.id), 'detrend', '%02d.%02d.npz' % (q, i)), **res)
   
     return (tag, True) 
   
@@ -203,7 +203,7 @@ def Detrend(input_file = None, pool = None):
 
   # Set up our list of runs  
   tags = list(itertools.product(range(inp.niter), inp.quarters))
-  W = Worker(inp.koi, inp.kernel, inp.kinit, inp.pert_sigma, 
+  W = Worker(inp.id, inp.kernel, inp.kinit, inp.pert_sigma, 
              inp.kbounds, inp.maxfun, inp.debug, inp.datadir)
   
   # Run and save
@@ -218,10 +218,17 @@ def LoadBestRun(inp, q):
   
   '''
   
+  # Attempt to load it, if it's been set already
+  try:
+    res = np.load(os.path.join(pldpath, "%02d.npz" % q))
+  except:
+    pass
+  
+  # Find it among all the runs for that quarter
   try:
   
     # Look at the likelihoods of all runs for this quarter
-    pldpath = os.path.join(inp.datadir, str(inp.koi), 'detrend')
+    pldpath = os.path.join(inp.datadir, str(inp.id), 'detrend')
     files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) 
              if f.startswith('%02d.' % q) and f.endswith('.npz')]
 
@@ -251,6 +258,9 @@ def PlotDetrended(input_file = None):
   
   # Load inputs
   inp = Input(input_file)
+  
+  if not inp.quiet:
+    print("Plotting detrended background flux...")
   
   # Number of kernel params
   nkpars = len(inp.kernel.pars)
@@ -338,7 +348,7 @@ def PlotDetrended(input_file = None):
       # Best GP param values
       ax[1].annotate("\n   GP PARAMS", (ltq, yp1), ha='left', va='top', fontsize = 8)
       for i, c in enumerate(cc[q][:nkpars]):
-        ax[1].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp1), ha='left', va='top', fontsize = 8)
+        ax[1].annotate("\n" * (i + 2) + "   %.2f" % c, (ltq, yp1), ha='left', va='top', fontsize = 8)
       
       # Optimization info
       if wf[q] == "":
@@ -358,11 +368,11 @@ def PlotDetrended(input_file = None):
   ax[1].set_title('PLD-Decorrelated Flux', fontsize = 24)  
   ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 24)   
   
-  fig.savefig(os.path.join(inp.datadir, str(inp.koi), 'detrended.png'), bbox_inches = 'tight')
+  fig.savefig(os.path.join(inp.datadir, str(inp.id), 'detrended.png'), bbox_inches = 'tight')
   
   return fig, ax
 
-def GetWhitenedTransits(input_file = None):
+def GetWhitenedData(input_file = None, folded = True):
   '''
   
   '''
@@ -370,13 +380,20 @@ def GetWhitenedTransits(input_file = None):
   # Input file
   inp = Input(input_file)
   
+  if not inp.quiet:
+    print("Whitening the flux...")
+    
   # Number of kernel params
   nkpars = len(inp.kernel.pars)
 
   # Load the data
-  bkg = GetData(inp.koi, data_type = 'bkg', datadir = inp.datadir)
-  prc = GetData(inp.koi, data_type = 'prc', datadir = inp.datadir)
-  tN, per, tdur, hash = GetInfo(inp.koi, datadir = inp.datadir)
+  bkg = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
+  prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
+  info = GetInfo(inp.id, datadir = inp.datadir); info.update(inp.info)
+  tN = info['tN']
+
+  if folded and len(tN) == 0:
+    raise Exception("No transits for current target!")
 
   # Whiten
   t = np.array([], dtype = float)
@@ -398,7 +415,8 @@ def GetWhitenedTransits(input_file = None):
       flux = Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = inp.kernel, crowding = prc[q]['crowding'])
     
       # Fold the time
-      time -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in time])
+      if folded:
+        time -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in time])
     
       # Plot
       t = np.append(t, time)
@@ -414,9 +432,13 @@ def PlotTransits(input_file = None):
   # Input file
   inp = Input(input_file)
 
+  if not inp.quiet:
+    print("Plotting transits...")
+
   # Load the info
-  tN, per, tdur, hash = GetInfo(inp.koi, datadir = inp.datadir)
-  t, f = GetWhitenedTransits(input_file)
+  info = GetInfo(inp.id, datadir = inp.datadir); info.update(inp.info)
+  tdur = info['tdur']
+  t, f = GetWhitenedData(input_file, folded = True)
 
   # Plot
   fig, ax = pl.subplots(1, 1, figsize = inp.transits_figsize)
@@ -441,6 +463,6 @@ def PlotTransits(input_file = None):
   ax.set_title('Folded Whitened Transits', fontsize = 24)
   ax.set_xlabel('Time (days)', fontsize = 22)
   ax.set_ylabel('Flux', fontsize = 22)
-  fig.savefig(os.path.join(inp.datadir, str(inp.koi), 'folded.png'), bbox_inches = 'tight')
+  fig.savefig(os.path.join(inp.datadir, str(inp.id), 'folded.png'), bbox_inches = 'tight')
   
   return fig, ax
