@@ -212,3 +212,37 @@ def GetInfo(id, datadir = ''):
     raise IOError("File ``transits.npz`` not found.")
   
   return {'tN': tN, 'per': per, 'tdur': tdur, 'hash': hash}
+
+import matplotlib; matplotlib.use('TkAgg')
+import kplr
+import matplotlib.pyplot as pl
+import numpy as np
+
+def GetPDCFlux(id, long_cadence = True):
+  '''
+  
+  '''
+  
+  if type(id) is float:
+    obj = GetKoi(id)  
+  elif type(id) is int:
+    try:
+      obj = kplr.API().star(id)
+    except:
+      raise Exception("Invalid KIC number!")
+      
+  # Get a list of light curve datasets.
+  lcs = obj.get_light_curves(short_cadence = not long_cadence)
+
+  # Loop over the datasets and read in the data.
+  time, flux, ferr, quality = [], [], [], []
+  for lc in lcs:
+      with lc.open() as f:
+          # The lightcurve data are in the first FITS HDU.
+          hdu_data = f[1].data
+          time.extend(hdu_data["time"])
+          flux.extend(hdu_data["pdcsap_flux"] - np.nanmedian(hdu_data["pdcsap_flux"]))
+          ferr.extend(hdu_data["pdcsap_flux_err"])
+          quality.extend(hdu_data["sap_quality"])
+
+  return np.array(time), np.array(flux)

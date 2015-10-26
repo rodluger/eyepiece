@@ -66,6 +66,7 @@ nodes = 5
 padbkg = 2.0
 padtrn = 5.0
 pert_sigma = 0.25
+plot_pdc = False
 ppn = 12
 
 # Q
@@ -148,6 +149,7 @@ class _Docs(object):
     self.padbkg = 'Padding in units of the transit duration for masking transits in background data'
     self.padtrn = 'Padding in units of the transit duration for selecting transits for the transit-only data'
     self.pert_sigma = 'Perturb the initial conditions by this many sigma'
+    self.plot_pdc = 'Plot the PDC data for comparison to the detrended data?'
     self.ppn = 'Number of processors per node for a ``qsub`` job'
     
     # Q

@@ -10,6 +10,7 @@ from . import defaults
 import os
 import subprocess
 import imp
+import numpy as np
 
 __all__ = ['Input', 'GitHash', 'Bold', 'RowCol']
 
@@ -116,3 +117,21 @@ def Help(param = None):
       print("\x1b[1m%s:\x1b[0m No docstring available." % param)
   else:
     print(helpstr)
+
+def GetOutliers(data, sig_tol = 3.):
+  """
+  Outlier rejection: see the
+  `Wikipedia article <http://en.wikipedia.org/wiki/Median_absolute_deviation>`_ .
+  
+  """
+  
+  M = np.nanmedian(data)
+  MAD = 1.4826*np.nanmedian(np.abs(data - M))
+  
+  out = []
+  for i, x in enumerate(data):
+    if (x > M + sig_tol * MAD) or (x < M - sig_tol * MAD):
+      out.append(i)    
+  out = np.array(out, dtype = int)
+  
+  return out, M, MAD

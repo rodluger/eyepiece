@@ -8,9 +8,10 @@ Custom settings for ``eyepiece``.
 
 '''
 
-kic = 757076
-ttvs = True
+kic = 18.01
+ttvs = False
 interactive_inspect = True
-niter = 1
-nodes = 1
+niter = 5
+nodes = 5
 fullscreen = False
+plot_pdc = True

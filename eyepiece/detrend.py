@@ -9,10 +9,10 @@ detrend.py
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
-from .download import GetData, GetInfo
+from .download import GetData, GetInfo, GetPDCFlux
 from .interruptible_pool import InterruptiblePool
-from .lnlike import LnLike
-from .utils import Input
+from .linalg import LnLike, Whiten
+from .utils import Input, GetOutliers
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 import matplotlib.pyplot as pl
@@ -20,50 +20,9 @@ import george
 import os
 import itertools
 
-__all__ = ['Detrend', 'PlotDetrended', 'Whiten', 'PlotTransits', 'GetWhitenedData']
+__all__ = ['Detrend', 'PlotDetrended', 'PlotTransits', 'GetWhitenedData']
 
 data = None
-
-def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.Matern32Kernel(1.), crowding = None):
-  '''
-  
-  '''
-  
-  # Calculate fsum
-  b_fsum = np.sum(b_fpix, axis = 1)
-  fsum = np.sum(fpix, axis = 1)
-  
-  # PLD coefficients
-  c = x[len(kernel.pars):]
-  
-  # Kernel params
-  kernel.pars = x[:len(kernel.pars)]
-  
-  # Number of background data points
-  b_K = len(b_time)
-
-  # The pixel model
-  b_pmod = np.sum(b_fpix * np.outer(1. / b_fsum, c), axis = 1)
-  pmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)
-
-  # Errors on detrended background data
-  X = 1. + b_pmod / b_fsum
-  B = X.reshape(b_K, 1) * b_perr - c * b_perr / b_fsum.reshape(b_K, 1)
-  b_yerr = np.sum(B ** 2, axis = 1) ** 0.5
-
-  # Compute the likelihood
-  gp = george.GP(kernel)
-  gp.compute(b_time, b_yerr)
-  mu, _ = gp.predict(b_fsum - b_pmod, time)
-  
-  # The full decorrelated flux with baseline = 1.
-  dflux = 1. + (fsum - mu - pmod) / fsum
-  
-  # Correct for crowding?
-  if crowding is not None:
-    dflux = (dflux - 1.) / crowding + 1.
-  
-  return dflux
 
 def NegLnLike(x, id, q, kernel, debug):
   '''
@@ -262,11 +221,19 @@ def PlotDetrended(input_file = None):
   if not inp.quiet:
     print("Plotting detrended background flux...")
   
+  # Load some info
+  info = GetInfo(inp.id, datadir = inp.datadir); info.update(inp.info)
+  tN = info['tN']
+  tdur = info['tdur']
+  
   # Number of kernel params
   nkpars = len(inp.kernel.pars)
   
   # Plot the decorrelated data
-  fig, ax = pl.subplots(3, 1, figsize = inp.detrend_figsize) 
+  if not inp.plot_pdc:
+    fig, ax = pl.subplots(3, 1, figsize = inp.detrend_figsize) 
+  else:
+    fig, ax = pl.subplots(4, 1, figsize = (inp.detrend_figsize[0], inp.detrend_figsize[1] * 4./3.)) 
   
   # Some miscellaneous info
   lt = [None] * (inp.quarters[-1] + 1)
@@ -306,11 +273,8 @@ def PlotDetrended(input_file = None):
     ax[2].fill_between(time, f - gperr, f + gperr, alpha = 0.1, lw = 0, color = 'r')
     
     # Appearance
-    ax[0].set_xticklabels([])
-    ax[1].set_xticklabels([])
-    ax[0].margins(0, 0.01)
-    ax[1].margins(0, 0.01)
-    ax[2].margins(0, 0.01)
+    [axis.set_xticklabels([]) for axis in ax[:-1]]
+    [axis.margins(0, 0.01) for axis in ax]
     
     # Extra info
     lt[q] = time[-1]
@@ -318,8 +282,8 @@ def PlotDetrended(input_file = None):
     ni[q] = info['nit']
     if info['warnflag']:
       wf[q] = info['task']
-      if len(wf[q]) > 20:
-        wf[q] = "%s..." % wf[q][:20]
+      if wf[q] == 'ABNORMAL_TERMINATION_IN_LNSRCH':
+        wf[q] = 'AT_LNSRCH'
     ll[q] = lnlike
     cc[q] = x
       
@@ -354,7 +318,7 @@ def PlotDetrended(input_file = None):
       if wf[q] == "":
         ax[2].annotate("\n   SUCCESS", (ltq, yp2), ha='left', va='top', fontsize = 8, color = 'b')
       else:
-        ax[2].annotate("\n   ERROR: %s" % wf[q], (ltq, yp2), ha='left', va='top', fontsize = 8, color = 'r')
+        ax[2].annotate("\n   %s" % wf[q], (ltq, yp2), ha='left', va='top', fontsize = 8, color = 'r')
       ax[2].annotate("\n\n   CALLS: %d" % fc[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
       ax[2].annotate("\n\n\n   NITR: %d" % ni[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
       ax[2].annotate("\n\n\n\n   LNLK: %.2f" % ll[q], (ltq, yp2), ha='left', va='top', fontsize = 8)
@@ -364,10 +328,43 @@ def PlotDetrended(input_file = None):
     
     ltq = lt[q]
   
-  ax[0].set_title('Raw Background Flux', fontsize = 24, y = 1.1) 
-  ax[1].set_title('PLD-Decorrelated Flux', fontsize = 24)  
-  ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 24)   
+  # Labels and titles
+  ax[0].set_title('Raw Background Flux', fontsize = 28, fontweight = 'bold', y = 1.1) 
+  ax[1].set_title('PLD-Decorrelated Flux', fontsize = 28, fontweight = 'bold', y = 1.025)  
+  ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 28, fontweight = 'bold', y = 1.025) 
+  ax[-1].set_xlabel('Time (Days)', fontsize = 24)
+  [axis.set_ylabel('Counts', fontsize = 24) for axis in ax]
   
+  # Appearance
+  [i.set_linewidth(2) for axis in ax for i in axis.spines.itervalues()]
+  [tick.label.set_fontsize(20) for tick in ax[-1].xaxis.get_major_ticks()]
+  [tick.label.set_fontsize(18) for axis in ax for tick in axis.yaxis.get_major_ticks()] 
+  ax[0].set_axis_bgcolor((1.0, 0.95, 0.95))
+  ax[1].set_axis_bgcolor((0.95, 0.95, 0.95))
+  ax[2].set_axis_bgcolor((0.95, 0.95, 1.0))
+  
+  # PDC flux
+  if inp.plot_pdc:
+    
+    # Grab the data
+    t, f = GetPDCFlux(inp.id, inp.long_cadence)
+    
+    # Remove transits
+    trnidx = np.array([], dtype = int)
+    for tNi in tN:
+      i = np.where(np.abs(tNi - t) <= tdur * inp.padbkg / 2.)[0]
+      if len(i):
+        trnidx = np.append(trnidx, i)
+    t = np.delete(t, trnidx)
+    f = np.delete(f, trnidx)
+
+    # Plot
+    out, M, MAD = GetOutliers(f, sig_tol = 5.)
+    ax[3].plot(t, f, 'b.', alpha = 0.3)
+    ax[3].set_ylim(M - 3 * MAD, M + 3 * MAD)
+    ax[3].set_axis_bgcolor((0.95, 0.95, 0.95))
+    ax[3].set_title('Kepler PDC Flux', fontsize = 28, fontweight = 'bold', y = 1.025)
+      
   fig.savefig(os.path.join(inp.datadir, str(inp.id), 'detrended.png'), bbox_inches = 'tight')
   
   return fig, ax
@@ -455,8 +452,7 @@ def PlotTransits(input_file = None):
   delta = bins[1] - bins[0]
   idx  = np.digitize(t, bins)
   med = [np.median(f[idx == k]) for k in range(inp.tbins)]
-  ax.plot(bins - delta / 2., med, 'ro', alpha = 0.5)
-  ax.plot(bins - delta / 2., med, 'r-', lw = 2, alpha = 0.5)
+  ax.plot(bins - delta / 2., med, 'ro', alpha = 0.75)
   
   ax.set_xlim(xlim)  
   ax.set_ylim(ylim)
