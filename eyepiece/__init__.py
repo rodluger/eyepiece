@@ -6,7 +6,7 @@ from __future__ import (division, print_function, absolute_import,
 import matplotlib; matplotlib.use('TkAgg', warn = False)
 import matplotlib.pyplot as pl
 
-from . import (detrend, download, lnlike, defaults, 
+from . import (detrend, download, linalg, defaults, 
                inspect, mpi_pool, interruptible_pool,
                utils)
 

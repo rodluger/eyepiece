@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-lnlike.py
+linalg.py
 ---------
 
 '''
@@ -56,7 +56,7 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
   :type predict: ``bool``, optional
   
   :param kernel: The kernel to use in the GP computation. Default is a *Matern 3/2* \
-                 kernel
+                 kernel. To perform decorrelation without GP, set this to ``None``
   :type fpix: :class:``george.kernels.Kernel``
   
   '''
@@ -65,11 +65,12 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
   if fsum is None:
     fsum = np.sum(fpix, axis = 1)
   
-  # PLD coefficients
-  c = x[len(kernel.pars):]
+  # Index of first PLD coefficient in ``x``
+  iPLD = len(kernel.pars)
+  kernel.pars = x[:iPLD]
   
-  # Kernel params
-  kernel.pars = x[:len(kernel.pars)]
+  # PLD coefficients
+  c = x[iPLD:]
   
   # Number of data points
   K = len(time)
@@ -81,13 +82,13 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
     D = 1. / tmod
   
   # The pixel model
-  pmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)
+  pixmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)
   
   # The PLD-detrended data
-  y = fsum - pmod
+  y = fsum - pixmod
 
   # Errors on detrended data (y)
-  X = D + pmod / fsum
+  X = D + pixmod / fsum
   B = X.reshape(K, 1) * perr - c * perr / fsum.reshape(K, 1)
   yerr = np.sum(B ** 2, axis = 1) ** 0.5
 
@@ -146,7 +147,7 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
   else:
     return (ll, grad_ll)
 
-def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.Matern32Kernel(1.), crowding = None):
+def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.Matern32Kernel(1.), order = 2, crowding = None):
   '''
   
   '''
@@ -155,31 +156,45 @@ def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.M
   b_fsum = np.sum(b_fpix, axis = 1)
   fsum = np.sum(fpix, axis = 1)
   
-  # PLD coefficients
-  c = x[len(kernel.pars):]
+  # Index of first PLD coefficient in ``x``
+  if kernel is not None:
+    iPLD = len(kernel.pars)
+    kernel.pars = x[:iPLD]
+  else:
+    if order is None:
+      iPLD = 0
+    else:
+      iPLD = order + 1
+    poly = x[:iPLD]
   
-  # Kernel params
-  kernel.pars = x[:len(kernel.pars)]
+  # PLD coefficients
+  c = x[iPLD:]
   
   # Number of background data points
   b_K = len(b_time)
 
   # The pixel model
-  b_pmod = np.sum(b_fpix * np.outer(1. / b_fsum, c), axis = 1)
-  pmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)
+  b_pixmod = np.sum(b_fpix * np.outer(1. / b_fsum, c), axis = 1)
+  pixmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)
 
-  # Errors on detrended background data
-  X = 1. + b_pmod / b_fsum
-  B = X.reshape(b_K, 1) * b_perr - c * b_perr / b_fsum.reshape(b_K, 1)
-  b_yerr = np.sum(B ** 2, axis = 1) ** 0.5
+  # The GP/polynomial model
+  if kernel is None:
+    # Polynomial correction
+    tnorm = ((time - time[0]) / (time[-1] - time[0]))
+    mu = np.sum([c * tnorm ** i for i, c in enumerate(poly)], axis = 0)
+  else:
+    # Errors on detrended background data
+    X = 1. + b_pixmod / b_fsum
+    B = X.reshape(b_K, 1) * b_perr - c * b_perr / b_fsum.reshape(b_K, 1)
+    b_yerr = np.sum(B ** 2, axis = 1) ** 0.5
 
-  # Compute the likelihood
-  gp = george.GP(kernel)
-  gp.compute(b_time, b_yerr)
-  mu, _ = gp.predict(b_fsum - b_pmod, time)
+    # Compute the GP prediction
+    gp = george.GP(kernel)
+    gp.compute(b_time, b_yerr)
+    mu, _ = gp.predict(b_fsum - b_pixmod, time)
   
   # The full decorrelated flux with baseline = 1.
-  dflux = 1. + (fsum - mu - pmod) / fsum
+  dflux = 1. + (fsum - mu - pixmod) / fsum
   
   # Correct for crowding?
   if crowding is not None:

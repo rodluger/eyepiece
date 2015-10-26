@@ -11,6 +11,7 @@ import os
 import subprocess
 import imp
 import numpy as np
+import types
 
 __all__ = ['Input', 'GitHash', 'Bold', 'RowCol']
 
@@ -22,7 +23,7 @@ def Input(input_file = None):
   if input_file is None:
     return defaults
   
-  inp = imp.load_source("input", input_file)                                       
+  inp = imp.load_source("input", input_file) 
 
   # Let's check that the user didn't specify both a KIC and a KOI number
   if ('kic' in inp.__dict__.keys()) and ('koi' in inp.__dict__.keys()):
@@ -34,7 +35,7 @@ def Input(input_file = None):
       inp.__dict__.pop(key, None)
     else:
       # Check if user provided something they shouldn't have
-      if key not in defaults.__dict__.keys():                                  
+      if key not in defaults.__dict__.keys() and not isinstance(inp.__dict__[key], types.ModuleType):                  
         raise Exception("Invalid input parameter %s." % key)
     
   # Update default conf with user values     
@@ -50,6 +51,19 @@ def Input(input_file = None):
   elif inp.koi is not None:
     inp.id = inp.koi
 
+  # Check some other stuff
+  if inp.order is not None:
+    inp.kernel = None
+    if len(inp.kbounds) != inp.order + 1:
+      raise Exception("Input option ``kbounds`` has the wrong size!")
+    if len(inp.kinit) != inp.order + 1:
+      raise Exception("Input option ``kinit`` has the wrong size!")
+  elif inp.kernel is not None:
+    if len(inp.kbounds) != len(inp.kernel.pars):
+      raise Exception("Input option ``kbounds`` has the wrong size!")
+    if len(inp.kinit) != len(inp.kernel.pars):
+      raise Exception("Input option ``kinit`` has the wrong size!")
+  
   return inp
 
 def GitHash():

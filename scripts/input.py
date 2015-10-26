@@ -8,10 +8,12 @@ Custom settings for ``eyepiece``.
 
 '''
 
-kic = 18.01
+import numpy as np
+
+kic = 254.01
 ttvs = False
-interactive_inspect = True
-niter = 5
-nodes = 5
+interactive_inspect = False
+niter = 1
+nodes = 1
 fullscreen = False
 plot_pdc = True

@@ -62,6 +62,9 @@ mpn = 40
 niter = 5
 nodes = 5
 
+# O
+order = None
+
 # P
 padbkg = 2.0
 padtrn = 5.0
@@ -144,6 +147,9 @@ class _Docs(object):
     # N
     self.niter = 'Number of iterations when detrending in parallel.'
     self.nodes = 'Number of nodes to use when submitting a job with ``qsub``'
+    
+    # O
+    self.order = 'Order of decorrelation polynomial if not using GP. Set to ``None`` otherwise'
     
     # P
     self.padbkg = 'Padding in units of the transit duration for masking transits in background data'
