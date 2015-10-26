@@ -4,6 +4,8 @@
 detrend.py
 ----------
 
+.. todo::
+   - Save ``input.py`` file for each target
 
 '''
 

@@ -29,7 +29,7 @@ if __name__ == '__main__':
   # Let's try to load it
   try:
     inp = Input(input_file)
-  except (IndexError, FileNotFoundError):
+  except:
     raise Exception("Please provide a valid input file!")
     
   # Try to load the data. If it fails, run ``Inspect``
