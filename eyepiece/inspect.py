@@ -686,9 +686,9 @@ def Inspect(input_file = None):
       GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
       if not inp.quiet: print("Loding saved data...")
       return True
-    except IOError:
+    except:
       # The file doesn't exist
-      continue
+      pass
   
   # Grab the data
   if not inp.quiet: print("Retrieving target data...")

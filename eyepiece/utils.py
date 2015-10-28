@@ -26,7 +26,7 @@ def Input(input_file = None):
   try:
     inp = imp.load_source("input", input_file) 
   except:
-    raise Exception("Please provide a valid input file!")
+    raise IOError("Please provide a valid input file!")
 
   # Let's check that the user didn't specify both a KIC and a KOI number
   if ('kic' in inp.__dict__.keys()) and ('koi' in inp.__dict__.keys()):
