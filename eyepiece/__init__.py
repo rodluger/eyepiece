@@ -12,6 +12,8 @@ from . import (detrend, download, linalg, defaults,
 
 from .utils import Help
 
+from .detrend import Detrend, Plot
+
 # Info
 __version__ = "0.0.1"
 __author__ = "Rodrigo Luger (rodluger@uw.edu)"

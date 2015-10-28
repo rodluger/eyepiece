@@ -4,47 +4,19 @@
 example.py
 ----------
 
-Runs full detrending on a given KOI.
-
->>> python example.py /path/to/input/script.py
+Runs full detrending on a given KOI. Edit the file ``input.py``
+in this directory for custom options.
 
 '''
 
-import subprocess
-from eyepiece.inspect import Inspect
-from eyepiece.download import GetData
-from eyepiece.utils import Input
-from eyepiece.detrend import Detrend, PlotDetrended, PlotTransits
-import os
-import sys
+from eyepiece import Detrend, Plot
 
 if __name__ == '__main__':
-  
-  # Did the user specify an input file?
-  if len(sys.argv) == 2:
-    input_file = os.path.abspath(str(sys.argv[1]))
-  else:
-    # Assume it's in the cwd
-    input_file = 'input.py'
-  # Let's try to load it
-  try:
-    inp = Input(input_file)
-  except:
-    raise Exception("Please provide a valid input file!")
-    
-  # Try to load the data. If it fails, run ``Inspect``
-  try:
-    GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
-  except IOError:
-    success = Inspect(input_file)
-    if not success:
-      if not inp.quiet:
-        print("Detrending aborted!")
-      sys.exit()
-  
-  # Run detrending. You can optionally specify a parallelization pool instance here.
-  Detrend(input_file = input_file, pool = None)
+      
+  # Run detrending. You can optionally specify a 
+  # parallelization pool instance here.
+  success = Detrend(input_file = 'input.py', pool = None)
   
   # Plot the results
-  PlotDetrended(input_file = input_file)
-  PlotTransits(input_file = input_file)
+  if success:
+    Plot(input_file = input_file)

@@ -679,6 +679,17 @@ def Inspect(input_file = None):
   # Load inputs
   inp = Input(input_file)
 
+  # Check for a saved version
+  if not inp.clobber:
+    try:
+      # Try to load it
+      GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
+      if not inp.quiet: print("Loding saved data...")
+      return True
+    except IOError:
+      # The file doesn't exist
+      continue
+  
   # Grab the data
   if not inp.quiet: print("Retrieving target data...")
   foo = GetTPFData(inp.id, long_cadence = inp.long_cadence, 

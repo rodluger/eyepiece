@@ -13,7 +13,7 @@ Plot the results of a detrending run.
 import matplotlib; matplotlib.use('Agg')
 import sys
 import os
-from eyepiece.detrend import PlotDetrended, PlotTransits
+from eyepiece.detrend import Plot, PlotTransits
 from eyepiece.utils import Input
 
 if __name__ == '__main__':
@@ -31,5 +31,5 @@ if __name__ == '__main__':
     raise Exception("Please provide a valid input file!")
   
   # Plot
-  PlotDetrended(input_file = input_file)
+  Plot(input_file = input_file)
   PlotTransits(input_file = input_file)

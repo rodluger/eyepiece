@@ -15,6 +15,7 @@ from .download import GetData, GetInfo, GetPDCFlux
 from .interruptible_pool import InterruptiblePool
 from .linalg import LnLike, Whiten
 from .utils import Input, GetOutliers
+from .inspect import Inspect
 import numpy as np; np.seterr(invalid = 'ignore')
 from scipy.optimize import fmin_l_bfgs_b
 import matplotlib.pyplot as pl
@@ -23,7 +24,7 @@ import os
 import itertools
 from scipy.optimize import curve_fit
 
-__all__ = ['Detrend', 'PlotDetrended', 'PlotTransits', 'GetWhitenedData']
+__all__ = ['Detrend', 'PlotDecorrelation', 'GetWhitenedData', 'Compare', 'PlotTransits', 'Plot']
 
 data = None
 
@@ -137,7 +138,7 @@ class Worker(object):
   
   '''
   
-  def __init__(self, id, kernel, order, kinit, sigma, kbounds, maxfun, debug, datadir):
+  def __init__(self, id, kernel, order, kinit, sigma, kbounds, maxfun, debug, datadir, save = True):
     self.id = id
     self.kernel = kernel
     self.order = order
@@ -147,6 +148,7 @@ class Worker(object):
     self.maxfun = maxfun
     self.debug = debug
     self.datadir = datadir
+    self.save = save
   
   def __call__(self, tag):
     
@@ -162,7 +164,10 @@ class Worker(object):
   
     # Is there data for this quarter?
     if qd['time'] == []:
-      return (tag, False)
+      if self.save:
+        return (tag, False)
+      else:
+        return None
   
     # Set our initial guess
     npix = qd['fpix'][0].shape[1]
@@ -185,18 +190,27 @@ class Worker(object):
     # Detrend
     res = QuarterDetrend(self.id, q, self.kernel, self.order, init, bounds, self.maxfun, self.debug)
   
-    # Save
-    if not os.path.exists(os.path.join(self.datadir, str(self.id), 'detrend')):
-      os.makedirs(os.path.join(self.datadir, str(self.id), 'detrend'))
-    np.savez(os.path.join(self.datadir, str(self.id), 'detrend', '%02d.%02d.npz' % (q, i)), **res)
-  
-    return (tag, True) 
+    # Save ?
+    if self.save:
+      if not os.path.exists(os.path.join(self.datadir, str(self.id), 'detrend')):
+        os.makedirs(os.path.join(self.datadir, str(self.id), 'detrend'))
+      np.savez(os.path.join(self.datadir, str(self.id), 'detrend', '%02d.%02d.npz' % (q, i)), **res)
+      return (tag, True) 
+    else:
+      return res
   
 def Detrend(input_file = None, pool = None):
 
   '''
 
   '''
+  
+  # Run inspection if needed
+  success = Inspect(input_file)
+  if not success:
+    if not inp.quiet:
+      print("Detrending aborted!")
+    return False
   
   # Load inputs
   inp = Input(input_file)
@@ -217,7 +231,7 @@ def Detrend(input_file = None, pool = None):
     if not inp.quiet:
       print("Detrending complete for tag " + str(res[0]))
   
-  return
+  return True
 
 def LoadBestRun(inp, q):
   '''
@@ -257,7 +271,7 @@ def LoadBestRun(inp, q):
   except IOError:
     return None
 
-def PlotDetrended(input_file = None):
+def PlotDecorrelation(input_file = None):
   '''
   
   '''
@@ -283,10 +297,7 @@ def PlotDetrended(input_file = None):
       iPLD = inp.order + 1
   
   # Plot the decorrelated data
-  if not inp.plot_pdc:
-    fig, ax = pl.subplots(3, 1, figsize = inp.detrend_figsize) 
-  else:
-    fig, ax = pl.subplots(4, 1, figsize = (inp.detrend_figsize[0], inp.detrend_figsize[1] * 4./3.)) 
+  fig, ax = pl.subplots(3, 1, figsize = inp.detrend_figsize)
   
   # Some miscellaneous info
   lt = [None] * (inp.quarters[-1] + 1)
@@ -408,29 +419,7 @@ def PlotDetrended(input_file = None):
   ax[0].set_axis_bgcolor((1.0, 0.95, 0.95))
   ax[1].set_axis_bgcolor((0.95, 0.95, 0.95))
   ax[2].set_axis_bgcolor((0.95, 0.95, 1.0))
-  
-  # PDC flux
-  if inp.plot_pdc:
-    
-    # Grab the data
-    t, f = GetPDCFlux(inp.id, inp.long_cadence)
-    
-    # Remove transits
-    trnidx = np.array([], dtype = int)
-    for tNi in tN:
-      i = np.where(np.abs(tNi - t) <= tdur * inp.padbkg / 2.)[0]
-      if len(i):
-        trnidx = np.append(trnidx, i)
-    t = np.delete(t, trnidx)
-    f = np.delete(f, trnidx)
-
-    # Plot
-    out, M, MAD = GetOutliers(f, sig_tol = 5.)
-    ax[3].plot(t, f, 'b.', alpha = 0.3)
-    ax[3].set_ylim(M - 3 * MAD, M + 3 * MAD)
-    ax[3].set_axis_bgcolor((0.95, 0.95, 0.95))
-    ax[3].set_title('Kepler PDC Flux', fontsize = 28, fontweight = 'bold', y = 1.025)
-      
+       
   fig.savefig(os.path.join(inp.datadir, str(inp.id), 'detrended.png'), bbox_inches = 'tight')
   
   return fig, ax
@@ -525,3 +514,158 @@ def PlotTransits(input_file = None):
   fig.savefig(os.path.join(inp.datadir, str(inp.id), 'folded.png'), bbox_inches = 'tight')
   
   return fig, ax
+  
+def Compare(input_file = None):
+  '''
+  
+  '''
+  
+  # Load inputs
+  inp = Input(input_file)
+  
+  if not inp.quiet:
+    print("Detrending...")
+  
+  # Load some info
+  info = GetInfo(inp.id, datadir = inp.datadir); info.update(inp.info)
+  tN = info['tN']
+  tdur = info['tdur']
+    
+  # Plot the decorrelated data
+  fig, ax = pl.subplots(3, 1, figsize = inp.detrend_figsize)     
+  lt = [None] * (inp.quarters[-1] + 1)
+  
+  
+  # --- PDC ---
+  t, fpdc = GetPDCFlux(inp.id, inp.long_cadence)
+  
+  # Remove transits
+  trnidx = np.array([], dtype = int)
+  for tNi in tN:
+    i = np.where(np.abs(tNi - t) <= tdur * inp.padbkg / 2.)[0]
+    if len(i):
+      trnidx = np.append(trnidx, i)
+  t = np.delete(t, trnidx)
+  fpdc = np.delete(fpdc, trnidx)
+
+  # Plot
+  ax[0].plot(t, fpdc, 'b.', alpha = 0.3)
+  
+  
+  # --- PLD ---
+  W = Worker(inp.id, None, 5, [1.] * 6, inp.pert_sigma, 
+             [[-np.inf, np.inf]] * 6, inp.maxfun, inp.debug, inp.datadir,
+             save = False)
+  fpld = []
+  for q in inp.quarters:
+    res = W((0,q))
+    if res is None: 
+      continue
+    time = res['time']
+    fsum = res['fsum']
+    ypld = res['ypld']
+    gpmu = res['gpmu']
+    gperr = res['gperr']
+    x = res['x']
+    lnlike = res['lnlike']
+    init = res['init']
+    f = ypld - gpmu
+    fpld.extend(f)
+    ax[1].plot(time, f, 'b.', alpha = 0.3)
+    ax[1].fill_between(time, f - gperr, f + gperr, alpha = 0.1, lw = 0, color = 'r')
+  
+    # Keep track of last time for each quarter for later
+    lt[q] = time[-1]
+    
+  fpld = np.array(fpld)
+  
+  # --- GP ONLY ---
+  data = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
+  fgp = []
+  for q in inp.quarters:
+    
+    # Load the decorrelation results
+    res = LoadBestRun(inp, q)
+    if res is None: 
+      continue
+    
+    # Load the data
+    time = np.array([x for foo in data[q]['time'] for x in foo])
+    fsum = np.array([x for foo in data[q]['fsum'] for x in foo])
+    yerr = np.array([x for foo in data[q]['perr'] for x in foo])
+    yerr = np.sqrt(np.sum(yerr ** 2, axis = 1))
+    
+    # GP
+    inp.kernel.pars = res['x'][:len(inp.kernel.pars)]
+    gp = george.GP(inp.kernel)
+    gp.compute(time, yerr)
+    mu, _ = gp.predict(fsum - np.median(fsum), time)
+    mu += np.median(fsum)
+    fgp.extend(fsum - mu)
+    
+    # The SAP flux
+    ax[2].plot(time, fsum - mu, 'b.', alpha = 0.3)
+
+  fgp = np.array(fgp)
+  
+  # Scale y limits
+  out, M, MAD = GetOutliers(np.concatenate([fpdc, fgp, fpld]), sig_tol = 5.)
+  ax[0].set_ylim(M - 5 * MAD, M + 5 * MAD)
+  ax[1].set_ylim(M - 5 * MAD, M + 5 * MAD)
+  ax[2].set_ylim(M - 5 * MAD, M + 5 * MAD)
+  
+  # --- Appearance ---
+  [axis.set_xticklabels([]) for axis in ax[:-1]]
+  [axis.margins(0, 0.01) for axis in ax]
+  ltq = ax[0].get_xlim()[0]
+  yp0 = ax[0].get_ylim()[1]
+  yp1 = ax[1].get_ylim()[1]
+  yp2 = ax[2].get_ylim()[1] 
+  for q in inp.quarters:
+      
+    # This stores the last timestamp of the quarter
+    if lt[q] is None:
+      continue
+    
+    # If the data spans more than 20 days, plot some info (otherwise, it won't fit!)
+    if lt[q] - ltq > 20:
+    
+      # Quarter number
+      ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
+    
+    # Quarter markers
+    for axis in ax:
+      axis.axvline(lt[q], color='k', ls = '--')
+    
+    ltq = lt[q]
+  
+  # Labels and titles
+  ax[0].set_title('Kepler PDC Flux', fontsize = 28, fontweight = 'bold', y = 1.1)
+  ax[1].set_title('PLD + Polynomial', fontsize = 28, fontweight = 'bold', y = 1.025) 
+  ax[2].set_title('GP Only', fontsize = 28, fontweight = 'bold', y = 1.025)  
+  ax[2].set_xlabel('Time (Days)', fontsize = 24)
+  [axis.set_ylabel('Counts', fontsize = 24) for axis in ax]
+  
+  # Appearance
+  for s in ['top', 'bottom', 'left', 'right']:
+    [axis.spines[s].set_linewidth(2) for axis in ax]
+  [tick.label.set_fontsize(20) for tick in ax[-1].xaxis.get_major_ticks()]
+  [tick.label.set_fontsize(18) for axis in ax for tick in axis.yaxis.get_major_ticks()] 
+  ax[0].set_axis_bgcolor((1., 0.95, 0.95))
+  ax[1].set_axis_bgcolor((1., 0.95, 0.95))
+  ax[2].set_axis_bgcolor((1., 0.95, 0.95))
+
+
+
+  # Save
+  fig.savefig(os.path.join(inp.datadir, str(inp.id), 'comparison.png'), bbox_inches = 'tight')
+  
+  return fig, ax
+
+def Plot(input_file = None):
+  '''
+  
+  '''
+  
+  PlotDecorrelation(input_file)
+  PlotTransits(input_file)
