@@ -19,4 +19,4 @@ if __name__ == '__main__':
   
   # Plot the results
   if success:
-    Plot(input_file = input_file)
+    Plot(input_file = 'input.py')

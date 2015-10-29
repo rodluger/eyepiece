@@ -350,7 +350,7 @@ def PlotDecorrelation(input_file = None):
     fc[q] = info['funcalls']
     ni[q] = info['nit']
     if info['warnflag']:
-      wf[q] = info['task']
+      wf[q] = str(info['task'])
       if 'ABNORMAL_TERMINATION_IN_LNSRCH' in wf[q]:
         wf[q] = 'AT_LNSRCH'
     ll[q] = lnlike
