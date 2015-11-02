@@ -168,13 +168,13 @@ class DummySelector(object):
   def set_active(self, active):
     self.active = active
 
-class Selector(object):
+class Viewer(object):
   '''
   
   '''
   
   def __init__(self, fig, ax, id, quarter, data, tN, cptbkg, cpttrn, datadir, 
-               split_cads = [], cad_tol = 10, min_sz = 300):
+               split_cads = [], cad_tol = 10, min_sz = 300, interactive = True):
     self.fig = fig
     self.ax = ax    
     self.cad = data['cad']
@@ -187,6 +187,7 @@ class Selector(object):
     self.id = id
     self.datadir = datadir
     self.quarter = quarter
+    self.interactive = interactive
     
     # Initialize arrays
     self._outliers = []
@@ -219,26 +220,44 @@ class Selector(object):
       self._transits_wide.extend(i) 
       self._transits_wide_tag.extend([j for k in i])
     
-    # Initialize our selectors
-    self.Outliers = RectangleSelector(ax, self.oselect,
-                                      rectprops = dict(facecolor='red', 
-                                                       edgecolor = 'black',
-                                                       alpha=0.1, fill=True))
-    self.Outliers.set_active(False)
-    self.Zoom = RectangleSelector(ax, self.zselect,
-                                  rectprops = dict(edgecolor = 'black', linestyle = 'dashed',
-                                                   fill=False))
-    self.Zoom.set_active(False) 
-    self.Transits = DummySelector()
-    self.Transits.set_active(False)
-    self.Split = DummySelector()
-    self.Split.set_active(False)
+    # Interactive features
+    if self.interactive:
     
-    pl.connect('key_press_event', self.on_key_press)
-    pl.connect('key_release_event', self.on_key_release) 
-    pl.connect('motion_notify_event', self.on_mouse_move)     
-    pl.connect('button_release_event', self.on_mouse_release)  
-    pl.connect('button_press_event', self.on_mouse_click)                                         
+      # Initialize our selectors
+      self.Outliers = RectangleSelector(ax, self.oselect,
+                                        rectprops = dict(facecolor='red', 
+                                                         edgecolor = 'black',
+                                                         alpha=0.1, fill=True))
+      self.Outliers.set_active(False)
+      self.Zoom = RectangleSelector(ax, self.zselect,
+                                    rectprops = dict(edgecolor = 'black', linestyle = 'dashed',
+                                                     fill=False))
+      self.Zoom.set_active(False) 
+      self.Transits = DummySelector()
+      self.Transits.set_active(False)
+      self.Split = DummySelector()
+      self.Split.set_active(False)
+    
+      pl.connect('key_press_event', self.on_key_press)
+      pl.connect('key_release_event', self.on_key_release) 
+      pl.connect('motion_notify_event', self.on_mouse_move)     
+      pl.connect('button_release_event', self.on_mouse_release)  
+      pl.connect('button_press_event', self.on_mouse_click)   
+    
+    else:
+      
+      # Dummy selectors (serve no purpose)
+      self.Outliers = DummySelector()
+      self.Outliers.set_active(False)
+      self.Zoom = DummySelector()
+      self.Zoom.set_active(False)
+      self.Transits = DummySelector()
+      self.Transits.set_active(False)
+      self.Split = DummySelector()
+      self.Split.set_active(False)
+      
+      self.info = "next"
+                                         
     self.redraw(preserve_lims = False)
   
   def redraw(self, preserve_lims = True):
@@ -733,133 +752,110 @@ def Inspect(input_file = None):
     if cpttrn is None:
       cpttrn = tdur * inp.padtrn / tpc
   
+    # Disable toolbar and shortcuts
     if inp.interactive_inspect:
-  
-      # Disable toolbar and shortcuts
       orig = DisableShortcuts()
-  
-      # Set up the plot
-      fig, ax = pl.subplots(1, 1, figsize = (16, 6))
-      fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
-      sel = Selector(fig, ax, inp.id, q, data[q], tN, cptbkg, cpttrn, inp.datadir,
-                     split_cads = inp.split_cads, cad_tol = cad_tol, 
-                     min_sz = inp.min_sz)
-              
-      # If user is re-visiting this quarter, update with their selections 
-      if len(uj[q]): 
-        sel._jumps = list(uj[q])
-      if len(uo[q]): 
-        sel._outliers = list(uo[q])
-      if len(utn[q]): 
-        sel._transits_narrow = list(utn[q])
-      if len(utw[q]): 
-        sel._transits_wide = list(utw[q])
 
+    # Set up the plot
+    fig, ax = pl.subplots(1, 1, figsize = (16, 6))
+    fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
+    sel = Viewer(fig, ax, inp.id, q, data[q], tN, cptbkg, cpttrn, inp.datadir,
+                 split_cads = inp.split_cads, cad_tol = cad_tol, 
+                 min_sz = inp.min_sz, interactive = inp.interactive_inspect)
+            
+    # If user is re-visiting this quarter, update with their selections 
+    if len(uj[q]): 
+      sel._jumps = list(uj[q])
+    if len(uo[q]): 
+      sel._outliers = list(uo[q])
+    if len(utn[q]): 
+      sel._transits_narrow = list(utn[q])
+    if len(utw[q]): 
+      sel._transits_wide = list(utw[q])
+    
+    if inp.interactive_inspect:
       fig.canvas.set_window_title('KEPLER %.2f: Quarter %02d' % (inp.id, q)) 
-      sel.UpdateTransits()
-      sel.redraw()
+    
+    sel.UpdateTransits()
+    sel.redraw()
 
-      # Bring window to the front and fullscreen it
+    # Bring window to the front and fullscreen it
+    if inp.interactive_inspect:
       fig.canvas.manager.window.attributes('-topmost', 1)
       if inp.fullscreen:
         fig.canvas.manager.window.attributes('-fullscreen', 1) 
     
-      pl.show()
-      pl.close()
-
-      # What will we do next time?
-      if sel.info == "next":
-        dq = 1
-      elif sel.info == "prev":
-        dq = -1
-      elif sel.info == "reset":
-        continue
-      elif sel.info == "help":
-        ShowHelp()
-        # Save user selections
-        uo[q] = sel.outliers
-        uj[q] = sel.jumps
-        utn[q] = sel.transits_narrow
-        utw[q] = sel.transits_wide
-        tN = sel.tN
-        cptbkg = sel.cptbkg
-        cpttrn = sel.cpttrn
-        # Re-plot
-        continue
-      elif sel.info == "tpad":
-        try:
-          cptbkg = float(prompt("Cadences per transit (background) [%.2f]: " % sel.cptbkg))
-          if cptbkg <= 0:
-            raise Exception("")
-          sel.cptbkg = cptbkg
-        except:
-          pass
-        try:
-          cpttrn = float(prompt("Cadences per transit (transits) [%.2f]: " % sel.cpttrn))
-          if cpttrn <= 0:
-            raise Exception("")
-          sel.cpttrn = cpttrn
-        except:
-          pass
-        # Save user selections
-        uo[q] = sel.outliers
-        uj[q] = sel.jumps
-        utn[q] = sel.transits_narrow
-        utw[q] = sel.transits_wide
-        tN = sel.tN
-        cptbkg = sel.cptbkg
-        cpttrn = sel.cpttrn
-        # Re-plot
-        continue
-      elif sel.info == "quit":
-        EnableShortcuts()
-        return False
-      elif sel.info == "blind":
-        EnableShortcuts()
-        inp.interactive_inspect = False
-      else:
-        EnableShortcuts()
-        return False
+    # Save the figure
+    fig.savefig(os.path.join(inp.datadir, str(inp.id), "Q%02d.png" % q), bbox_inches = 'tight')
     
-      jumps = sel.jumps
-      transits_narrow = sel.transits_narrow
-      transits_wide = sel.transits_wide
-      transits_wide_tag = sel.transits_wide_tag
-      outliers = sel.outliers
+    # Show the figure
+    if inp.interactive_inspect:
+      pl.show()
+    
+    pl.close()
+
+    # What will we do next time?
+    if sel.info == "next":
+      dq = 1
+    elif sel.info == "prev":
+      dq = -1
+    elif sel.info == "reset":
+      continue
+    elif sel.info == "help":
+      ShowHelp()
+      # Save user selections
+      uo[q] = sel.outliers
+      uj[q] = sel.jumps
+      utn[q] = sel.transits_narrow
+      utw[q] = sel.transits_wide
       tN = sel.tN
       cptbkg = sel.cptbkg
       cpttrn = sel.cpttrn
-  
-    # Not inp.interactive_inspect
+      # Re-plot
+      continue
+    elif sel.info == "tpad":
+      try:
+        cptbkg = float(prompt("Cadences per transit (background) [%.2f]: " % sel.cptbkg))
+        if cptbkg <= 0:
+          raise Exception("")
+        sel.cptbkg = cptbkg
+      except:
+        pass
+      try:
+        cpttrn = float(prompt("Cadences per transit (transits) [%.2f]: " % sel.cpttrn))
+        if cpttrn <= 0:
+          raise Exception("")
+        sel.cpttrn = cpttrn
+      except:
+        pass
+      # Save user selections
+      uo[q] = sel.outliers
+      uj[q] = sel.jumps
+      utn[q] = sel.transits_narrow
+      utw[q] = sel.transits_wide
+      tN = sel.tN
+      cptbkg = sel.cptbkg
+      cpttrn = sel.cpttrn
+      # Re-plot
+      continue
+    elif sel.info == "quit":
+      EnableShortcuts()
+      return False
+    elif sel.info == "blind":
+      EnableShortcuts()
+      inp.interactive_inspect = False
     else:
-    
-      # Process the data
-      jumps = GetJumps(data[q]['time'], data[q]['cad'], cad_tol = cad_tol, 
-                       min_sz = inp.min_sz, split_cads = inp.split_cads)
-      # Time per cadence
-      tpc = np.median(data[q]['time'][1:] - data[q]['time'][:-1])
-    
-      # Cadences per transit
-      cptbkg = (inp.padbkg * tdur / tpc)
-      cpttrn = (inp.padtrn * tdur / tpc)
-   
-      # Transit indices. TODO: Verify
-      transits_narrow = []
-      transits_wide = []
-      transits_wide_tag = []
-      tNc = data[q]['cad'][0] + (data[q]['cad'][-1] - data[q]['cad'][0])/(data[q]['time'][-1] - data[q]['time'][0]) * (tN - data[q]['time'][0])
-      for j, tc in enumerate(tNc):
-        i = np.where(np.abs(data[q]['cad'] - tc) <= cptbkg / 2.)[0]
-        transits_narrow.extend(i) 
-        i = np.where(np.abs(data[q]['cad'] - tc) <= cpttrn / 2.)[0]
-        transits_wide.extend(i) 
-        transits_wide_tag.extend([j for k in i])
-
-      jumps = np.array(sorted(jumps), dtype = int)
-      transits_narrow = np.array(sorted(transits_narrow), dtype = int)
-      transits_wide = np.array(sorted(transits_wide), dtype = int)
-      transits_wide_tag = np.array(sorted(transits_wide_tag), dtype = int)
-      outliers = np.array([], dtype = int)
+      EnableShortcuts()
+      return False
+  
+    jumps = sel.jumps
+    transits_narrow = sel.transits_narrow
+    transits_wide = sel.transits_wide
+    transits_wide_tag = sel.transits_wide_tag
+    outliers = sel.outliers
+    tN = sel.tN
+    cptbkg = sel.cptbkg
+    cpttrn = sel.cpttrn
   
     # Store the user-defined outliers, jumps, and transits
     uo[q] = outliers

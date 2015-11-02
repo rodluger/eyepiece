@@ -61,7 +61,7 @@ def QuarterDetrend(tag, id, kernel, order, kinit, sigma, kbounds, maxfun, debug,
   '''
   
   '''
-  
+
   # Load the data (if necessary)
   global data
   if data is None:
@@ -161,14 +161,14 @@ def QuarterDetrend(tag, id, kernel, order, kinit, sigma, kbounds, maxfun, debug,
     return {'time': time, 'fsum': fsum, 'ypld': ypld, 'gpmu': gpmu, 'gperr': gperr,
             'x': x, 'lnlike': lnlike, 'info': info, 'init': init, 'tag': tag}
 
-def Detrend(input_file = None, mapf = map):
+def Detrend(input_file = None, pool = None):
 
   '''
 
   '''
   
-  if not inp.quiet:
-    print("Detrending...")
+  # Load inputs
+  inp = Input(input_file)
   
   # Run inspection if needed
   success = Inspect(input_file)
@@ -176,17 +176,23 @@ def Detrend(input_file = None, mapf = map):
     if not inp.quiet:
       print("Detrending aborted!")
     return False
-  
-  # Load inputs
-  inp = Input(input_file)
+
+  if not inp.quiet:
+    print("Detrending...")
 
   # Set up our list of runs  
   tags = list(itertools.product(range(inp.niter), inp.quarters))
   FW = FunctionWrapper(QuarterDetrend, inp.id, inp.kernel, inp.order, inp.kinit, inp.pert_sigma, 
                        inp.kbounds, inp.maxfun, inp.debug, inp.datadir)
   
+  # Parallelize?
+  if pool is None:
+    M = map
+  else:
+    M = pool.map
+  
   # Run and save
-  for res in mapf(FW, tags):
+  for res in M(FW, tags):
   
     # No data?
     if res is None:
