@@ -14,7 +14,7 @@ from __future__ import (division, print_function, absolute_import,
 from .download import GetData, GetInfo, GetPDCFlux
 from .interruptible_pool import InterruptiblePool
 from .linalg import LnLike, Whiten
-from .utils import Input, GetOutliers
+from .utils import Input, GetOutliers, FunctionWrapper
 from .inspect import Inspect
 import numpy as np; np.seterr(invalid = 'ignore')
 from scipy.optimize import fmin_l_bfgs_b
@@ -57,7 +57,7 @@ def NegLnLike(x, id, q, kernel, debug):
   
   return (-ll, -grad_ll)
     
-def QuarterDetrend(id, q, kernel, order, init, bounds, maxfun, debug):
+def QuarterDetrend(tag, id, kernel, order, kinit, sigma, kbounds, maxfun, debug, datadir):
   '''
   
   '''
@@ -65,8 +65,34 @@ def QuarterDetrend(id, q, kernel, order, init, bounds, maxfun, debug):
   # Load the data (if necessary)
   global data
   if data is None:
-    data = GetData(id, data_type = 'bkg')
+    data = GetData(id, data_type = 'bkg', datadir = datadir)
+  
+  # Tags: i is the iteration number; q is the quarter number
+  i = tag[0]
+  q = tag[1]
   qd = data[q]
+
+  # Is there data for this quarter?
+  if qd['time'] == []:
+    return None
+
+  # Set our initial guess
+  npix = qd['fpix'][0].shape[1]
+  if kernel is None and order is None:
+    # Just PLD
+    init = np.array([np.median(qd['fsum'][0])] * npix)
+    bounds = np.array([[-np.inf, np.inf]] * npix)
+  else:
+    # PLD + GP or polynomial
+    init = np.append(kinit, [np.median(qd['fsum'][0])] * npix)
+    bounds = np.concatenate([kbounds, [[-np.inf, np.inf]] * npix])
+
+  # Perturb initial conditions by sigma, and ensure within bounds
+  np.random.seed(tag)
+  foo = bounds[:,0]
+  while np.any(foo <= bounds[:,0]) or np.any(foo >= bounds[:,1]):
+    foo = init * (1 + sigma * np.random.randn(len(init)))
+  init = foo
   
   # If we're doing PLD + polynomial, no need to run fmin_l_bfgs_b!
   if order is not None:
@@ -102,108 +128,47 @@ def QuarterDetrend(id, q, kernel, order, init, bounds, maxfun, debug):
     gperr = np.sum(B ** 2, axis = 1) ** 0.5
     
     return {'time': time, 'fsum': fsum, 'ypld': ypld, 'gpmu': gpmu, 'gperr': gperr,
-            'x': x, 'lnlike': 0, 'init': init,
+            'x': x, 'lnlike': 0, 'init': init, 'tag': tag,
             'info': {'warnflag': 0, 'funcalls': 0, 'nit': 0, 'task': ''}, }
+  
+  else:
+  
+    # Run the optimizer.
+    res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
+                        args = (id, q, kernel, debug), bounds = bounds,
+                        m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = maxfun)
 
-  # Run the optimizer.
-  res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
-                      args = (id, q, kernel, debug), bounds = bounds,
-                      m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = maxfun)
+    # Grab some info
+    x = res[0]
+    lnlike = -res[1]
+    info = res[2]       
 
-  # Grab some info
-  x = res[0]
-  lnlike = -res[1]
-  info = res[2]       
+    # Compute a GP prediction
+    time = np.array([], dtype = float)
+    fsum = np.array([], dtype = float)
+    ypld = np.array([], dtype = float)
+    gpmu = np.array([], dtype = float)
+    gperr = np.array([], dtype = float)
+  
+    for t, fs, fp, pe in zip(qd['time'], qd['fsum'], qd['fpix'], qd['perr']):
+      res = LnLike(x, t, fp, pe, fsum = fs, kernel = kernel, predict = True)
+      time = np.append(time, t)
+      fsum = np.append(fsum, fs)
+      ypld = np.append(ypld, res[2])
+      gpmu = np.append(gpmu, res[3])
+      gperr = np.append(gperr, res[4])
 
-  # Compute a GP prediction
-  time = np.array([], dtype = float)
-  fsum = np.array([], dtype = float)
-  ypld = np.array([], dtype = float)
-  gpmu = np.array([], dtype = float)
-  gperr = np.array([], dtype = float)
-  
-  for t, fs, fp, pe in zip(qd['time'], qd['fsum'], qd['fpix'], qd['perr']):
-    res = LnLike(x, t, fp, pe, fsum = fs, kernel = kernel, predict = True)
-    time = np.append(time, t)
-    fsum = np.append(fsum, fs)
-    ypld = np.append(ypld, res[2])
-    gpmu = np.append(gpmu, res[3])
-    gperr = np.append(gperr, res[4])
+    return {'time': time, 'fsum': fsum, 'ypld': ypld, 'gpmu': gpmu, 'gperr': gperr,
+            'x': x, 'lnlike': lnlike, 'info': info, 'init': init, 'tag': tag}
 
-  return {'time': time, 'fsum': fsum, 'ypld': ypld, 'gpmu': gpmu, 'gperr': gperr,
-          'x': x, 'lnlike': lnlike, 'info': info, 'init': init}
-  
-class Worker(object):
-  '''
-  
-  '''
-  
-  def __init__(self, id, kernel, order, kinit, sigma, kbounds, maxfun, debug, datadir, save = True):
-    self.id = id
-    self.kernel = kernel
-    self.order = order
-    self.kinit = kinit
-    self.sigma = sigma
-    self.kbounds = kbounds
-    self.maxfun = maxfun
-    self.debug = debug
-    self.datadir = datadir
-    self.save = save
-  
-  def __call__(self, tag):
-    
-    # Load the data (if necessary)
-    global data
-    if data is None:
-      data = GetData(self.id, data_type = 'bkg', datadir = self.datadir)
-    
-    # Tags: i is the iteration number; q is the quarter number
-    i = tag[0]
-    q = tag[1]
-    qd = data[q]
-  
-    # Is there data for this quarter?
-    if qd['time'] == []:
-      if self.save:
-        return (tag, False)
-      else:
-        return None
-  
-    # Set our initial guess
-    npix = qd['fpix'][0].shape[1]
-    if self.kernel is None and self.order is None:
-      # Just PLD
-      init = np.array([np.median(qd['fsum'][0])] * npix)
-      bounds = np.array([[-np.inf, np.inf]] * npix)
-    else:
-      # PLD + GP or polynomial
-      init = np.append(self.kinit, [np.median(qd['fsum'][0])] * npix)
-      bounds = np.concatenate([self.kbounds, [[-np.inf, np.inf]] * npix])
-  
-    # Perturb initial conditions by sigma, and ensure within bounds
-    np.random.seed(tag)
-    foo = bounds[:,0]
-    while np.any(foo <= bounds[:,0]) or np.any(foo >= bounds[:,1]):
-      foo = init * (1 + self.sigma * np.random.randn(len(init)))
-    init = foo
-    
-    # Detrend
-    res = QuarterDetrend(self.id, q, self.kernel, self.order, init, bounds, self.maxfun, self.debug)
-  
-    # Save ?
-    if self.save:
-      if not os.path.exists(os.path.join(self.datadir, str(self.id), 'detrend')):
-        os.makedirs(os.path.join(self.datadir, str(self.id), 'detrend'))
-      np.savez(os.path.join(self.datadir, str(self.id), 'detrend', '%02d.%02d.npz' % (q, i)), **res)
-      return (tag, True) 
-    else:
-      return res
-  
-def Detrend(input_file = None, pool = None):
+def Detrend(input_file = None, mapf = map):
 
   '''
 
   '''
+  
+  if not inp.quiet:
+    print("Detrending...")
   
   # Run inspection if needed
   success = Inspect(input_file)
@@ -215,21 +180,26 @@ def Detrend(input_file = None, pool = None):
   # Load inputs
   inp = Input(input_file)
 
-  # Multiprocess?
-  if pool is None:
-    M = map
-  else:
-    M = pool.map
-
   # Set up our list of runs  
   tags = list(itertools.product(range(inp.niter), inp.quarters))
-  W = Worker(inp.id, inp.kernel, inp.order, inp.kinit, inp.pert_sigma, 
-             inp.kbounds, inp.maxfun, inp.debug, inp.datadir)
+  FW = FunctionWrapper(QuarterDetrend, inp.id, inp.kernel, inp.order, inp.kinit, inp.pert_sigma, 
+                       inp.kbounds, inp.maxfun, inp.debug, inp.datadir)
   
   # Run and save
-  for res in M(W, tags):
+  for res in mapf(FW, tags):
+  
+    # No data?
+    if res is None:
+      continue
+  
+    # Save
+    if not os.path.exists(os.path.join(inp.datadir, str(inp.id), 'detrend')):
+      os.makedirs(os.path.join(inp.datadir, str(inp.id), 'detrend'))
+    np.savez(os.path.join(inp.datadir, str(inp.id), 'detrend', '%02d.%02d.npz' % res['tag']), **res)
+  
+    # Print
     if not inp.quiet:
-      print("Detrending complete for tag " + str(res[0]))
+      print("Detrending complete for tag " + str(res['tag']))
   
   return True
 
@@ -532,7 +502,7 @@ def Compare(input_file = None):
   tdur = info['tdur']
     
   # Plot the decorrelated data
-  fig, ax = pl.subplots(3, 1, figsize = inp.detrend_figsize)     
+  fig, ax = pl.subplots(4, 1, figsize = (inp.detrend_figsize[0], inp.detrend_figsize[1] * 4. / 3.))     
   lt = [None] * (inp.quarters[-1] + 1)
   
   
@@ -553,12 +523,12 @@ def Compare(input_file = None):
   
   
   # --- PLD ---
-  W = Worker(inp.id, None, 5, [1.] * 6, inp.pert_sigma, 
-             [[-np.inf, np.inf]] * 6, inp.maxfun, inp.debug, inp.datadir,
-             save = False)
+
+  FW = FunctionWrapper(QuarterDetrend, inp.id, None, 5, [1.] * 6, inp.pert_sigma, 
+                       [[-np.inf, np.inf]] * 6, inp.maxfun, inp.debug, inp.datadir)
   fpld = []
   for q in inp.quarters:
-    res = W((0,q))
+    res = FW((0,q))
     if res is None: 
       continue
     time = res['time']
@@ -582,6 +552,7 @@ def Compare(input_file = None):
   # --- GP ONLY ---
   data = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
   fgp = []
+  fgppld = []
   for q in inp.quarters:
     
     # Load the decorrelation results
@@ -603,24 +574,29 @@ def Compare(input_file = None):
     mu += np.median(fsum)
     fgp.extend(fsum - mu)
     
-    # The SAP flux
+    # Plot
     ax[2].plot(time, fsum - mu, 'b.', alpha = 0.3)
 
+    # Now plot the GP + PLD solution
+    f = np.array(res['ypld']) - np.array(res['gpmu'])
+    fgppld.extend(f)
+    ax[3].plot(time, f, 'b.', alpha = 0.3)
+
   fgp = np.array(fgp)
+  fgppld = np.array(fgppld)
   
   # Scale y limits
-  out, M, MAD = GetOutliers(np.concatenate([fpdc, fgp, fpld]), sig_tol = 5.)
+  out, M, MAD = GetOutliers(np.concatenate([fpdc, fgp, fgppld, fpld]), sig_tol = 5.)
   ax[0].set_ylim(M - 5 * MAD, M + 5 * MAD)
   ax[1].set_ylim(M - 5 * MAD, M + 5 * MAD)
   ax[2].set_ylim(M - 5 * MAD, M + 5 * MAD)
+  ax[3].set_ylim(M - 5 * MAD, M + 5 * MAD)
   
   # --- Appearance ---
   [axis.set_xticklabels([]) for axis in ax[:-1]]
   [axis.margins(0, 0.01) for axis in ax]
   ltq = ax[0].get_xlim()[0]
   yp0 = ax[0].get_ylim()[1]
-  yp1 = ax[1].get_ylim()[1]
-  yp2 = ax[2].get_ylim()[1] 
   for q in inp.quarters:
       
     # This stores the last timestamp of the quarter
@@ -643,7 +619,8 @@ def Compare(input_file = None):
   ax[0].set_title('Kepler PDC Flux', fontsize = 28, fontweight = 'bold', y = 1.1)
   ax[1].set_title('PLD + Polynomial', fontsize = 28, fontweight = 'bold', y = 1.025) 
   ax[2].set_title('GP Only', fontsize = 28, fontweight = 'bold', y = 1.025)  
-  ax[2].set_xlabel('Time (Days)', fontsize = 24)
+  ax[3].set_title('Templar', fontsize = 28, fontweight = 'bold', y = 1.025)
+  ax[3].set_xlabel('Time (Days)', fontsize = 24)
   [axis.set_ylabel('Counts', fontsize = 24) for axis in ax]
   
   # Appearance
@@ -654,7 +631,7 @@ def Compare(input_file = None):
   ax[0].set_axis_bgcolor((1., 0.95, 0.95))
   ax[1].set_axis_bgcolor((1., 0.95, 0.95))
   ax[2].set_axis_bgcolor((1., 0.95, 0.95))
-
+  ax[3].set_axis_bgcolor((0.9, 0.9, 1.0))
 
 
   # Save

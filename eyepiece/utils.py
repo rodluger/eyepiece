@@ -13,7 +13,7 @@ import imp
 import numpy as np
 import types
 
-__all__ = ['Input', 'GitHash', 'Bold', 'RowCol']
+__all__ = ['Input', 'GitHash', 'Bold', 'RowCol', 'FunctionWrapper']
 
 def Input(input_file = None):
   '''
@@ -152,3 +152,15 @@ def GetOutliers(data, sig_tol = 3.):
   out = np.array(out, dtype = int)
   
   return out, M, MAD
+
+class FunctionWrapper(object):
+  '''
+  
+  '''
+  def __init__(self, f, *args, **kwargs):
+    self.f = f
+    self.args = args
+    self.kwargs = kwargs
+  
+  def __call__(self, x):
+    return self.f(x, *self.args, **self.kwargs)

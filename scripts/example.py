@@ -10,12 +10,17 @@ in this directory for custom options.
 '''
 
 from eyepiece import Detrend, Plot
+try:
+  import para
+  mapf = para.map
+except:
+  mapf = map
 
 if __name__ == '__main__':
       
   # Run detrending. You can optionally specify a 
   # parallelization pool instance here.
-  success = Detrend(input_file = 'input.py', pool = None)
+  success = Detrend(input_file = 'input.py', mapf = mapf)
   
   # Plot the results
   if success:

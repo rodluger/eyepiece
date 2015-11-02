@@ -684,7 +684,7 @@ def Inspect(input_file = None):
     try:
       # Try to load it
       GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
-      if not inp.quiet: print("Loding saved data...")
+      if not inp.quiet: print("Loading saved data...")
       return True
     except:
       # The file doesn't exist
