@@ -1,3 +1,14 @@
+TODO
+----
+
+- Multi-planet system handling
+- Fit parameters simultaneously; beware overlapping transits
+- Use Rowe's transit times for TTV systems
+- Libralato et al. - K2 PSF photomoetry
+
+TARGETS
+-------
+
 17.01 - Hot Jupiter
 18.01 - Hot Jupiter
 142.01 - "King of TTVs"

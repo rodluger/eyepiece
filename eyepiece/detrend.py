@@ -201,7 +201,7 @@ def Detrend(input_file = None, pool = None):
     # Save
     if not os.path.exists(os.path.join(inp.datadir, str(inp.id), 'detrend')):
       os.makedirs(os.path.join(inp.datadir, str(inp.id), 'detrend'))
-    np.savez(os.path.join(inp.datadir, str(inp.id), 'detrend', '%02d.%02d.npz' % res['tag']), **res)
+    np.savez(os.path.join(inp.datadir, str(inp.id), 'detrend', '%02d.%02d.npz' % res['tag'][::-1]), **res)
   
     # Print
     if not inp.quiet:
@@ -215,6 +215,8 @@ def LoadBestRun(inp, q):
   '''
   
   # Attempt to load it, if it's been set already
+  pldpath = os.path.join(inp.datadir, str(inp.id), 'detrend')
+  
   try:
     res = np.load(os.path.join(pldpath, "%02d.npz" % q))
   except:
@@ -224,10 +226,9 @@ def LoadBestRun(inp, q):
   try:
   
     # Look at the likelihoods of all runs for this quarter
-    pldpath = os.path.join(inp.datadir, str(inp.id), 'detrend')
     files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) 
              if f.startswith('%02d.' % q) and f.endswith('.npz')]
-
+    
     # Is there data this quarter?
     if len(files) == 0:
       return None
@@ -416,6 +417,7 @@ def GetWhitenedData(input_file = None, folded = True):
   prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   info = GetInfo(inp.id, datadir = inp.datadir); info.update(inp.info)
   tN = info['tN']
+  per = info['per']
 
   if folded and len(tN) == 0:
     raise Exception("No transits for current target!")
@@ -423,6 +425,7 @@ def GetWhitenedData(input_file = None, folded = True):
   # Whiten
   t = np.array([], dtype = float)
   f = np.array([], dtype = float)
+  e = np.array([], dtype = float)
   for q in inp.quarters:
 
     # Load coefficients for this quarter
@@ -434,20 +437,34 @@ def GetWhitenedData(input_file = None, folded = True):
     else:
       x = res['x']
     
-    for b_time, b_fpix, b_perr, time, fpix in zip(bkg[q]['time'], bkg[q]['fpix'], bkg[q]['perr'], prc[q]['time'], prc[q]['fpix']):
+    for b_time, b_fpix, b_perr, time, fpix, perr in zip(bkg[q]['time'], bkg[q]['fpix'], bkg[q]['perr'], prc[q]['time'], prc[q]['fpix'], prc[q]['perr']):
     
       # Whiten the flux
-      flux = Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = inp.kernel, order = inp.order, crowding = prc[q]['crowding'])
+      flux, ferr = Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = inp.kernel, order = inp.order, crowding = prc[q]['crowding'])
     
       # Fold the time
       if folded:
         time -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in time])
+        
+        # Remove tail preceding the very first transit
+        bad = np.where(time < -per / 2.)
+        time = np.delete(time, bad)
+        flux = np.delete(flux, bad)  
+        ferr = np.delete(ferr, bad)    
     
       # Plot
       t = np.append(t, time)
       f = np.append(f, flux)
+      e = np.append(e, ferr)
   
-  return t, f
+  # Sort
+  if folded:
+    idx = np.argsort(t)
+    t = t[idx]
+    f = f[idx]
+    e = e[idx]
+  
+  return t, f, e
 
 def PlotTransits(input_file = None):
   '''
@@ -463,7 +480,7 @@ def PlotTransits(input_file = None):
   # Load the info
   info = GetInfo(inp.id, datadir = inp.datadir); info.update(inp.info)
   tdur = info['tdur']
-  t, f = GetWhitenedData(input_file, folded = True)
+  t, f, e = GetWhitenedData(input_file, folded = True)
 
   # Plot
   fig, ax = pl.subplots(1, 1, figsize = inp.transits_figsize)

@@ -20,7 +20,10 @@ if __name__ == '__main__':
       
   # Run detrending. You can optionally specify a 
   # parallelization pool instance here.
-  success = Detrend(input_file = 'input.py', pool = None)
+  #success = Detrend(input_file = 'input.py', pool = None)
+  
+  # DEBUG
+  success = True
   
   # Plot the results
   if success:

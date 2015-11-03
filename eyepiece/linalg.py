@@ -147,7 +147,7 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
   else:
     return (ll, grad_ll)
 
-def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.Matern32Kernel(1.), order = 2, crowding = None):
+def Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = 1. * george.kernels.Matern32Kernel(1.), order = 2, crowding = None):
   '''
   
   '''
@@ -170,8 +170,9 @@ def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.M
   # PLD coefficients
   c = x[iPLD:]
   
-  # Number of background data points
+  # Number of data points
   b_K = len(b_time)
+  K = len(time)
 
   # The pixel model
   b_pixmod = np.sum(b_fpix * np.outer(1. / b_fsum, c), axis = 1)
@@ -187,17 +188,25 @@ def Whiten(x, b_time, b_fpix, b_perr, time, fpix, kernel = 1. * george.kernels.M
     X = 1. + b_pixmod / b_fsum
     B = X.reshape(b_K, 1) * b_perr - c * b_perr / b_fsum.reshape(b_K, 1)
     b_yerr = np.sum(B ** 2, axis = 1) ** 0.5
-
+    
+    # Errors on complete data
+    X = 1. + pixmod / fsum
+    B = X.reshape(K, 1) * perr - c * perr / fsum.reshape(K, 1)
+    yerr = np.sum(B ** 2, axis = 1) ** 0.5
+    
     # Compute the GP prediction
     gp = george.GP(kernel)
     gp.compute(b_time, b_yerr)
-    mu, _ = gp.predict(b_fsum - b_pixmod, time)
+    mu, cov = gp.predict(b_fsum - b_pixmod, time)
+    muerr = np.sqrt(np.diag(cov))
   
   # The full decorrelated flux with baseline = 1.
   dflux = 1. + (fsum - mu - pixmod) / fsum
+  dfluxerr = np.sqrt(yerr ** 2 + muerr ** 2) / fsum
   
   # Correct for crowding?
   if crowding is not None:
     dflux = (dflux - 1.) / crowding + 1.
+    dfluxerr /= crowding
   
-  return dflux
+  return dflux, dfluxerr

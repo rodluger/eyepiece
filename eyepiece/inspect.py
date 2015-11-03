@@ -698,6 +698,9 @@ def Inspect(input_file = None):
   # Load inputs
   inp = Input(input_file)
 
+  # DEBUG
+  inp.clobber = True
+
   # Check for a saved version
   if not inp.clobber:
     try:
@@ -708,6 +711,9 @@ def Inspect(input_file = None):
     except:
       # The file doesn't exist
       pass
+  
+  # DEBUG
+  inp.clobber = False
   
   # Grab the data
   if not inp.quiet: print("Retrieving target data...")
@@ -726,10 +732,10 @@ def Inspect(input_file = None):
 
   # Loop over all inp.quarters
   if not inp.quiet: print("Inspecting...")
-  uo = [[] for q in inp.quarters]
-  uj = [[] for q in inp.quarters]
-  utn = [[] for q in inp.quarters]
-  utw = [[] for q in inp.quarters]
+  uo = {}; [uo.update({q: []}) for q in inp.quarters]
+  uj = {}; [uj.update({q: []}) for q in inp.quarters]
+  utn = {}; [utn.update({q: []}) for q in inp.quarters]
+  utw = {}; [utw.update({q: []}) for q in inp.quarters]
   q = inp.quarters[0]
   dq = 1
   cpttrn = None
