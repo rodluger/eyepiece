@@ -6,14 +6,30 @@ utils.py
 
 '''
 
+from __future__ import division, print_function, absolute_import, unicode_literals
 from . import defaults
 import os
 import subprocess
-import imp
 import numpy as np
-import types
+import imp
 
-__all__ = ['Input', 'GitHash', 'Bold', 'RowCol', 'FunctionWrapper']
+# Python 2/3 compatibility
+try:
+  FileNotFoundError
+except:
+  FileNotFoundError = IOError
+
+class FunctionWrapper(object):
+  '''
+  
+  '''
+  def __init__(self, f, *args, **kwargs):
+    self.f = f
+    self.args = args
+    self.kwargs = kwargs
+  
+  def __call__(self, x):
+    return self.f(x, *self.args, **self.kwargs)
 
 def Input(input_file = None):
   '''
@@ -27,11 +43,6 @@ def Input(input_file = None):
     inp = imp.load_source("input", input_file) 
   except:
     raise IOError("Please provide a valid input file!")
-
-  # Let's check that the user didn't specify both a KIC and a KOI number
-  if ('kic' in inp.__dict__.keys()) and ('koi' in inp.__dict__.keys()):
-    if (inp.kic is not None) and (inp.koi is not None):
-      raise Exception("Please specify either a KOI or a KIC id, but not both!")
 
   for key, val in list(inp.__dict__.items()):
     if key.startswith('_'):
@@ -47,25 +58,11 @@ def Input(input_file = None):
   # Finally, update conf                                
   inp.__dict__.update(defaults.__dict__)
 
-  # Set the id
-  if inp.kic is not None:
-    inp.koi = None
-    inp.id = inp.kic
-  elif inp.koi is not None:
-    inp.id = inp.koi
-
   # Check some other stuff
-  if inp.order is not None:
-    inp.kernel = None
-    if len(inp.kbounds) != inp.order + 1:
-      raise Exception("Input option ``kbounds`` has the wrong size!")
-    if len(inp.kinit) != inp.order + 1:
-      raise Exception("Input option ``kinit`` has the wrong size!")
-  elif inp.kernel is not None:
-    if len(inp.kbounds) != len(inp.kernel.pars):
-      raise Exception("Input option ``kbounds`` has the wrong size!")
-    if len(inp.kinit) != len(inp.kernel.pars):
-      raise Exception("Input option ``kinit`` has the wrong size!")
+  if len(inp.kbounds) != len(inp.kernel.pars):
+    raise Exception("Input option ``kbounds`` has the wrong size!")
+  if len(inp.kinit) != len(inp.kernel.pars):
+    raise Exception("Input option ``kinit`` has the wrong size!")
   
   return inp
 
@@ -94,30 +91,6 @@ def Bold(string):
   '''
   
   return ("\x1b[01m%s\x1b[39;49;00m" % string)
-
-def RowCol(N):
-  '''
-  Given an integer ``N``, returns the ideal number of columns and rows 
-  to arrange ``N`` subplots on a grid.
-  
-  :param int N: The number of subplots
-  
-  :returns: **``(cols, rows)``**, the most aesthetically pleasing number of columns \
-  and rows needed to display ``N`` subplots on a grid.
-  
-  '''
-  rows = np.floor(np.sqrt(N)).astype(int)
-  while(N % rows != 0):
-    rows = rows - 1
-  cols = N/rows
-  while cols/rows > 2:
-    cols = np.ceil(cols/2.).astype(int)
-    rows *= 2
-  if cols > rows:
-    tmp = cols
-    cols = rows
-    rows = tmp
-  return cols, rows
 
 def Help(param = None):
   '''
@@ -153,14 +126,27 @@ def GetOutliers(data, sig_tol = 3.):
   
   return out, M, MAD
 
-class FunctionWrapper(object):
+def FreedmanDiaconis(x):
+  '''
+  Returns the optimal number of bins for a histogram
+  of the vector quantity x according to the Freedman-
+  Diaconis rule.
+  
+  '''
+  q75, q25 = np.percentile(x, [75, 25])
+  iqr = q75 - q25
+  h = 2*iqr*len(x)**(-1./3.)
+  bins = int((np.nanmax(x) - np.nanmin(x))/h)
+  return bins
+
+def GetData(id, data_type = 'prc', datadir = ''):
   '''
   
   '''
-  def __init__(self, f, *args, **kwargs):
-    self.f = f
-    self.args = args
-    self.kwargs = kwargs
-  
-  def __call__(self, x):
-    return self.f(x, *self.args, **self.kwargs)
+
+  try:
+    data = np.load(os.path.join(datadir, str(id), '_data', '%s.npz' % data_type))['data'][()]
+  except FileNotFoundError:
+    raise FileNotFoundError("File ``_data/%s.npz`` not found." % data_type)
+
+  return data

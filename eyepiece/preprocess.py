@@ -1,27 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-inspect.py
-----------
-
-Download and visually inspect, split, and correct Kepler lightcurves.
+preprocess.py
+-------------
 
 .. todo::
-   - Suppress this message: ``setCanCycle: is deprecated.  Please use setCollectionBehavior instead``
-   - Bring focus to plot on start
+   - Add keyboard shortcut to view PDC data
 
 '''
 
-from __future__ import (division, print_function, absolute_import,
-                        unicode_literals)
-from .utils import Bold, GitHash, Input
-from .download import GetTPFData, GetData, EmptyData
+from __future__ import division, print_function, absolute_import, unicode_literals
+from .utils import Bold, GitHash, Input, GetData
+from .download import DownloadData, DownloadInfo, EmptyData
 import matplotlib.pyplot as pl
 from matplotlib.widgets import RectangleSelector, Cursor
 import numpy as np
 import os
-
-__all__ = ["Inspect"]
 
 # Python 2/3 compatibility.
 import sys
@@ -34,7 +28,6 @@ rcParams = dict(pl.rcParams)
 
 # Keyboard shortcuts
 ZOOM = 'z'
-SAVE = 'super+s'
 QUIT = 'escape'
 HOME = 'H'
 HELP = 'h'
@@ -99,7 +92,6 @@ def ShowHelp():
               NEXT: 'Go to next quarter',
               RSET: 'Reset all selections',
               QUIT: 'Quit (without saving)',
-              SAVE: 'Save current plot to disk',
               TPAD: 'Adjust transit padding',
               ERRB: 'Show/hide error bars',
               BLND: 'Continue in blind mode'
@@ -177,10 +169,10 @@ class Viewer(object):
                split_cads = [], cad_tol = 10, min_sz = 300, interactive = True):
     self.fig = fig
     self.ax = ax    
-    self.cad = data['cad']
+    self.cad = data['cadn']
     self.time = data['time']
-    self.fsum = data['fsum']
-    self.ferr = data['ferr']
+    self.fsum = np.sum(data['fpix'], axis = 1)
+    self.ferr = np.sqrt(np.sum(data['perr'] ** 2, axis = 1))
     self.perr = data['perr']
     self.fpix = data['fpix']
     self.tNc = self.cad[0] + (self.cad[-1] - self.cad[0])/(self.time[-1] - self.time[0]) * (tN - self.time[0])
@@ -489,13 +481,7 @@ class Viewer(object):
       self.redraw()
       
   def on_key_press(self, event):
-  
-    # Save
-    if event.key == SAVE:
-      figname = os.path.join(self.datadir, str(self.id), '_plots', "Q%02d_%s.png" % (self.quarter, self.state[0]))
-      self.fig.savefig(figname, bbox_inches = 'tight')
-      print("Saved to file %s." % figname)
-  
+    
     # Alt
     if event.key == SUBT:
       self.subt = True
@@ -690,7 +676,7 @@ class Viewer(object):
   def jumps(self):
     return np.array(sorted(self._jumps), dtype = int)
   
-def Inspect(input_file = None):
+def Preprocess(input_file = None):
   '''
 
   '''
@@ -700,32 +686,39 @@ def Inspect(input_file = None):
 
   # Check for a saved version
   if not inp.clobber:
+  
     try:
+    
       # Try to load it
       GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
-      if not inp.quiet: print("Loading saved data...")
+      if not inp.quiet: 
+        print("Loading saved data...")
       return True
     except:
+    
       # The file doesn't exist
       pass
   
   # Grab the data
-  if not inp.quiet: print("Retrieving target data...")
-  foo = GetTPFData(inp.id, long_cadence = inp.long_cadence, 
-                   clobber = inp.clobber, datadir = inp.datadir, 
-                   bad_bits = inp.bad_bits, aperture = inp.aperture, 
-                   quarters = inp.quarters, quiet = inp.quiet, 
-                   pad = inp.padbkg, ttvs = inp.ttvs, ttvpath = inp.ttvpath)
-  data = foo['data']
-  tN = foo['tN']
-  per = foo['per']
-  tdur = foo['tdur']
+  if not inp.quiet: 
+    print("Downloading target data...")
+  data = DownloadData(inp.id, inp.dataset, long_cadence = inp.long_cadence, 
+                      clobber = inp.clobber, datadir = inp.datadir, 
+                      bad_bits = inp.bad_bits, aperture = inp.aperture, 
+                      quarters = inp.quarters, quiet = inp.quiet)
+  info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir, 
+                      clobber = inp.clobber, ttvs = inp.ttvs, pad = inp.padbkg)
+  tN = info['tN']
+  tdur = info['tdur']
+  per = info['per']
+  hash = info['hash']
   data_new = EmptyData(inp.quarters)
   data_trn = EmptyData(inp.quarters)
   data_bkg = EmptyData(inp.quarters)
 
-  # Loop over all inp.quarters
-  if not inp.quiet: print("Inspecting...")
+  # Loop over all quarters
+  if not inp.quiet: 
+    print("Inspecting...")
   uo = {}; [uo.update({q: []}) for q in inp.quarters]
   uj = {}; [uj.update({q: []}) for q in inp.quarters]
   utn = {}; [utn.update({q: []}) for q in inp.quarters]
@@ -753,7 +746,7 @@ def Inspect(input_file = None):
       cpttrn = tdur * inp.padtrn / tpc
   
     # Disable toolbar and shortcuts
-    if inp.interactive_inspect:
+    if inp.interactive:
       orig = DisableShortcuts()
 
     # Set up the plot
@@ -761,7 +754,7 @@ def Inspect(input_file = None):
     fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
     sel = Viewer(fig, ax, inp.id, q, data[q], tN, cptbkg, cpttrn, inp.datadir,
                  split_cads = inp.split_cads, cad_tol = cad_tol, 
-                 min_sz = inp.min_sz, interactive = inp.interactive_inspect)
+                 min_sz = inp.min_sz, interactive = inp.interactive)
             
     # If user is re-visiting this quarter, update with their selections 
     if len(uj[q]): 
@@ -773,14 +766,14 @@ def Inspect(input_file = None):
     if len(utw[q]): 
       sel._transits_wide = list(utw[q])
     
-    if inp.interactive_inspect:
+    if inp.interactive:
       fig.canvas.set_window_title('KEPLER %.2f: Quarter %02d' % (inp.id, q)) 
     
     sel.UpdateTransits()
     sel.redraw()
 
     # Bring window to the front and fullscreen it
-    if inp.interactive_inspect:
+    if inp.interactive:
       fig.canvas.manager.window.attributes('-topmost', 1)
       if inp.fullscreen:
         fig.canvas.manager.window.attributes('-fullscreen', 1) 
@@ -789,7 +782,7 @@ def Inspect(input_file = None):
     fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', "Q%02d.png" % q), bbox_inches = 'tight')
     
     # Show the figure
-    if inp.interactive_inspect:
+    if inp.interactive:
       pl.show()
     
     pl.close()
@@ -843,7 +836,7 @@ def Inspect(input_file = None):
       return False
     elif sel.info == "blind":
       EnableShortcuts()
-      inp.interactive_inspect = False
+      inp.interactive = False
     else:
       EnableShortcuts()
       return False
@@ -865,7 +858,7 @@ def Inspect(input_file = None):
 
     # Split the data
     j = np.concatenate([[0], jumps, [len(data[q]['time']) - 1]])
-    for arr in ['time', 'fsum', 'ferr', 'fpix', 'perr', 'cad']:
+    for arr in ['time', 'fpix', 'perr', 'cadn', 'pdcf', 'pdce']:
 
       # All data and background data
       for a, b in zip(j[:-1], j[1:]):
@@ -884,9 +877,9 @@ def Inspect(input_file = None):
           data_trn[q][arr].append(data[q][arr][ti])
     
     # Add the crowding
-    data_new[q]['crowding'] = data[q]['crowding']
-    data_trn[q]['crowding'] = data[q]['crowding']
-    data_bkg[q]['crowding'] = data[q]['crowding']
+    data_new[q]['crwd'] = data[q]['crwd']
+    data_trn[q]['crwd'] = data[q]['crwd']
+    data_bkg[q]['crwd'] = data[q]['crwd']
     
     # Add an empty detrending vector to the transit data
     data_trn[q]['dvec'] = None
@@ -904,7 +897,7 @@ def Inspect(input_file = None):
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'bkg.npz'), data = data_bkg, hash = GitHash())
 
   # Re-enable toolbar and shortcuts
-  if inp.interactive_inspect:
+  if inp.interactive:
     EnableShortcuts()
 
   return True

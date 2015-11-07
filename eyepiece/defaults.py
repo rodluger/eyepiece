@@ -29,26 +29,23 @@ bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17]
 clobber = False
 
 # D
-datadir = '/Users/rodrigo/src/eyepiece/lightcurves'
+datadir = '/Users/rodrigo/Desktop/new/lightcurves'
+dataset = 'Kepler'
 debug = False
-detrend_figsize = (48, 16)
 dt_tol = 0.5
 
 # F
 fullscreen = True
 
 # I
-id = None
+id = 17.01
 info = {}
-interactive_inspect = True
-interactive_detrend = False
+interactive = True
 
 # K
 kbounds = [[1.e-8, 1.e8], [1.e-4, 1.e8]]
 kernel = 1. * george.kernels.Matern32Kernel(1.)
-kic = None
 kinit = [100., 100.]
-koi = 17.01
 
 # L
 long_cadence = True
@@ -62,13 +59,11 @@ mpn = 40
 niter = 5
 nodes = 5
 
-# O
-order = None
-
 # P
 padbkg = 2.0
 padtrn = 5.0
 pert_sigma = 0.25
+plot_det_info = True
 ppn = 12
 
 # Q
@@ -80,8 +75,6 @@ split_cads = [4472, 6717]
 
 # T
 tbins = 20
-transits_figsize = (14, 6)
-ttvpath = '/Users/rodrigo/src/templar/ttvs'
 ttvs = False
 
 # W
@@ -115,25 +108,22 @@ class _Docs(object):
     
     # D
     self.datadir = 'Directory to store lightcurve processing data in'
+    self.dataset = 'Which exoplanet dataset to use (Kepler, K2, TESS...)'
     self.debug = 'Debug mode?'
-    self.detrend_figsize = 'Size of figure returned by ``detrend.PlotDetrend`` in inches'
     self.dt_tol = 'Transit gap tolerance in days'
     
     # F
     self.fullscreen = 'Fullscreen the plot when inspecting?'
     
     # I
-    self.id = '[READ-ONLY] Kepler identifier'
+    self.id = 'Kepler target ID (KOI number or KIC identifier)'
     self.info = 'Override the database values for the KOI\'s ``per``, ``tdur`` and the transit times ``tN`` by setting values for those in this dict'
-    self.interactive_inspect = 'Process data in interactive mode when inspecting?'
-    self.interactive_detrend = 'Process data in interactive mode when detrending?'
+    self.interactive = 'Process data in interactive mode?'
     
     # K
     self.kbounds = 'Bounds on the kernel parameters'
     self.kernel = 'The kernel to use for GP detrending'
-    self.kic = 'Kepler KIC identifier'
     self.kinit = 'Initial values for the kernel parameters'
-    self.koi = 'Kepler KOI number'
     
     # L
     self.long_cadence = 'Use Kepler long cadence data?'
@@ -146,14 +136,12 @@ class _Docs(object):
     # N
     self.niter = 'Number of iterations when detrending in parallel.'
     self.nodes = 'Number of nodes to use when submitting a job with ``qsub``'
-    
-    # O
-    self.order = 'Order of decorrelation polynomial if not using GP. Set to ``None`` otherwise'
-    
+
     # P
     self.padbkg = 'Padding in units of the transit duration for masking transits in background data'
     self.padtrn = 'Padding in units of the transit duration for selecting transits for the transit-only data'
     self.pert_sigma = 'Perturb the initial conditions by this many sigma'
+    self.plot_det_info = 'Plot detrending information?'
     self.ppn = 'Number of processors per node for a ``qsub`` job'
     
     # Q
@@ -165,10 +153,7 @@ class _Docs(object):
     
     # T
     self.tbins = 'Number of bins when plotting folded transits'
-    self.transits_figsize = 'Size of figure returned by ``detrend.PlotTransits`` in inches'
-    self.ttvpath = 'Path to folder containing KOI ttv information'
     self.ttvs = 'Analyze this system assuming ttvs?'
     
     # W
     self.walltime = 'Walltime in hours for a ``qsub`` job'
-

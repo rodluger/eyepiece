@@ -1,18 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import (division, print_function, absolute_import,
-                        unicode_literals)
+from __future__ import division, print_function, absolute_import, unicode_literals
+
+__all__ = ['Help', 'Eyepiece']
+
+# Try to use TkAgg backend, and issue warning if it didn't work
 import matplotlib; matplotlib.use('TkAgg', warn = False)
-import matplotlib.pyplot as pl
+if matplotlib.get_backend() != 'TkAgg':
+  print("WARNING: Unable to load TkAgg backend. Interactive preprocessing may not work correctly.")
 
-from . import (detrend, download, linalg, defaults, 
-               inspect, mpi_pool, interruptible_pool,
-               utils)
-
+# Import local files
+from . import detrend, download, linalg, defaults, plot, preprocess, utils, compare, classy
 from .utils import Help
-
-from .detrend import Detrend, Plot
+from .classy import Eyepiece
 
 # Info
 __version__ = "0.0.1"
