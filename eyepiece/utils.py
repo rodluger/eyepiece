@@ -12,6 +12,7 @@ import os
 import subprocess
 import numpy as np
 import imp
+import types
 
 # Python 2/3 compatibility
 try:
