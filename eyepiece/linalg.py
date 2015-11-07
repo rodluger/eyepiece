@@ -147,7 +147,7 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
   else:
     return (ll, grad_ll)
 
-def Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = 1. * george.kernels.Matern32Kernel(1.), order = 2, crowding = None):
+def Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = 1. * george.kernels.Matern32Kernel(1.), order = 2, crowding = None, return_mean = False):
   '''
   
   '''
@@ -199,6 +199,10 @@ def Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = 1. * george.ker
     gp.compute(b_time, b_yerr)
     mu, cov = gp.predict(b_fsum - b_pixmod, time)
     muerr = np.sqrt(np.diag(cov))
+    
+    # Return the mean or draw a sample from the prediction?
+    if not return_mean:
+      mu = gp.sample_conditional(b_fsum - b_pixmod, time)
   
   # The full decorrelated flux with baseline = 1.
   dflux = 1. + (fsum - mu - pixmod) / fsum

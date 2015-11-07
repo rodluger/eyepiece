@@ -100,8 +100,8 @@ def GetTPFData(id, long_cadence = True, clobber = False,
   
   if not clobber:
     try:
-      data = np.load(os.path.join(datadir, str(id), 'data_raw.npz'))['data'][()]      # For some reason, numpy saved it as a 0-d array! See http://stackoverflow.com/questions/8361561/recover-dict-from-0-d-numpy-array
-      foo = np.load(os.path.join(datadir, str(id), 'transits.npz'))
+      data = np.load(os.path.join(datadir, str(id), '_data', 'raw.npz'))['data'][()]      # For some reason, numpy saved it as a 0-d array! See http://stackoverflow.com/questions/8361561/recover-dict-from-0-d-numpy-array
+      foo = np.load(os.path.join(datadir, str(id), '_data', 'transits.npz'))
       tN = foo['tN']
       per = foo['per']
       tdur = foo['tdur']
@@ -109,6 +109,10 @@ def GetTPFData(id, long_cadence = True, clobber = False,
       return {'data': data, 'tN': tN, 'per': per, 'tdur': tdur}
     except:
       pass
+  
+  for sd in ['_data', '_plots', '_detrend']:
+    if not os.path.exists(os.path.join(datadir, str(id), sd)):
+      os.makedirs(os.path.join(datadir, str(id), sd))
   
   if not quiet: print("Downloading TPF data...")
   if type(id) is float:
@@ -168,9 +172,7 @@ def GetTPFData(id, long_cadence = True, clobber = False,
     if time[0] < tstart: tstart = time[0]
     if time[-1] > tend: tend = time[-1]
   
-  if not os.path.exists(os.path.join(datadir, str(id))):
-    os.makedirs(os.path.join(datadir, str(id)))
-  np.savez_compressed(os.path.join(datadir, str(id), 'data_raw.npz'), data = data, hash = GitHash())
+  np.savez_compressed(os.path.join(datadir, str(id), '_data', 'raw.npz'), data = data, hash = GitHash())
   
   # Now get the transit info
   if type(id) is float:
@@ -180,7 +182,7 @@ def GetTPFData(id, long_cadence = True, clobber = False,
     tN = np.array([], dtype = int)
     per = 0.
     tdur = 0.
-  np.savez_compressed(os.path.join(datadir, str(id), 'transits.npz'), tN = tN, 
+  np.savez_compressed(os.path.join(datadir, str(id), '_data', 'transits.npz'), tN = tN, 
                       per = per, tdur = tdur, hash = GitHash())
     
   return {'data': data, 'tN': tN, 'per': per, 'tdur': tdur}
@@ -191,7 +193,7 @@ def GetData(id, data_type = 'prc', datadir = ''):
   '''
 
   try:
-    data = np.load(os.path.join(datadir, str(id), 'data_%s.npz' % data_type))['data'][()]
+    data = np.load(os.path.join(datadir, str(id), '_data', '%s.npz' % data_type))['data'][()]
   except IOError:
     raise IOError("File ``data_%s.npz`` not found." % data_type)
 
@@ -203,7 +205,7 @@ def GetInfo(id, datadir = ''):
   '''
   
   try:
-    data = np.load(os.path.join(datadir, str(id), 'transits.npz'))
+    data = np.load(os.path.join(datadir, str(id), '_data', 'transits.npz'))
     tN = data['tN'][()]
     per = data['per'][()]
     tdur = data['tdur'][()]
@@ -212,11 +214,6 @@ def GetInfo(id, datadir = ''):
     raise IOError("File ``transits.npz`` not found.")
   
   return {'tN': tN, 'per': per, 'tdur': tdur, 'hash': hash}
-
-import matplotlib; matplotlib.use('TkAgg')
-import kplr
-import matplotlib.pyplot as pl
-import numpy as np
 
 def GetPDCFlux(id, long_cadence = True):
   '''

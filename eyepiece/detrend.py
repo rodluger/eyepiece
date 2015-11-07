@@ -14,7 +14,7 @@ from __future__ import (division, print_function, absolute_import,
 from .download import GetData, GetInfo, GetPDCFlux
 from .interruptible_pool import InterruptiblePool
 from .linalg import LnLike, Whiten
-from .utils import Input, GetOutliers, FunctionWrapper
+from .utils import Input, GetOutliers, FunctionWrapper, GitHash
 from .inspect import Inspect
 import numpy as np; np.seterr(invalid = 'ignore')
 from scipy.optimize import fmin_l_bfgs_b
@@ -169,6 +169,9 @@ def Detrend(input_file = None, pool = None):
   
   # Load inputs
   inp = Input(input_file)
+  pldpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
+  allpath = os.path.join(pldpath, '_all')
+  kernel = inp.kernel
   
   # Run inspection if needed
   success = Inspect(input_file)
@@ -199,34 +202,21 @@ def Detrend(input_file = None, pool = None):
       continue
   
     # Save
-    if not os.path.exists(os.path.join(inp.datadir, str(inp.id), 'detrend')):
-      os.makedirs(os.path.join(inp.datadir, str(inp.id), 'detrend'))
-    np.savez(os.path.join(inp.datadir, str(inp.id), 'detrend', '%02d.%02d.npz' % res['tag'][::-1]), **res)
+    if not os.path.exists(allpath):
+      os.makedirs(allpath)
+    np.savez(os.path.join(allpath, '%02d.%02d.npz' % res['tag'][::-1]), **res)
   
     # Print
     if not inp.quiet:
       print("Detrending complete for tag " + str(res['tag']))
   
-  return True
-
-def LoadBestRun(inp, q):
-  '''
+  # We're going to update the trn data with the detrending info
+  data = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   
-  '''
+  # Identify the highest likelihood run
+  for q in inp.quarters:
   
-  # Attempt to load it, if it's been set already
-  pldpath = os.path.join(inp.datadir, str(inp.id), 'detrend')
-  
-  try:
-    res = np.load(os.path.join(pldpath, "%02d.npz" % q))
-  except:
-    pass
-  
-  # Find it among all the runs for that quarter
-  try:
-  
-    # Look at the likelihoods of all runs for this quarter
-    files = [os.path.join(pldpath, f) for f in os.listdir(pldpath) 
+    files = [os.path.join(allpath, f) for f in os.listdir(allpath) 
              if f.startswith('%02d.' % q) and f.endswith('.npz')]
     
     # Is there data this quarter?
@@ -239,12 +229,51 @@ def LoadBestRun(inp, q):
       lnl[i] = float(np.load(f)['lnlike'])
     res = np.load(files[np.argmax(lnl)])
 
-    # Save this as the best one
+    # Save this as the best run
     np.savez(os.path.join(pldpath, "%02d.npz" % q), **res)
+  
+    # Now detrend the transit data and save to disk
+    gp_arr = []
+    ypld_arr = []
+    yerr_arr = []
+    x = res['x']
+    kernel.pars = x[:iPLD]
+    c = x[iPLD:]
+    for time, fpix, perr in zip(data[q]['time'], data[q]['fpix'], data[q]['perr']):
+      fsum = np.sum(fpix, axis = 1)
+      K = len(time)
+      pixmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)
+      X = 1. + pixmod / fsum
+      B = X.reshape(K, 1) * perr - c * perr / fsum.reshape(K, 1)
+      yerr = np.sum(B ** 2, axis = 1) ** 0.5
+      ypld = fsum - pixmod
+      gp = george.GP(kernel)
+      gp.compute(time, yerr)
     
-    # Return
+      gp_arr.append(gp)
+      ypld_arr.append(ypld)
+      yerr_arr.append(yerr)
+    
+    # Update our transit file with the detrended data
+    data[q].update({'dvec': x})
+    data[q].update({'gp': gp_arr})
+    data[q].update({'ypld': ypld_arr})
+    data[q].update({'yerr': yerr_arr})
+    
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = data, hash = GitHash())  
+    
+  return True
+
+def LoadQuarter(inp, q):
+  '''
+  
+  '''
+  
+  pldpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
+  
+  try:
+    res = np.load(os.path.join(pldpath, "%02d.npz" % q))
     return res
-    
   except IOError:
     return None
 
@@ -286,7 +315,7 @@ def PlotDecorrelation(input_file = None):
   for q in inp.quarters:
     
     # Load the decorrelated data
-    res = LoadBestRun(inp, q)
+    res = LoadQuarter(inp, q)
     if res is None: 
       continue
   
@@ -401,7 +430,7 @@ def PlotDecorrelation(input_file = None):
   
   return fig, ax
 
-def GetWhitenedData(input_file = None, folded = True):
+def GetWhitenedData(input_file = None, folded = True, return_mean = False):
   '''
   
   '''
@@ -429,7 +458,7 @@ def GetWhitenedData(input_file = None, folded = True):
   for q in inp.quarters:
 
     # Load coefficients for this quarter
-    res = LoadBestRun(inp, q)
+    res = LoadQuarter(inp, q)
     if res is None:
       if not inp.quiet:
         print("WARNING: No decorrelation info found for quarter %d." % q)
@@ -440,7 +469,7 @@ def GetWhitenedData(input_file = None, folded = True):
     for b_time, b_fpix, b_perr, time, fpix, perr in zip(bkg[q]['time'], bkg[q]['fpix'], bkg[q]['perr'], prc[q]['time'], prc[q]['fpix'], prc[q]['perr']):
     
       # Whiten the flux
-      flux, ferr = Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = inp.kernel, order = inp.order, crowding = prc[q]['crowding'])
+      flux, ferr = Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = inp.kernel, order = inp.order, crowding = prc[q]['crowding'], return_mean = return_mean)
     
       # Fold the time
       if folded:
@@ -452,7 +481,6 @@ def GetWhitenedData(input_file = None, folded = True):
         flux = np.delete(flux, bad)  
         ferr = np.delete(ferr, bad)    
     
-      # Plot
       t = np.append(t, time)
       f = np.append(f, flux)
       e = np.append(e, ferr)
@@ -579,7 +607,7 @@ def Compare(input_file = None):
   for q in inp.quarters:
     
     # Load the decorrelation results
-    res = LoadBestRun(inp, q)
+    res = LoadQuarter(inp, q)
     if res is None: 
       continue
     

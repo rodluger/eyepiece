@@ -492,7 +492,7 @@ class Viewer(object):
   
     # Save
     if event.key == SAVE:
-      figname = os.path.join(self.datadir, str(self.id), "Q%02d_%s.png" % (self.quarter, self.state[0]))
+      figname = os.path.join(self.datadir, str(self.id), '_plots', "Q%02d_%s.png" % (self.quarter, self.state[0]))
       self.fig.savefig(figname, bbox_inches = 'tight')
       print("Saved to file %s." % figname)
   
@@ -698,9 +698,6 @@ def Inspect(input_file = None):
   # Load inputs
   inp = Input(input_file)
 
-  # DEBUG
-  inp.clobber = True
-
   # Check for a saved version
   if not inp.clobber:
     try:
@@ -711,9 +708,6 @@ def Inspect(input_file = None):
     except:
       # The file doesn't exist
       pass
-  
-  # DEBUG
-  inp.clobber = False
   
   # Grab the data
   if not inp.quiet: print("Retrieving target data...")
@@ -792,7 +786,7 @@ def Inspect(input_file = None):
         fig.canvas.manager.window.attributes('-fullscreen', 1) 
     
     # Save the figure
-    fig.savefig(os.path.join(inp.datadir, str(inp.id), "Q%02d.png" % q), bbox_inches = 'tight')
+    fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', "Q%02d.png" % q), bbox_inches = 'tight')
     
     # Show the figure
     if inp.interactive_inspect:
@@ -894,14 +888,20 @@ def Inspect(input_file = None):
     data_trn[q]['crowding'] = data[q]['crowding']
     data_bkg[q]['crowding'] = data[q]['crowding']
     
+    # Add an empty detrending vector to the transit data
+    data_trn[q]['dvec'] = None
+    data_trn[q]['gp'] = None
+    data_trn[q]['ypld'] = None
+    data_trn[q]['yerr'] = None
+    
     # Increment and loop
     q += dq
 
   # Save the data
   if not inp.quiet: print("Saving data to disk...")
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), 'data_prc.npz'), data = data_new, hash = GitHash())
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), 'data_trn.npz'), data = data_trn, hash = GitHash())
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), 'data_bkg.npz'), data = data_bkg, hash = GitHash())
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'prc.npz'), data = data_new, hash = GitHash())
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = data_trn, hash = GitHash())
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'bkg.npz'), data = data_bkg, hash = GitHash())
 
   # Re-enable toolbar and shortcuts
   if inp.interactive_inspect:
