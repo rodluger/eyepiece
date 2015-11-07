@@ -33,12 +33,12 @@ class Eyepiece(object):
     # Preprocess
     preprocess.Preprocess(self.input_file)
   
-  def Detrend(self):
+  def Detrend(self, pool = None):
     '''
     
     '''
     
-    detrend.Detrend(self.input_file)
+    detrend.Detrend(self.input_file, pool = pool)
   
   def Plot(self):
     '''
