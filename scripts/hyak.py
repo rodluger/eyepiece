@@ -12,6 +12,7 @@ Run ``eyepiece`` on Hyak.
 
 from eyepiece import Eyepiece
 import sys
+import subprocess
 import para
 
 if __name__ == '__main__':
