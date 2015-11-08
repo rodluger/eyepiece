@@ -34,6 +34,7 @@ if __name__ == '__main__':
     pool = para.Pool()
     eye = Eyepiece('input.py')
     eye.Detrend(pool = pool)
+    eye.Compare(pool = pool)
     pool.close()
     
     # Plot the results

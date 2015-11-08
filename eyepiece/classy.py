@@ -47,20 +47,22 @@ class Eyepiece(object):
     
     plot.PlotDetrended(self.input_file)
     plot.PlotTransits(self.input_file)
+    try:
+      compare.PlotComparison(self.input_file)
+    except:
+      # Not a big deal
+      pass
     
     if not self.inp.quiet:
       print("Figures saved to %s." % os.path.join(self.inp.datadir, str(self.inp.id), '_plots'))
   
-  def Compare(self):
+  def Compare(self, pool = None):
     '''
     
     '''
     
-    compare.PlotComparison(self.input_file)
-    
-    if not self.inp.quiet:
-      print("Figure saved to %s." % os.path.join(self.inp.datadir, str(self.inp.id), '_plots'))
-
+    compare.Compare(self.input_file, pool = pool)
+  
   def WhiteData(self, folded = True, return_mean = False):
     '''
     

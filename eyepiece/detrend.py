@@ -116,6 +116,10 @@ def Detrend(input_file = None, pool = None):
 
   '''
   
+  # Reset the global variable
+  global data
+  data = None
+  
   # Load inputs
   inp = Input(input_file)
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
@@ -130,15 +134,15 @@ def Detrend(input_file = None, pool = None):
     return False
   
   # We're going to update the trn data with the detrending info later
-  data = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
+  tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   
   # Have we already detrended?
   if not inp.clobber:
     try:
-      for q in data:
-        if len(data[q]['time']) == 0:
+      for q in tdata:
+        if len(tdata[q]['time']) == 0:
           continue
-        if data[q]['dvec'] is None:
+        if tdata[q]['dvec'] is None:
           raise ValueError("Detrending vector is ``None``.")
       
       # Data is already detrended
@@ -158,7 +162,7 @@ def Detrend(input_file = None, pool = None):
   if not inp.clobber:
     quarters = []
     for q in inp.quarters:
-      if data[q]['dvec'] is None:
+      if tdata[q]['dvec'] is None:
         quarters.append(q)
   else:
     quarters = inp.quarters
@@ -212,7 +216,7 @@ def Detrend(input_file = None, pool = None):
     x = res['x']
     kernel.pars = x[:iPLD]
     c = x[iPLD:]
-    for time, fpix, perr in zip(data[q]['time'], data[q]['fpix'], data[q]['perr']):
+    for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
       fsum = np.sum(fpix, axis = 1)
       K = len(time)
       pixmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)
@@ -227,12 +231,12 @@ def Detrend(input_file = None, pool = None):
       yerr_arr.append(yerr)
     
     # Update our transit file with the detrended data
-    data[q].update({'dvec': x})
-    data[q].update({'gp': gp_arr})
-    data[q].update({'ypld': ypld_arr})
-    data[q].update({'yerr': yerr_arr})
+    tdata[q].update({'dvec': x})
+    tdata[q].update({'gp': gp_arr})
+    tdata[q].update({'ypld': ypld_arr})
+    tdata[q].update({'yerr': yerr_arr})
     
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = data, hash = GitHash())  
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())  
     
   return True
 

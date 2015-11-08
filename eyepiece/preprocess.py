@@ -12,8 +12,6 @@ preprocess.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .utils import Bold, GitHash, Input, GetData
 from .download import DownloadData, DownloadInfo, EmptyData
-import matplotlib.pyplot as pl
-from matplotlib.widgets import RectangleSelector, Cursor
 import numpy as np
 import os
 
@@ -24,7 +22,7 @@ if sys.version_info >= (3,0):
 else:
   prompt = raw_input
   
-rcParams = dict(pl.rcParams)
+rcParams = None
 
 # Keyboard shortcuts
 ZOOM = 'z'
@@ -47,9 +45,11 @@ BLND = 'b'
 def DisableShortcuts():
   '''
   Disable MPL keyboard shortcuts and the plot toolbar.
-  Returns a copy of the original pl.rcParams
-  
+
   '''
+  
+  global rcParams
+  rcParams = dict(pl.rcParams)
     
   pl.rcParams['toolbar'] = 'None'
   pl.rcParams['keymap.all_axes'] = ''
@@ -70,6 +70,9 @@ def EnableShortcuts():
   Resets pl.rcParams to its original state.
   
   '''
+  
+  global rcParams
+  
   pl.rcParams.update(rcParams)
 
 def ShowHelp():
@@ -214,7 +217,9 @@ class Viewer(object):
     
     # Interactive features
     if self.interactive:
-    
+      
+      from matplotlib.widgets import RectangleSelector
+      
       # Initialize our selectors
       self.Outliers = RectangleSelector(ax, self.oselect,
                                         rectprops = dict(facecolor='red', 
@@ -683,6 +688,20 @@ def Preprocess(input_file = None):
 
   # Load inputs
   inp = Input(input_file)
+
+  # Load MPL backend
+  import matplotlib
+  if inp.interactive:
+    # Are we running this interactively? If so, use TkAgg
+    matplotlib.use('TkAgg', warn = False)
+    if matplotlib.get_backend() != 'TkAgg':
+      print("WARNING: Unable to load TkAgg backend. Interactive mode disabled.")
+      inp.interactive = False
+  else:
+    # Let's try to use the Agg backend. Not a big deal if it doesn't work
+    import matplotlib
+    matplotlib.use('Agg', warn = False)
+  import matplotlib.pyplot as pl
 
   # Check for a saved version
   if not inp.clobber:

@@ -5,11 +5,6 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 
 __all__ = ['Help', 'Eyepiece']
 
-# Try to use TkAgg backend, and issue warning if it didn't work
-import matplotlib; matplotlib.use('TkAgg', warn = False)
-if matplotlib.get_backend() != 'TkAgg':
-  print("WARNING: Unable to load TkAgg backend. Interactive preprocessing may not work correctly.")
-
 # Import local files
 from . import detrend, download, linalg, defaults, plot, preprocess, utils, compare, classy
 from .utils import Help

@@ -7,7 +7,7 @@ compare.py
 '''
 
 from __future__ import division, print_function, absolute_import, unicode_literals
-from .utils import Input, GetData, GetOutliers, FreedmanDiaconis
+from .utils import Input, GetData, GetOutliers, FreedmanDiaconis, FunctionWrapper
 from scipy.optimize import curve_fit, fmin_l_bfgs_b
 from scipy.stats import norm
 import matplotlib.mlab as mlab
@@ -15,6 +15,14 @@ import numpy as np
 import os
 import george
 import matplotlib.pyplot as pl
+
+# Python 2/3 compatibility
+try:
+  FileNotFoundError
+except:
+  FileNotFoundError = IOError
+
+data = None
 
 def NegLnLikeGP(x, t, y, e, kernel):
   '''
@@ -115,115 +123,101 @@ def PLDPoly(input_file = None, order = 5):
   
   return t, f
 
-def PLD_then_GP(input_file = None):
+def PLD_then_GP(q, id, kernel, kinit, kbounds, maxfun, datadir):
   '''
   
   '''
   
-  # Load inputs
-  inp = Input(input_file)
-  kernel = inp.kernel
-  kinit = inp.kinit
-  kbounds = inp.kbounds
+  global data
+  if data is None:
+    data = GetData(id, data_type = 'bkg', datadir = datadir)
+  qd = data[q]
 
-  # Load the data
-  data = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
-  
+  if qd['time'] == []:
+    return None
+
+  # t/y for all chunks
   t_all = np.array([], dtype = float)
-  y_all = np.array([], dtype = float)
+  y_all = np.array([], dtype = float)  
+  
+  # Solve the (linear) PLD problem for this quarter
+  fpix = np.array([x for y in qd['fpix'] for x in y])
+  fsum = np.sum(fpix, axis = 1)
+  init = np.array([np.median(fsum)] * fpix.shape[1])
+  def pm(y, *x):
+    return np.sum(fpix * np.outer(1. / fsum, x), axis = 1)
+  x, _ = curve_fit(pm, None, fsum, p0 = init)
+  
+  # Here's our detrended data
+  y = []
+  t = []
+  e = []
+  for time, fpix, perr in zip(qd['time'], qd['fpix'], qd['perr']):
     
-  for q in inp.quarters:
-  
-    # This might be a bit slow, so let's print the progress
-    if not inp.quiet:
-      print("Detrending quarter %d with PLD --> GP..." % q)
-  
-    # Solve the (linear) PLD problem for this quarter
-    qd = data[q]
-    fpix = np.array([x for y in qd['fpix'] for x in y])
+    # The pixel model
     fsum = np.sum(fpix, axis = 1)
-    init = np.array([np.median(fsum)] * fpix.shape[1])
-    def pm(y, *x):
-      return np.sum(fpix * np.outer(1. / fsum, x), axis = 1)
-    x, _ = curve_fit(pm, None, fsum, p0 = init)
+    pixmod = np.sum(fpix * np.outer(1. / fsum, x), axis = 1)
     
-    # Here's our detrended data
-    y = []
-    t = []
-    e = []
-    for time, fpix, perr in zip(qd['time'], qd['fpix'], qd['perr']):
-      
-      # The pixel model
-      fsum = np.sum(fpix, axis = 1)
-      pixmod = np.sum(fpix * np.outer(1. / fsum, x), axis = 1)
-      
-      # The errors
-      X = np.ones_like(time) + pixmod / fsum
-      B = X.reshape(len(time), 1) * perr - x * perr / fsum.reshape(len(time), 1)
-      yerr = np.sum(B ** 2, axis = 1) ** 0.5
+    # The errors
+    X = np.ones_like(time) + pixmod / fsum
+    B = X.reshape(len(time), 1) * perr - x * perr / fsum.reshape(len(time), 1)
+    yerr = np.sum(B ** 2, axis = 1) ** 0.5
 
-      # Append to our arrays
-      y.append(fsum - pixmod)
-      t.append(time)
-      e.append(yerr)
-    
-    # Now we solve for the best GP params
-    res = fmin_l_bfgs_b(NegLnLikeGP, kinit, approx_grad = False,
-                        args = (t, y, e, kernel), bounds = kbounds,
-                        m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = inp.maxfun)
-    
-    # Finally, detrend the data
-    kernel.pars = res[0]
-    gp = george.GP(kernel)
-    for ti, yi, ei in zip(t, y, e):
-      gp.compute(ti, ei)
-      mu, _ = gp.predict(yi, ti)
-      y_all = np.append(y_all, yi - mu)
-      t_all = np.append(t_all, ti)
+    # Append to our arrays
+    y.append(fsum - pixmod)
+    t.append(time)
+    e.append(yerr)
+  
+  # Now we solve for the best GP params
+  res = fmin_l_bfgs_b(NegLnLikeGP, kinit, approx_grad = False,
+                      args = (t, y, e, kernel), bounds = kbounds,
+                      m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = maxfun)
+  
+  # Finally, detrend the data
+  kernel.pars = res[0]
+  gp = george.GP(kernel)
+  for ti, yi, ei in zip(t, y, e):
+    gp.compute(ti, ei)
+    mu, _ = gp.predict(yi, ti)
+    y_all = np.append(y_all, yi - mu)
+    t_all = np.append(t_all, ti)
   
   return t_all, y_all
 
-def GPOnly(input_file = None):
+def GPOnly(q, id, kernel, kinit, kbounds, maxfun, datadir):
   '''
   
   '''
   
-  # Load inputs
-  inp = Input(input_file)
-  kernel = inp.kernel
-  kinit = inp.kinit
-  kbounds = inp.kbounds
+  global data
+  if data is None:
+    data = GetData(id, data_type = 'bkg', datadir = datadir)
+  qd = data[q]
 
-  # Load the data
-  data = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
+  if qd['time'] == []:
+    return None
   
+  # t/y for all chunks
   t_all = np.array([], dtype = float)
   y_all = np.array([], dtype = float)
-    
-  for q in inp.quarters:
-  
-    # This might be a bit slow, so let's print the progress
-    if not inp.quiet:
-      print("Detrending quarter %d with GP..." % q)
-      
-    # Solve for the best GP params
-    qd = data[q]
-    t = qd['time']
-    y = np.array([np.sum(fpix, axis = 1) - np.median(np.sum(fpix, axis = 1)) for fpix in qd['fpix']])
-    e = [np.sqrt(np.sum(perr ** 2, axis = 1)) for perr in qd['perr']]
 
-    res = fmin_l_bfgs_b(NegLnLikeGP, kinit, approx_grad = False,
-                        args = (t, y, e, kernel), bounds = kbounds,
-                        m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = inp.maxfun)
-    
-    # Finally, detrend the data
-    kernel.pars = res[0]
-    gp = george.GP(kernel)
-    for ti, yi, ei in zip(t, y, e):
-      gp.compute(ti, ei)
-      mu, _ = gp.predict(yi, ti)
-      y_all = np.append(y_all, yi - mu)
-      t_all = np.append(t_all, ti)
+  # Solve for the best GP params
+  t = qd['time']
+  y = np.array([np.sum(fpix, axis = 1) - np.median(np.sum(fpix, axis = 1)) for fpix in qd['fpix']])
+  e = [np.sqrt(np.sum(perr ** 2, axis = 1)) for perr in qd['perr']]
+
+  res = fmin_l_bfgs_b(NegLnLikeGP, kinit, approx_grad = False,
+                      args = (t, y, e, kernel), bounds = kbounds,
+                      m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = maxfun)
+  
+  # Finally, detrend the data
+  kernel.pars = res[0]
+  gp = george.GP(kernel)
+  for ti, yi, ei in zip(t, y, e):
+    gp.compute(ti, ei)
+    mu, _ = gp.predict(yi, ti)
+    y_all = np.append(y_all, yi - mu)
+    t_all = np.append(t_all, ti)
   
   return t_all, y_all
 
@@ -264,6 +258,56 @@ def Templar(input_file = None):
   
   return t, f
 
+def Compare(input_file = None, pool = None):
+  '''
+  
+  '''
+  
+  # Reset the global variable
+  global data
+  data = None
+  
+  # Load
+  inp = Input(input_file)
+  datapath = os.path.join(inp.datadir, str(inp.id), '_data')
+  
+  if not inp.quiet:
+    print("Detrending...")
+  
+  # These are quick; no need to parallelize
+  t, fPDC = PDC(input_file)
+  _, fPLD = PLDPoly(input_file)
+  _, fTem = Templar(input_file)
+  
+  # This one is slow
+  fPLDGP = np.array([], dtype = float)
+  FW = FunctionWrapper(PLD_then_GP, inp.id, inp.kernel, inp.kinit, 
+                       inp.kbounds, inp.maxfun, inp.datadir)
+  if pool is None: 
+    M = map
+  else: 
+    M = pool.map
+  for res in M(FW, inp.quarters):
+    if res is None:
+      continue
+    fPLDGP = np.append(fPLDGP, res[1])
+  
+  # This one too
+  fGP = np.array([], dtype = float)
+  FW = FunctionWrapper(GPOnly, inp.id, inp.kernel, inp.kinit, 
+                       inp.kbounds, inp.maxfun, inp.datadir)
+  if pool is None: 
+    M = map
+  else: 
+    M = pool.map
+  for res in M(FW, inp.quarters):
+    if res is None:
+      continue
+    fGP = np.append(fGP, res[1])
+
+  # Save
+  np.savez(os.path.join(datapath, 'cmp.npz'), t = t, fPDC = fPDC, fPLD = fPLD, fPLDGP = fPLDGP, fGP = fGP, fTem = fTem)
+
 def PlotComparison(input_file = None):
   '''
   
@@ -273,11 +317,23 @@ def PlotComparison(input_file = None):
   inp = Input(input_file)
   data = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
   plotpath = os.path.join(inp.datadir, str(inp.id), '_plot')
+  datapath = os.path.join(inp.datadir, str(inp.id), '_data')
+  
+  # Load detrended data
+  try:
+    det = np.load(os.path.join(datapath, 'cmp.npz'))
+  except FileNotFoundError:
+    raise Exception("Please run ``Compare()`` first.")
+  
+  t = det['t']
+  fPDC = det['fPDC']
+  fPLD = det['fPLD']
+  fPLDGP = det['fPLDGP']
+  fGP = det['fGP']
+  fTem = det['fTem']
   
   if not inp.quiet:
     print("Plotting detrending comparison...")
-  
-  
   
   fig = pl.figure()
   fig.set_size_inches(48,28)
@@ -301,23 +357,14 @@ def PlotComparison(input_file = None):
   ax = [ax0, ax1, ax2, ax3, ax4]
   axh = [ax0h, ax1h, ax2h, ax3h, ax4h]
   
-  # Plot data
-  t, f0 = PDC(input_file)  
-  ax[0].plot(t, f0, 'b.', alpha = 0.3)
+  # Plot data   
+  ax[0].plot(t, fPDC, 'b.', alpha = 0.3)
+  ax[1].plot(t, fPLD, 'b.', alpha = 0.3)
+  ax[2].plot(t, fPLDGP, 'b.', alpha = 0.3)
+  ax[3].plot(t, fGP, 'b.', alpha = 0.3)
+  ax[4].plot(t, fTem, 'b.', alpha = 0.3)
   
-  t, f1 = PLDPoly(input_file)
-  ax[1].plot(t, f1, 'b.', alpha = 0.3)
-  
-  t, f2 = GPOnly(input_file)
-  ax[2].plot(t, f2, 'b.', alpha = 0.3)
-  
-  t, f3 = PLD_then_GP(input_file)
-  ax[3].plot(t, f3, 'b.', alpha = 0.3)
-  
-  t, f4 = Templar(input_file)
-  ax[4].plot(t, f4, 'b.', alpha = 0.3)
-  
-  f = [f0, f1, f2, f3, f4]
+  f = [fPDC, fPLD, fPLDGP, fGP, fTem]
   
   # Scale y limits
   out, M, MAD = GetOutliers(np.concatenate(f), sig_tol = 5.)
