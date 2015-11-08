@@ -60,6 +60,7 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
   global data
   if data is None:
     data = GetData(id, data_type = 'bkg', datadir = datadir)
+  detpath = os.path.join(datadir, str(id), '_detrend')
   
   # Tags: i is the iteration number; q is the quarter number
   i = tag[0]
@@ -107,12 +108,17 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
     gpmu = np.append(gpmu, res[3])
     gperr = np.append(gperr, res[4])
 
+  res = {'time': time, 'fsum': fsum, 'ypld': ypld, 'gpmu': gpmu, 'gperr': gperr,
+          'x': x, 'lnlike': lnlike, 'info': info, 'init': init, 'tag': tag}
+
+  # Save
+  np.savez(os.path.join(detpath, '%02d.%02d.npz' % res['tag'][::-1]), **res)
+
   # Debug?
   if debug:
     print("End tag " + str(tag))
 
-  return {'time': time, 'fsum': fsum, 'ypld': ypld, 'gpmu': gpmu, 'gperr': gperr,
-          'x': x, 'lnlike': lnlike, 'info': info, 'init': init, 'tag': tag}
+  return res
 
 def Detrend(input_file = None, pool = None):
 
@@ -127,6 +133,8 @@ def Detrend(input_file = None, pool = None):
   # Load inputs
   inp = Input(input_file)
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
+  if not os.path.exists(detpath):
+    os.makedirs(detpath)
   kernel = inp.kernel
   iPLD = len(inp.kernel.pars)
   
@@ -181,21 +189,9 @@ def Detrend(input_file = None, pool = None):
   else:
     M = pool.map
   
-  # Run and save
+  # Run
   for res in M(FW, tags):
-  
-    # No data?
-    if res is None:
-      continue
-  
-    # Save
-    if not os.path.exists(detpath):
-      os.makedirs(detpath)
-    np.savez(os.path.join(detpath, '%02d.%02d.npz' % res['tag'][::-1]), **res)
-  
-    # Print
-    if not inp.quiet:
-      print("Detrending complete for quarter %d, tag %s." % (res['tag'][1], str(res['tag'][0])))
+    continue
   
   # Identify the highest likelihood run
   for q in quarters:
