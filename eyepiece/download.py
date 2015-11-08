@@ -96,7 +96,10 @@ def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False,
     print("Downloading TPF data...")
   
   # Download the data
-  obj = get_kplr_obj(id)
+  try:
+    obj = get_kplr_obj(id)
+  except:
+    raise Exception("Unable to access online database.")
   data = EmptyData(quarters)
   
   # Target pixel files

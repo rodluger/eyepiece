@@ -4,38 +4,33 @@
 hyak.py
 -------
 
-Run ``eyepiece`` on Hyak.
+Runs ``eyepiece``. Call this script with ``mpi`` for
+MPI parallelization on Hyak. Note that the raw data must
+be cached prior to submitting the job. Simply run
 
->>> python hyak.py
+>>> python -c "import eyepiece; eyepiece.Eyepiece('input.py')"
+
+before executing this script with ``mpi``.
 
 '''
 
 from eyepiece import Eyepiece
-import sys
-import subprocess
 import para
 
-if __name__ == '__main__':
+# Create a ``para`` MPI pool instance
+pool = para.Pool()
 
-  # If no arguments were provided, download the data, then re-run this script 
-  # with ``mpi`` to add the job to the PBS queue
-  if len(sys.argv) == 1:
-  
-    # Download the data
-    eye = Eyepiece('input.py')
-    
-    # Submit the job
-    subprocess.call(['mpi', 'hyak.py', '-a', 'QSUB'])
-  
-  # We're already in a PBS run. Let's load the data, then detrend!
-  else:
-  
-    # Create a ``para`` MPI pool instance
-    pool = para.Pool()
-    eye = Eyepiece('input.py')
-    eye.Detrend(pool = pool)
-    eye.Compare(pool = pool)
-    pool.close()
-    
-    # Plot the results
-    eye.Plot()
+# Grab the data
+eye = Eyepiece('input.py')
+
+# Detrend
+eye.Detrend(pool = pool)
+
+# Compare to other methods
+eye.Compare(pool = pool)
+
+# Release the nodes
+pool.close()
+
+# Plot the results
+eye.Plot()

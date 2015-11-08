@@ -27,12 +27,16 @@ bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17]
 
 # C
 clobber = False
+commands = None
 
 # D
 datadir = '/Users/rodrigo/eyepiece/lightcurves'
 dataset = 'Kepler'
 debug = False
 dt_tol = 0.5
+
+# E
+email = None
 
 # F
 fullscreen = True
@@ -48,14 +52,16 @@ kernel = 1. * george.kernels.Matern32Kernel(1.)
 kinit = [100., 100.]
 
 # L
+logfile = '<script>.log'
 long_cadence = True
 
 # M
 maxfun = 15000
+mem = 40
 min_sz = 300
-mpn = 40
 
 # N
+name = None
 niter = 5
 nodes = 5
 
@@ -72,13 +78,15 @@ quiet = False
 
 # S
 split_cads = [4472, 6717]
+stdout = '/dev/null'
+stderr = '/dev/null'
 
 # T
 tbins = 20
 ttvs = False
 
 # W
-walltime = 2
+walltime = 1
 
 # -------
 # CLEANUP
@@ -105,12 +113,16 @@ class _Docs(object):
     
     # C
     self.clobber = 'Overwrite existing data?'
+    self.commands = 'Additional PBS script commands'
     
     # D
     self.datadir = 'Directory to store lightcurve processing data in'
     self.dataset = 'Which exoplanet dataset to use (Kepler, K2, TESS...)'
     self.debug = 'Debug mode?'
     self.dt_tol = 'Transit gap tolerance in days'
+    
+    # E
+    self.email = 'Email (PBS only)'
     
     # F
     self.fullscreen = 'Fullscreen the plot when inspecting?'
@@ -126,14 +138,16 @@ class _Docs(object):
     self.kinit = 'Initial values for the kernel parameters'
     
     # L
+    self.logfile = 'Name of log file for PBS jobs'
     self.long_cadence = 'Use Kepler long cadence data?'
     
     # M
     self.maxfun = 'Maximum number of ln-like function calls in ``l_bfgs_b``'
+    self.mem = 'Memory in GB for PBS jobs'
     self.min_sz = 'Minimum chunk size in cadences when splitting the lightcurve'
-    self.mpn = 'Memory per node in GB when submitting a job with ``qsub``'
     
     # N
+    self.name = 'PBS job name'
     self.niter = 'Number of iterations when detrending in parallel.'
     self.nodes = 'Number of nodes to use when submitting a job with ``qsub``'
 
@@ -150,6 +164,8 @@ class _Docs(object):
     
     # S
     self.split_cads = 'Cadences at which to split the data'
+    self.stdout = 'Path to STDOUT file (PBS only)'
+    self.stderr = 'Path to STDOUT file (PBS only)'
     
     # T
     self.tbins = 'Number of bins when plotting folded transits'
