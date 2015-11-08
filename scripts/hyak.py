@@ -17,19 +17,22 @@ import para
 
 if __name__ == '__main__':
 
-  # Grab the data
-  eye = Eyepiece('input.py')
-
-  # If no arguments were provided, re-run this script with ``mpi`` to add the job
-  # to the PBS queue
+  # If no arguments were provided, download the data, then re-run this script 
+  # with ``mpi`` to add the job to the PBS queue
   if len(sys.argv) == 1:
+  
+    # Download the data
+    eye = Eyepiece('input.py')
+    
+    # Submit the job
     subprocess.call(['mpi', 'hyak.py', '-a', 'QSUB'])
   
-  # We're already in a PBS run. Let's detrend!
+  # We're already in a PBS run. Let's load the data, then detrend!
   else:
   
     # Create a ``para`` MPI pool instance
     pool = para.Pool()
+    eye = Eyepiece('input.py')
     eye.Detrend(pool = pool)
     pool.close()
     

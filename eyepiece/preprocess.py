@@ -881,12 +881,6 @@ def Preprocess(input_file = None):
     data_trn[q]['crwd'] = data[q]['crwd']
     data_bkg[q]['crwd'] = data[q]['crwd']
     
-    # Add an empty detrending vector to the transit data
-    data_trn[q]['dvec'] = None
-    data_trn[q]['gp'] = None
-    data_trn[q]['ypld'] = None
-    data_trn[q]['yerr'] = None
-    
     # Increment and loop
     q += dq
 
