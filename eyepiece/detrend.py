@@ -44,17 +44,17 @@ def NegLnLike(x, id, q, kernel, debug):
     res = LnLike(x, time, fpix, perr, kernel = kernel)
     ll += res[0]
     grad_ll += res[1]
-  
-  # Check the progress by printing to the screen
-  if debug:
-    print(q, ll)
-  
+    
   return (-ll, -grad_ll)
 
 def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadir):
   '''
   
   '''
+
+  # Debug?
+  if debug:
+    print("Begin tag " + str(tag))
 
   # Load the data (if necessary)
   global data
@@ -106,6 +106,10 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
     ypld = np.append(ypld, res[2])
     gpmu = np.append(gpmu, res[3])
     gperr = np.append(gperr, res[4])
+
+  # Debug?
+  if debug:
+    print("End tag " + str(tag))
 
   return {'time': time, 'fsum': fsum, 'ypld': ypld, 'gpmu': gpmu, 'gperr': gperr,
           'x': x, 'lnlike': lnlike, 'info': info, 'init': init, 'tag': tag}
