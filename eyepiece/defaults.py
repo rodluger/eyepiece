@@ -30,7 +30,7 @@ clobber = False
 commands = None
 
 # D
-datadir = '/Users/rodrigo/eyepiece/lightcurves'
+datadir = '/Users/rodrigo/src/eyepiece/lightcurves'
 dataset = 'Kepler'
 debug = False
 dt_tol = 0.5

@@ -24,6 +24,21 @@ class Eyepiece(object):
     self.input_file = input_file
     self.inp = Input(self.input_file)
     
+    # Save a copy of the input file (will overwrite!)
+    datadir = os.path.join(self.inp.datadir, str(self.inp.id), '_data')
+    if not os.path.exists(datadir):
+      os.makedirs(datadir)
+    with open(os.path.join(datadir, 'input.log'), 'w') as f:
+      for key, val in sorted(zip(self.inp.__dict__.keys(), self.inp.__dict__.values())):
+        if not key.startswith('_'):
+          try:
+            item = '%s: %s' % (key, str(val))
+          except:
+            item = '%s: ???' % (key)
+          print(item, file = f)
+    
+    import pdb; pdb.set_trace()
+    
     # Download the data
     download.DownloadData(self.inp.id, self.inp.dataset, long_cadence = self.inp.long_cadence, 
                           clobber = self.inp.clobber, datadir = self.inp.datadir, 
