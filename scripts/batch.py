@@ -13,5 +13,6 @@ import subprocess
 import os
 
 for file in os.listdir('batch'):
-  eye = Eyepiece('batch/%s' % file)
-  subprocess.call(['mpi', 'hyak.py', '-i', 'batch/%s' % file])
+  if file.endswith('.py'):
+    eye = Eyepiece('batch/%s' % file)
+    subprocess.call(['mpi', 'hyak.py', '-i', 'batch/%s' % file])
