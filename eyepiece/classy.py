@@ -37,8 +37,6 @@ class Eyepiece(object):
             item = '%s: ???' % (key)
           print(item, file = f)
     
-    import pdb; pdb.set_trace()
-    
     # Download the data
     download.DownloadData(self.inp.id, self.inp.dataset, long_cadence = self.inp.long_cadence, 
                           clobber = self.inp.clobber, datadir = self.inp.datadir, 
