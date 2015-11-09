@@ -9,7 +9,7 @@ compare.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .utils import Input, GetData, GetOutliers, FreedmanDiaconis, FunctionWrapper
 from scipy.optimize import curve_fit, fmin_l_bfgs_b
-from scipy.stats import norm
+from scipy.stats import norm, normaltest
 import matplotlib.mlab as mlab
 import numpy as np
 import os
@@ -394,6 +394,14 @@ def PlotComparison(input_file = None):
     mu, sigma = norm.fit(fn, loc = 0)
     ah.plot(mlab.normpdf(bins, mu, sigma), bins, 'k-', linewidth=2)
   
+    # Print some statistics
+    rss = np.sum(fn ** 2)
+    ks0, ks1 = normaltest(fn)
+    xleft = axh.get_xlim()[0]
+    ytop = axh.get_ylim()[1]
+    ah.annotate("\nRSS = %.5e" % rss, (xleft, ytop), ha='left', va='top', fontsize = 8, color = 'k')
+    ah.annotate("\n\nKST = %.5e, %.5e" % (ks0, ks1), (xleft, ytop), ha='left', va='top', fontsize = 8, color = 'k')
+    
   # Annotate
   for q in inp.quarters:
   
@@ -437,4 +445,4 @@ def PlotComparison(input_file = None):
   # Save and return
   fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', 'comparison.png'), bbox_inches = 'tight')
   
-  return fig, ax
+  return fig, ax + axh
