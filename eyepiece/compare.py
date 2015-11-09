@@ -90,6 +90,9 @@ def PLDPoly(input_file = None, order = 5):
   for q in inp.quarters:
   
     qd = data[q]
+    
+    if len(qd['time']) == 0:
+      continue
   
     # Concatenate the arrays for this quarter
     time = np.array([x for y in qd['time'] for x in y])
