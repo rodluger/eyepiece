@@ -5,3 +5,4 @@ lightcurves
 scripts/input.py
 *.log
 *.pbs
+*.*~

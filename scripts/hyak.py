@@ -16,6 +16,7 @@ before executing this script with ``mpi``:
 
 '''
 
+import matplotlib as mpl; mpl.use('Agg')
 from eyepiece import Eyepiece
 import para
 

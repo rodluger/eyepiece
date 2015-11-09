@@ -274,8 +274,15 @@ def Compare(input_file = None, pool = None):
   inp = Input(input_file)
   datapath = os.path.join(inp.datadir, str(inp.id), '_data')
   
+  if not inp.clobber:
+    try:
+      res = np.load(os.path.join(datapath, 'cmp.npz'))
+      return
+    except FileNotFoundError:
+      pass
+  
   if not inp.quiet:
-    print("Detrending...")
+    print("Running comparison...")
   
   # These are quick; no need to parallelize
   t, fPDC = PDC(input_file)
