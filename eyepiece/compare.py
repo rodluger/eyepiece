@@ -382,7 +382,8 @@ def PlotComparison(input_file = None):
   
   # Plot histograms
   for fn, ah, a, c in zip(f, axh, ax, ['r', 'r', 'r', 'r', 'b']):
-    n, bins, patches = ah.hist(fn, normed = 1, orientation = 'horizontal', 
+    n, bins, patches = ah.hist(fn[~np.isnan(fn)], normed = 1, 
+                               orientation = 'horizontal', 
                                color=c, alpha = 0.25,
                                bins = FreedmanDiaconis(fn))
     ylim = a.get_ylim()
