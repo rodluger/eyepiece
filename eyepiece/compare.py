@@ -400,7 +400,7 @@ def PlotComparison(input_file = None):
     xleft = ah.get_xlim()[0]
     ytop = ah.get_ylim()[1]
     ah.annotate("\n    RSS = %.3e" % rss, (xleft, ytop), ha='left', va='top', fontsize = 9, color = 'k')
-    ah.annotate("\n\n    KST = (%.3e, %.3e)" % (ks0, ks1), (xleft, ytop), ha='left', va='top', fontsize = 9, color = 'k')
+    ah.annotate("\n\n    NRM = (%.3e, %.3e)" % (ks0, ks1), (xleft, ytop), ha='left', va='top', fontsize = 9, color = 'k')
     
   # Annotate
   for q in inp.quarters:

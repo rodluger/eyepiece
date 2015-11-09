@@ -12,6 +12,8 @@ import os
 import subprocess
 import numpy as np
 import imp
+import kplr
+import random
 import types
 
 # Python 2/3 compatibility
@@ -151,3 +153,34 @@ def GetData(id, data_type = 'prc', datadir = ''):
     raise FileNotFoundError("File ``_data/%s.npz`` not found." % data_type)
 
   return data
+
+def SampleKOIs(datadir, N):
+  '''
+  
+  '''
+  
+  # Grab all KOIs
+  client = kplr.API()
+  kois = client.kois()
+
+  # Find the indices of those we've processed already
+  done = ["K%08.2f" % float(k) for k in os.listdir(datadir) if os.path.isdir(os.path.join(datadir, k))]
+  done = [i for i, k in enumerate(kois) if (k.kepoi_name in done)]
+
+  # Now find the indices of those in multiplanet systems
+  multi = []
+  for i, koi in enumerate(kois):
+    star, planet = koi.kepoi_name.split('.')
+    if any([(k.kepoi_name.split('.')[0] == star and k.kepoi_name.split('.')[1] != planet) for k in kois]):
+      multi.append(i)
+
+  # Remove them!
+  kois = [i for j, i in enumerate(kois) if j not in done + multi]
+
+  # Now return the numbers of ``N`` randomly chosen kois
+  if N < len(kois):
+    sample = [float(koi.kepoi_name[1:]) for koi in random.sample(kois, N)]
+  else:
+    sample = [float(koi.kepoi_name[1:]) for koi in kois]
+    
+  return sample
