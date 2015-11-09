@@ -396,8 +396,8 @@ def PlotComparison(input_file = None):
     ah.plot(mlab.normpdf(bins, mu, sigma), bins, 'k-', linewidth=2)
   
     # Print some statistics
-    rss = np.sum(fn ** 2)
-    ks0, ks1 = normaltest(fn)
+    rss = np.sum(fn[~np.isnan(fn)] ** 2)
+    ks0, ks1 = normaltest(fn[~np.isnan(fn)])
     xleft = ah.get_xlim()[0]
     ytop = ah.get_ylim()[1]
     ah.annotate("\n    RSS = %.3e" % rss, (xleft, ytop), ha='left', va='top', fontsize = 9, color = 'k')
