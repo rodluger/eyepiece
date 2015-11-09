@@ -397,8 +397,8 @@ def PlotComparison(input_file = None):
     # Print some statistics
     rss = np.sum(fn ** 2)
     ks0, ks1 = normaltest(fn)
-    xleft = axh.get_xlim()[0]
-    ytop = axh.get_ylim()[1]
+    xleft = ah.get_xlim()[0]
+    ytop = ah.get_ylim()[1]
     ah.annotate("\nRSS = %.5e" % rss, (xleft, ytop), ha='left', va='top', fontsize = 8, color = 'k')
     ah.annotate("\n\nKST = %.5e, %.5e" % (ks0, ks1), (xleft, ytop), ha='left', va='top', fontsize = 8, color = 'k')
     
