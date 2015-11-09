@@ -8,6 +8,7 @@ Runs ``eyepiece`` in batch mode.
 
 '''
 
+from __future__ import division, print_function, absolute_import, unicode_literals
 from eyepiece import Eyepiece
 import subprocess
 import os
