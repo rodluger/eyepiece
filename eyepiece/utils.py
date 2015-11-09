@@ -154,10 +154,13 @@ def GetData(id, data_type = 'prc', datadir = ''):
 
   return data
 
-def SampleKOIs(datadir, N):
+def SampleKOIs(datadir, N, exclude = ['FALSE POSITIVE']):
   '''
   
   '''
+  
+  # Disposition exclusions
+  exclude = np.atleast1d(exclude)
   
   # Grab all KOIs
   client = kplr.API()
@@ -174,8 +177,14 @@ def SampleKOIs(datadir, N):
     if any([(k.kepoi_name.split('.')[0] == star and k.kepoi_name.split('.')[1] != planet) for k in kois]):
       multi.append(i)
 
+  # Exclude certain dispositions
+  exc = []
+  for i, koi in enumerate(kois):
+    if (koi.koi_disposition in exclude) or (koi.koi_pdisposition in exclude):
+      exc.append(i)
+
   # Remove them!
-  kois = [i for j, i in enumerate(kois) if j not in done + multi]
+  kois = [i for j, i in enumerate(kois) if j not in done + multi + exc]
 
   # Now return the numbers of ``N`` randomly chosen kois
   if N < len(kois):
