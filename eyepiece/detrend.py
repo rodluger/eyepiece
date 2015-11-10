@@ -309,3 +309,46 @@ def GetWhitenedData(input_file = None, folded = True, return_mean = False):
     e = e[idx]
   
   return t, f, e
+
+def GetBadChunks(f, winsz = 50, sig_tol = 3., sort = False):
+  '''
+  
+  '''
+  
+  tmp = np.zeros_like(f) * np.nan
+  rss = np.zeros_like(f) * np.nan
+
+  for i in range(winsz, len(f) - winsz):
+
+    # Grab the raw sum of the squares of the residuals
+    fwin = f[i - winsz / 2 : i + winsz / 2]
+    tmp[i] = np.sum(fwin ** 2)
+  
+    # Remove the point that's farthest from the mean
+    # and recalculate; this prevents single outliers
+    # from spoiling a whole chunk of data
+    fwin = np.delete(fwin, np.argmax(np.abs(fwin)))
+    rss[i] = np.sum(fwin ** 2)
+
+  # Find the "bad" chunks of data -- those with the
+  # highest RSS (residual sum of squares) values
+  M = np.nanmedian(tmp)
+  MAD = 1.4826 * np.nanmedian(np.abs(tmp - M))
+  bad = []
+  for i, x in enumerate(rss):
+    if (x > M + sig_tol * MAD):
+      bad.extend(list(range(int(i - winsz / 2), int(i + winsz / 2))))  
+  bad = np.array(sorted(list(set(bad))))
+
+  # We now have all the indices of the "bad" data points
+  # Let's group these into discrete "chunks"
+  i = [-1] + list(np.where(bad[1:] - bad[:-1] > 1)[0]) + [len(bad) - 1]
+  chunks = [bad[a+1:b+1] for a,b in zip(i[:-1], i[1:])]
+
+  if sort:
+    # Finally, let's sort the chunks in (decreasing) order of RSS,
+    # so that the "worst" chunks are the first ones in the list
+    chunks = [c for (r,c) in sorted(zip([-np.sum(f[chunk] ** 2) for chunk in chunks], chunks))]
+
+  # Return the indices of the "bad" chunks
+  return chunks

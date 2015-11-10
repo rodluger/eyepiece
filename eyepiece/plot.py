@@ -9,7 +9,7 @@ plot.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .download import DownloadInfo
 from .utils import Input, GetData
-from .detrend import GetWhitenedData
+from .detrend import GetWhitenedData, GetBadChunks
 import matplotlib.pyplot as pl
 import numpy as np
 import os
@@ -35,7 +35,20 @@ def PlotDetrended(input_file = None):
   iPLD = len(inp.kernel.pars)
   
   # Plot the decorrelated data
-  fig, ax = pl.subplots(3, 1, figsize = (48, 16))
+  fig = pl.figure(figsize = (48, 24))
+  #fig.subplots_adjust(hspace = 10.)  
+  
+  ax = [pl.subplot2grid((48,7), (0,0), colspan=7, rowspan=12),
+        pl.subplot2grid((48,7), (14,0), colspan=7, rowspan=12),
+        pl.subplot2grid((48,7), (28,0), colspan=7, rowspan=12)]
+  
+  axzoom = [pl.subplot2grid((48,7), (44,0), rowspan=4),
+            pl.subplot2grid((48,7), (44,1), rowspan=4),
+            pl.subplot2grid((48,7), (44,2), rowspan=4),
+            pl.subplot2grid((48,7), (44,3), rowspan=4),
+            pl.subplot2grid((48,7), (44,4), rowspan=4),
+            pl.subplot2grid((48,7), (44,5), rowspan=4),
+            pl.subplot2grid((48,7), (44,6), rowspan=4)]
   
   # Some miscellaneous info
   lt = [None] * (inp.quarters[-1] + 1)
@@ -44,6 +57,9 @@ def PlotDetrended(input_file = None):
   ni = np.zeros(inp.quarters[-1] + 1)
   ll = np.zeros(inp.quarters[-1] + 1)
   cc = [None] * (inp.quarters[-1] + 1)
+  
+  FLUX = np.array([], dtype = float)
+  TIME = np.array([], dtype = float)
   
   # Loop over all quarters
   for q in inp.quarters:
@@ -84,8 +100,9 @@ def PlotDetrended(input_file = None):
     f = ypld - gpmu
     ax[2].plot(time, f, 'b.', alpha = 0.3)
     
-    # [DEPRECATED] Plot GP standard deviation envelope
-    # ax[2].fill_between(time, f - gperr, f + gperr, alpha = 0.1, lw = 0, color = 'r')
+    # Running arrays
+    FLUX = np.append(FLUX, f)
+    TIME = np.append(TIME, time)
     
     # Appearance
     [axis.set_xticklabels([]) for axis in ax[:-1]]
@@ -145,6 +162,27 @@ def PlotDetrended(input_file = None):
     
     ltq = lt[q]
   
+  # Let's identify potentially bad parts of the detrended data
+  chunks = GetBadChunks(FLUX, sig_tol = 3.)
+  [ax[2].plot(TIME[chunk], FLUX[chunk], 'r.') for chunk in chunks]
+  
+  # Plot the bad chunks as insets
+  for i, axz, chunk in zip(range(len(axzoom)), axzoom, chunks):
+
+    # Expand around them a bit
+    a, b = chunk[0] - 3 * len(chunk), chunk[-1] + 3 * len(chunk)
+    axz.plot(TIME[a:b], FLUX[a:b], 'b.')
+    axz.plot(TIME[chunk], FLUX[chunk], 'r.')
+    
+    # Appearance
+    axz.set_title('Bad Chunk #%d' % (i + 1), fontsize = 22, fontweight = 'bold', y = 1.025)
+    axz.set_axis_bgcolor((0.95, 0.95, 0.95))
+  
+  # Hide empty plots
+  if len(chunks) < len(axzoom):
+    for axz in axzoom[len(chunks):]:
+      axz.set_visible(False)
+  
   # Labels and titles
   ax[0].set_title('Raw Background Flux', fontsize = 28, fontweight = 'bold', y = 1.1) 
   ax[1].set_title('PLD-Decorrelated Flux', fontsize = 28, fontweight = 'bold', y = 1.025)  
@@ -154,7 +192,7 @@ def PlotDetrended(input_file = None):
   
   # Appearance
   for s in ['top', 'bottom', 'left', 'right']:
-    [axis.spines[s].set_linewidth(2) for axis in ax]
+    [axis.spines[s].set_linewidth(2) for axis in ax + axzoom]
   [tick.label.set_fontsize(20) for tick in ax[-1].xaxis.get_major_ticks()]
   [tick.label.set_fontsize(18) for axis in ax for tick in axis.yaxis.get_major_ticks()] 
   ax[0].set_axis_bgcolor((1.0, 0.95, 0.95))
