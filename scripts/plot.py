@@ -41,7 +41,7 @@ for koi in kois:
   # Remove plots
   for file in ['detrended.png', 'folded.png', 'comparison.png']:
     try:
-      os.remove(os.path.join(inp.datadir, str(inp.id), '_plots', file))
+      os.remove(os.path.join(inp.datadir, str(koi), '_plots', file))
     except (FileNotFoundError, OSError):
       pass
   
