@@ -23,6 +23,11 @@ def PlotDetrended(input_file = None):
   inp = Input(input_file)
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   
+  # Have we done this already?
+  if not inp.clobber:
+    if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'detrended.png')):
+      return None, None
+  
   if not inp.quiet:
     print("Plotting detrended background flux...")
   
@@ -212,6 +217,11 @@ def PlotTransits(input_file = None):
   # Input file
   inp = Input(input_file)
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
+
+  # Have we done this already?
+  if not inp.clobber:
+    if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'folded.png')):
+      return None, None
 
   if not inp.quiet:
     print("Plotting transits...")

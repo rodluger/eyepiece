@@ -326,9 +326,14 @@ def PlotComparison(input_file = None):
   # Load inputs
   inp = Input(input_file)
   data = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
-  plotpath = os.path.join(inp.datadir, str(inp.id), '_plot')
+  plotpath = os.path.join(inp.datadir, str(inp.id), '_plots')
   datapath = os.path.join(inp.datadir, str(inp.id), '_data')
-  
+   
+  # Have we done this already?
+  if not inp.clobber:
+    if os.path.exists(plotpath, 'comparison.png'):
+      return None, None
+      
   # Load detrended data
   try:
     det = np.load(os.path.join(datapath, 'cmp.npz'))

@@ -12,6 +12,13 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 from .utils import Input, GetData
 from . import download, preprocess, detrend, plot, compare
 import os
+import numpy as np
+
+# Python 2/3 compatibility
+try:
+  FileNotFoundError
+except:
+  FileNotFoundError = IOError
 
 class Eyepiece(object):
   '''
@@ -60,10 +67,12 @@ class Eyepiece(object):
     
     plot.PlotDetrended(self.input_file)
     plot.PlotTransits(self.input_file)
+    
     try:
+      np.load(os.path.join(self.inp.datadir, str(self.inp.id), '_data', 'cmp.npz'))
       compare.PlotComparison(self.input_file)
-    except:
-      # Not a big deal
+    except FileNotFoundError:
+      # User hasn't run the comparison yet, so no big deal
       pass
     
     if not self.inp.quiet:
