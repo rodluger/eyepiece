@@ -201,7 +201,7 @@ def Detrend(input_file = None, pool = None):
     
     # Is there data this quarter?
     if len(files) == 0:
-      return None
+      continue
 
     # Grab the highest likelihood run
     lnl = np.zeros_like(files, dtype = float)
