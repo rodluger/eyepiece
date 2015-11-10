@@ -331,7 +331,7 @@ def PlotComparison(input_file = None):
    
   # Have we done this already?
   if not inp.clobber:
-    if os.path.exists(plotpath, 'comparison.png'):
+    if os.path.exists(os.path.join(plotpath, 'comparison.png')):
       return None, None
       
   # Load detrended data
