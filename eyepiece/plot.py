@@ -117,6 +117,9 @@ def PlotDetrended(input_file = None):
     ax[2].plot(time, f, 'b.', alpha = 0.3)
     '''
     
+    if len(prc[q]['time']) == 0:
+      continue
+    
     time = np.array([], dtype = float)
     fsum = np.array([], dtype = float)
     ypld = np.array([], dtype = float)
