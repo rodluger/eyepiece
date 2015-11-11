@@ -229,6 +229,26 @@ def ComputePLD(input_file = None):
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   iPLD = len(inp.kernel.pars)
   
+  # Have we already detrended?
+  tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
+  if not inp.clobber:
+    try:
+      for q in tdata:
+        if len(tdata[q]['time']) == 0:
+          continue
+        if tdata[q]['pmod'] is None:
+          raise ValueError("Pixel model list is empty.")
+      
+      # Data is already detrended
+      if not inp.quiet:
+        print("Using existing PLD info.")
+      return True
+      
+    except ValueError:
+      
+      # We're going to have to compute
+      pass
+  
   # We're going to whiten the data and fit a simple transit model so we 
   # can go back and derive the correct PLD errors in-transit.
   if not inp.clobber:
@@ -274,6 +294,7 @@ def ComputePLD(input_file = None):
   RpRs, bcirc, q1, q2 = res[0]
   
   # Now, finally, compute the PLD flux and errors
+  # First, reload the data
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   
   for q in inp.quarters:

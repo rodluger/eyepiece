@@ -274,6 +274,7 @@ def Compare(input_file = None, pool = None):
   inp = Input(input_file)
   datapath = os.path.join(inp.datadir, str(inp.id), '_data')
   
+  # Have we already done this?  
   if not inp.clobber:
     try:
       res = np.load(os.path.join(datapath, 'cmp.npz'))
