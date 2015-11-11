@@ -251,7 +251,7 @@ def ComputePLD(input_file = None):
   # Now, finally, compute the PLD flux and errors
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   
-  for q in quarters:
+  for q in inp.quarters:
   
     if len(data[q]['time']) == 0:
       continue
