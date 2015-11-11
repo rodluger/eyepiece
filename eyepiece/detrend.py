@@ -345,6 +345,7 @@ def ComputePLD(input_file = None):
       tdata[q]['gp'].append(george.GP(inp.kernel))
       tdata[q]['gp'][-1].compute(time, yerr)
   
+    import pdb; pdb.set_trace()
     
     # Now loop over all chunks in the full (processed) data
     for time, fpix, perr in zip(pdata[q]['time'], pdata[q]['fpix'], pdata[q]['perr']):
