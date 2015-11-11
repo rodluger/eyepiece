@@ -151,8 +151,9 @@ def Detrend(input_file = None, pool = None):
       print("Detrending aborted!")
     return False
   
-  # We're going to update the trn data with the detrending info later
+  # We're going to update the data with the detrending info later
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
+  pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   
   # Have we already detrended?
   if not inp.clobber:
@@ -215,8 +216,16 @@ def Detrend(input_file = None, pool = None):
       lnl[i] = float(np.load(f)['lnlike'])
     res = np.load(files[np.argmax(lnl)])
     tdata[q].update({'dvec': res['x']})
+    pdata[q].update({'dvec': res['x']})
+    
+    tdata[q].update({'info': res['info']})
+    pdata[q].update({'info': res['info']})
+    
+    tdata[q].update({'lnlike': res['lnlike']})
+    pdata[q].update({'lnlike': res['lnlike']})
     
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())  
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'prc.npz'), data = pdata, hash = GitHash())  
 
 def ComputePLD(input_file = None):
   '''
@@ -312,12 +321,10 @@ def ComputePLD(input_file = None):
     tdata[q]['pmod'] = []
     tdata[q]['yerr'] = []
     tdata[q]['ypld'] = []
-    tdata[q]['kpars'] = []
     
     pdata[q]['pmod'] = []
     pdata[q]['yerr'] = []
     pdata[q]['ypld'] = []
-    pdata[q]['kpars'] = []
     
     # Loop over all transits
     for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
@@ -338,9 +345,6 @@ def ComputePLD(input_file = None):
       # NOTE: This is just for verification purposes, since we used
       #       a very quick transit optimization to compute this!
       tdata[q]['ypld'].append(ypld)
-      
-      # The gaussian process kernel params
-      tdata[q]['kpars'].append(x)
   
     # Now loop over all chunks in the full (processed) data
     for time, fpix, perr in zip(pdata[q]['time'], pdata[q]['fpix'], pdata[q]['perr']):
@@ -361,9 +365,6 @@ def ComputePLD(input_file = None):
       # NOTE: This is just for verification purposes, since we used
       #       a very quick transit optimization to compute this!
       pdata[q]['ypld'].append(ypld)
-      
-      # The gaussian process kernel params
-      pdata[q]['kpars'].append(x)
   
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'prc.npz'), data = pdata, hash = GitHash())

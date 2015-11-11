@@ -59,8 +59,8 @@ def EmptyData(quarters):
   for q in quarters:
     foo.update({q: {'time': [], 'cadn': [], 'fpix': [], 'perr': [], 
                     'pdcf': [], 'pdce': [], 'crwd': None, 'dvec': None,
-                    'kpars': [], 'pmod': [], 'yerr': [], 'trni': [],
-                    'ypld': []}})
+                    'pmod': [], 'yerr': [], 'trni': [], 'info': None,
+                    'lnlike': None, 'ypld': []}})
   return foo
 
 def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False, 

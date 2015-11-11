@@ -43,12 +43,14 @@ def PlotDetrended(input_file = None):
   tN = info['tN']
   tdur = info['tdur']
   
+  # The full processed data
+  prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
+  
   # Index of first PLD coefficient in ``x``
   iPLD = len(inp.kernel.pars)
   
   # Plot the decorrelated data
-  fig = pl.figure(figsize = (48, 24))
-  #fig.subplots_adjust(hspace = 10.)  
+  fig = pl.figure(figsize = (48, 24))  
   
   ax = [pl.subplot2grid((48,7), (0,0), colspan=7, rowspan=12),
         pl.subplot2grid((48,7), (14,0), colspan=7, rowspan=12),
@@ -70,74 +72,36 @@ def PlotDetrended(input_file = None):
   ll = np.zeros(inp.quarters[-1] + 1)
   cc = [None] * (inp.quarters[-1] + 1)
   
+  # Cumulative arrays
   FLUX = np.array([], dtype = float)
   TIME = np.array([], dtype = float)
-  
-  # The full processed data (for the top plot)
-  prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   
   # Loop over all quarters
   for q in inp.quarters:
     
-    # Load the decorrelated data
-    files = [os.path.join(detpath, f) for f in os.listdir(detpath) 
-             if f.startswith('%02d.' % q) and f.endswith('.npz')]
-    
-    # Is there data this quarter?
-    if len(files) == 0:
-      continue
-
-    # Grab the highest likelihood run
-    lnl = np.zeros_like(files, dtype = float)
-    for i, f in enumerate(files):
-      lnl[i] = float(np.load(f)['lnlike'])
-    res = np.load(files[np.argmax(lnl)])
-    info = res['info'][()]
-    lnlike = res['lnlike']
-    x = res['x']
-    
-    # DEPRECATED
-    '''
-    # Grab the detrending info
-    time = res['time']
-    fsum = res['fsum']
-    ypld = res['ypld']
-    gpmu = res['gpmu']
-    gperr = res['gperr']
-    x = res['x']
-    lnlike = res['lnlike']
-    info = res['info'][()]
-    init = res['init']
-    
-    # The SAP flux (median-subtracted)
-    ax[0].plot(time, fsum - np.nanmedian(fsim), 'k.', alpha = 0.3)
-    
-    # The PLD-detrended SAP flux (blue) and the GP (red)
-    ax[1].plot(time, ypld - np.nanmedian(ypld), 'b.', alpha = 0.3)
-    ax[1].plot(time, gpmu - np.nanmedian(ypld), 'r-')
-  
-    # The fully detrended flux
-    f = ypld - gpmu
-    ax[2].plot(time, f, 'b.', alpha = 0.3)
-    '''
-    
+    # Empty quarter?
     if len(prc[q]['time']) == 0:
       continue
+    
+    # Get detrending info
+    info = prc[q]['info']
+    lnlike = prc[q]['lnlike']
+    dvec = prc[q]['dvec']
+    inp.kernel.pars = dvec[:iPLD]
+    gp = george.GP(inp.kernel)
     
     time = np.array([], dtype = float)
     fsum = np.array([], dtype = float)
     ypld = np.array([], dtype = float)
     gpmu = np.array([], dtype = float)
-    for t_, p_, y_, e_, k_ in zip(prc[q]['time'], prc[q]['fpix'], prc[q]['ypld'], prc[q]['yerr'], prc[q]['kpars']):
+    for t_, p_, y_, e_ in zip(prc[q]['time'], prc[q]['fpix'], prc[q]['ypld'], prc[q]['yerr']):
       
       time = np.append(time, t_)
       fsum = np.append(fsum, np.sum(p_, axis = 1))
       ypld = np.append(ypld, y_)
       
-      inp.kernel.pars = k_
-      gp = george.GP(inp.kernel)
       gp.compute(t_, e_)
-      mu, _ = gp.predict(y_, t_)
+      mu, cov = gp.predict(y_, t_); del cov
       gpmu = np.append(gpmu, mu)
       
     # The SAP flux (median-subtracted), with transits
@@ -151,7 +115,7 @@ def PlotDetrended(input_file = None):
     f = ypld - gpmu
     ax[2].plot(time, f, 'b.', alpha = 0.3)
     
-    # Running arrays
+    # Cumulative arrays
     FLUX = np.append(FLUX, f)
     TIME = np.append(TIME, time)
     
@@ -168,7 +132,7 @@ def PlotDetrended(input_file = None):
       if 'ABNORMAL_TERMINATION_IN_LNSRCH' in wf[q]:
         wf[q] = 'AT_LNSRCH'
     ll[q] = lnlike
-    cc[q] = x
+    cc[q] = dvec
       
   ltq = ax[0].get_xlim()[0]  
   yp0 = ax[0].get_ylim()[1]
