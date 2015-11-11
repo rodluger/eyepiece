@@ -342,8 +342,9 @@ def ComputePLD(input_file = None):
       tdata[q]['ypld'].append(ypld)
       
       # The gaussian process object for this transit
-      tdata[q]['gp'].append(george.GP(inp.kernel))
-      tdata[q]['gp'][-1].compute(time, yerr)
+      gp = george.GP(inp.kernel)
+      gp.compute(time, yerr)
+      tdata[q]['gp'].append(gp)
   
     # Now loop over all chunks in the full (processed) data
     for time, fpix, perr in zip(pdata[q]['time'], pdata[q]['fpix'], pdata[q]['perr']):
