@@ -251,6 +251,9 @@ def ComputePLD(input_file = None):
   res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
   RpRs, bcirc, q1, q2 = res[0]
   
+  # DEBUG
+  print(res)
+  
   # Now, finally, compute the PLD flux and errors
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   
@@ -273,7 +276,7 @@ def ComputePLD(input_file = None):
       tmod = psm(time, 'binned')
       
       # Compute the PLD model
-      ypld, yerr = PLDFlux(c, fpix, perr, tmod)
+      pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod)
       
       # The pixel model
       tdata[q]['pmod'][trni] = pmod

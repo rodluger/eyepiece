@@ -222,4 +222,4 @@ def PLDFlux(c, fpix, perr, tmod = 1., fsum = None):
   # The detrended transitless flux
   fpld = fsum / tmod - pixmod
   
-  return fpld, ferr
+  return pixmod, fpld, ferr
