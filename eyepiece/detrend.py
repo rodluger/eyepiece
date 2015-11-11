@@ -167,12 +167,7 @@ def Detrend(input_file = None, pool = None):
       # Data is already detrended
       if not inp.quiet:
         print("Using existing detrending info.")
-      
-      # debug
-      
-      pass
-      
-      #return True
+      return True
       
     except ValueError:
       
