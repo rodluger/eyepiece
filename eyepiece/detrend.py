@@ -307,7 +307,7 @@ def ComputePLD(input_file = None):
   tmod = psm(t, 'binned')
   
   # DEBUG
-  print(RpRs, bcirc, q1, q2)
+  print(np.median(t), np.std(t))
   
   # Save our quick-and-dirty transit fit
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'), t = t, tmod = tmod)
