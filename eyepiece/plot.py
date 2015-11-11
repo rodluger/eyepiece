@@ -279,6 +279,15 @@ def PlotTransits(input_file = None, ax = None):
   med = [np.median(f[idx == k]) for k in range(inp.tbins)]
   ax.plot(bins - delta / 2., med, 'ro', alpha = 0.75)
   
+  # Plot the quick-and-dirty transit model (if available)
+  try:
+    foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'))
+    t = foo['t']
+    tmod = foo['tmod']
+    ax.plot(t, tmod, 'r-', alpha = 0.5)
+  except FileNotFoundError:
+    pass
+    
   ax.set_xlim(xlim)  
   ax.set_ylim(ylim)
   

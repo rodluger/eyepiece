@@ -249,7 +249,10 @@ def ComputePLD(input_file = None):
       # Data is already detrended
       if not inp.quiet:
         print("Using existing PLD info.")
-      return True
+      
+      # DEBUG
+      pass
+      #return True
       
     except ValueError:
       
@@ -301,6 +304,10 @@ def ComputePLD(input_file = None):
   RpRs, bcirc, q1, q2 = res[0]
   psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
                    tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+  tmod = psm(t, 'binned')
+  
+  # Save our quick-and-dirty transit fit
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'), t = t, tmod = tmod)
   
   # Now, finally, compute the PLD flux and errors
   # First, reload the data
