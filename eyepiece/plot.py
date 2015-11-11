@@ -125,9 +125,6 @@ def PlotDetrended(input_file = None):
     
     # Extra info
     lt[q] = time[-1]
-    
-    import pdb; pdb.set_trace()
-    
     fc[q] = info['funcalls']
     ni[q] = info['nit']
     if info['warnflag']:
