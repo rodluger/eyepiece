@@ -137,7 +137,7 @@ def PlotDetrended(input_file = None):
       inp.kernel.pars = k_
       gp = george.gp(inp.kernel)
       gp.compute(t_, e_)
-      mu, _ = g_.predict(y_, t_)
+      mu, _ = gp.predict(y_, t_)
       gpmu = np.append(gpmu, mu)
       
     # The SAP flux (median-subtracted), with transits
