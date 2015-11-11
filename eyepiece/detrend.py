@@ -306,6 +306,9 @@ def ComputePLD(input_file = None):
                    tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
   tmod = psm(t, 'binned')
   
+  # DEBUG
+  print(RpRs, bcirc, q1, q2)
+  
   # Save our quick-and-dirty transit fit
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'), t = t, tmod = tmod)
   
