@@ -167,10 +167,7 @@ def Detrend(input_file = None, pool = None):
       # Data is already detrended
       if not inp.quiet:
         print("Using existing detrending info.")
-      
-      #DEBUG
-      pass
-      #return True
+      return True
       
     except ValueError:
       
@@ -204,12 +201,7 @@ def Detrend(input_file = None, pool = None):
     continue
   
   # Identify the highest likelihood run
-  
-  # DEBUG
-  for q in inp.quarters:
-  
-  #for q in quarters:
-  
+  for q in quarters:
     files = [os.path.join(detpath, f) for f in os.listdir(detpath) 
              if f.startswith('%02d.' % q) and f.endswith('.npz')]
     
@@ -227,10 +219,6 @@ def Detrend(input_file = None, pool = None):
     
     tdata[q].update({'info': res['info'][()]})
     pdata[q].update({'info': res['info'][()]})
-    
-    # DEBUG
-    print(res['info'][()])
-    # DEBUG
     
     tdata[q].update({'lnlike': res['lnlike']})
     pdata[q].update({'lnlike': res['lnlike']})
