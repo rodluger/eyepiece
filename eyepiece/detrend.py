@@ -243,7 +243,13 @@ def ComputePLD(input_file = None):
     psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
                      t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
     tmod = psm(t, 'binned')
-    return np.sum( (t - f / e) ** 2 )
+    
+    c = np.sum( (t - f / e) ** 2 )
+    
+    # DEBUG
+    print(c)
+    
+    return c
   
   # Run the optimizer
   init = [info['RpRs'], info['b'], 0.25, 0.25]
