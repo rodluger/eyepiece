@@ -117,13 +117,16 @@ def PlotDetrended(input_file = None):
     ax[2].plot(time, f, 'b.', alpha = 0.3)
     '''
     
-    time = []; fsum = []; ypld = []; gpmu = []
+    time = np.array([], dtype = float)
+    fsum = np.array([], dtype = float)
+    ypld = np.array([], dtype = float)
+    gpmu = np.array([], dtype = float)
     for t_, p_, y_ in zip(prc[q]['time'], prc[q]['fpix'], prc[q]['ypld']):
-      time.extend(t_)
-      fsum.extend(np.sum(p_, axis = 1))
-      ypld.extend(y_)
+      time = np.append(time, t_)
+      fsum = np.append(fsum, np.sum(p_, axis = 1))
+      ypld = np.append(ypld, y_)
       mu, _ = prc[q]['gp'].predict(ypld, time)
-      gpmu.extend(mu)
+      gpmu = np.append(gpmu, mu)
       
     # The SAP flux (median-subtracted), with transits
     ax[0].plot(time, fsum - np.nanmedian(fsum), 'k.', alpha = 0.3)
