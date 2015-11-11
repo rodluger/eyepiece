@@ -14,6 +14,12 @@ import matplotlib.pyplot as pl
 import numpy as np
 import os
 
+# Python 2/3 compatibility
+try:
+  FileNotFoundError
+except:
+  FileNotFoundError = IOError
+
 def PlotDetrended(input_file = None):
   '''
   
@@ -190,10 +196,10 @@ def PlotDetrended(input_file = None):
   
   # Plot the folded transits
   if type(inp.id) is float:
-    axfolded = PlotTransits(input_file, ax = axfolded)
-    axfolded.set_title('KOI %.2f' % inp.id, fontsize = 22)
+    axfold = PlotTransits(input_file, ax = axfold)
+    axfold.set_title('KOI %.2f' % inp.id, fontsize = 22)
   else:
-    axfolded.set_visible(False)
+    axfold.set_visible(False)
   
   # Labels and titles
   ax[0].set_title('Raw Background Flux', fontsize = 28, fontweight = 'bold', y = 1.1) 
@@ -238,7 +244,11 @@ def PlotTransits(input_file = None, ax = None):
   tdur = info['tdur']
   
   # Load the whitened data
-  foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'))
+  try:
+    foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'))
+  except FileNotFoundError:
+    raise FileNotFoundError("No detrending information found for this target.")
+    
   t = foo['t']
   f = foo['f']
   e = foo['e']
