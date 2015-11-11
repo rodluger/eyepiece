@@ -133,7 +133,7 @@ def PlotDetrended(input_file = None):
       fsum = np.append(fsum, np.sum(p_, axis = 1))
       ypld = np.append(ypld, y_)
       
-      g_.compute(t_,e_)
+      #g_.compute(t_,e_)
       mu, cov = g_.predict(y_, t_)
       
       # debug
