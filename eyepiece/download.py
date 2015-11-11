@@ -197,7 +197,10 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
       per = data['per'][()]
       tdur = data['tdur'][()]
       hash = data['hash'][()]
-      return {'tN': tN, 'per': per, 'tdur': tdur, 'hash': hash}
+      rhos = data['rhos'][()]
+      b = data['b'][()]
+      RpRs = data['RpRs'][()]
+      return {'tN': tN, 'per': per, 'tdur': tdur, 'hash': hash, 'rhos': rhos, 'b': b, 'RpRs': RpRs}
     except FileNotFoundError:
       pass
   
