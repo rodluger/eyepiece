@@ -244,7 +244,7 @@ def ComputePLD(input_file = None):
       for q in tdata:
         if len(tdata[q]['time']) == 0:
           continue
-        if tdata[q]['pmod'] is None:
+        if len(tdata[q]['pmod']) == 0:
           raise ValueError("Pixel model list is empty.")
       
       # Data is already detrended
