@@ -124,7 +124,10 @@ def PlotDetrended(input_file = None):
     [axis.margins(0, 0.01) for axis in ax]
     
     # Extra info
-    lt[q] = time[-1]
+    try:
+      lt[q] = time[-1]
+    except:
+      import pdb; pdb.set_trace()
     fc[q] = info['funcalls']
     ni[q] = info['nit']
     if info['warnflag']:
