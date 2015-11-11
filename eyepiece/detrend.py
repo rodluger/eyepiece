@@ -267,6 +267,12 @@ def ComputePLD(input_file = None):
     x = tdata[q]['dvec'][:iPLD]
     inp.kernel.pars = x
     
+    # Reset
+    tdata[q]['pmod'] = []
+    tdata[q]['yerr'] = []
+    tdata[q]['ypld'] = []
+    tdata[q]['gp'] = []
+    
     # Loop over all transits
     for time, fpix, perr, trni in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr'], tdata[q]['trni']):
       
@@ -279,19 +285,22 @@ def ComputePLD(input_file = None):
       pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod)
       
       # The pixel model
-      tdata[q]['pmod'][trni] = pmod
+      tdata[q]['pmod'].append(pmod)
       
       # The errors on our PLD-detrended flux
-      tdata[q]['yerr'][trni] = yerr
+      tdata[q]['yerr'].append(yerr)
       
       # The PLD-detrended, transitless flux
       # NOTE: This is just for verification purposes, since we used
       #       a very quick transit optimization to compute this!
-      tdata[q]['ypld'][trni] = ypld
+      tdata[q]['ypld'].append(ypld)
       
       # The gaussian process object for this transit
-      tdata[q]['gp'][trni] = george.GP(inp.kernel)
-      tdata[q]['gp'][trni].compute(time, yerr)
+      tdata[q]['gp'].append(george.GP(inp.kernel))
+      tdata[q]['gp'][-1].compute(time, yerr)
+  
+  # DEBUG!!!
+  quit()
   
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())
     
