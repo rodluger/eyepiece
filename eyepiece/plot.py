@@ -288,8 +288,8 @@ def PlotTransits(input_file = None, ax = None):
   except FileNotFoundError:
     pass
     
-  ax.set_xlim(xlim)  
-  ax.set_ylim(ylim)
+  #ax.set_xlim(xlim)  
+  #ax.set_ylim(ylim)
   
   if not userax:
     ax.set_title('Folded Whitened Transits', fontsize = 24)
