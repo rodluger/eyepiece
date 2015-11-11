@@ -118,11 +118,11 @@ def PlotDetrended(input_file = None):
     '''
     
     time = []; fsum = []; ypld = []; gpmu = []
-    for t_, p_, y_, gp in zip(prc[q]['time'], prc[q]['fpix'], prc[q]['ypld'], prc[q]['gp']):
+    for t_, p_, y_ in zip(prc[q]['time'], prc[q]['fpix'], prc[q]['ypld']):
       time.extend(t_)
       fsum.extend(np.sum(p_, axis = 1))
       ypld.extend(y_)
-      mu, _ = gp.predict(ypld, time)
+      mu, _ = prc[q]['gp'].predict(ypld, time)
       gpmu.extend(mu)
       
     # The SAP flux (median-subtracted), with transits
