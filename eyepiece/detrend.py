@@ -366,8 +366,9 @@ def ComputePLD(input_file = None):
       pdata[q]['ypld'].append(ypld)
       
       # The gaussian process object for this transit
-      pdata[q]['gp'].append(george.GP(inp.kernel))
-      pdata[q]['gp'][-1].compute(time, yerr)
+      gp = george.GP(inp.kernel)
+      gp.compute(time, yerr)
+      pdata[q]['gp'].append(gp)
   
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'prc.npz'), data = pdata, hash = GitHash())
