@@ -237,6 +237,10 @@ def ComputePLD(input_file = None):
   if not inp.quiet:
     print("Computing approximate transit model...")
   
+  # DEBUG
+  import pdb; pdb.set_trace()
+  
+  
   # We're just going to solve for RpRs, bcirc, q1 and q2 here
   def chisq(x):
     RpRs, bcirc, q1, q2 = x
