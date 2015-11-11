@@ -201,7 +201,7 @@ def Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = 1. * george.ker
   
   return dflux, dfluxerr
 
-def PLDFlux(c, fpix, perr, tmod = 1., fsum = None):
+def PLDFlux(c, fpix, perr, tmod = 1., fsum = None, crowding = None):
   '''
   
   '''
@@ -219,6 +219,10 @@ def PLDFlux(c, fpix, perr, tmod = 1., fsum = None):
   A = X.reshape(K, 1) * perr - c * perr / fsum.reshape(K, 1)
   ferr = np.sum(A ** 2, axis = 1) ** 0.5
   
+  # Correct for crowding
+  if crowding is not None:
+    tmod = (tmod - 1.) / crowding + 1.
+    
   # The detrended transitless flux
   fpld = fsum / tmod - pixmod
   

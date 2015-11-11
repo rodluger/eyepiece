@@ -250,8 +250,10 @@ def ComputePLD(input_file = None):
       if not inp.quiet:
         print("Using existing PLD info.")
       
-      # DEBUG
+      # DEBUG DEBUG DEBUG DEBUG DEBUG
+      # !!!
       pass
+      # !!!
       #return True
       
     except ValueError:
@@ -327,6 +329,9 @@ def ComputePLD(input_file = None):
     c = tdata[q]['dvec'][iPLD:]
     x = tdata[q]['dvec'][:iPLD]
     
+    # Crowding parameter
+    crwd = tdata[q]['crwd']
+    
     # Reset
     tdata[q]['pmod'] = []
     tdata[q]['yerr'] = []
@@ -343,7 +348,7 @@ def ComputePLD(input_file = None):
       tmod = psm(time, 'binned')
       
       # Compute the PLD model
-      pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod)
+      pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
       
       # The pixel model
       tdata[q]['pmod'].append(pmod)
@@ -363,7 +368,7 @@ def ComputePLD(input_file = None):
       tmod = psm(time, 'binned')
       
       # Compute the PLD model
-      pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod)
+      pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
       
       # The pixel model
       pdata[q]['pmod'].append(pmod)
