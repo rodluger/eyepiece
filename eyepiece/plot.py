@@ -78,6 +78,8 @@ def PlotDetrended(input_file = None):
   # Loop over all quarters
   for q in inp.quarters:
     
+    # DEPRECATED
+    '''
     # Load the decorrelated data
     files = [os.path.join(detpath, f) for f in os.listdir(detpath) 
              if f.startswith('%02d.' % q) and f.endswith('.npz')]
@@ -103,18 +105,33 @@ def PlotDetrended(input_file = None):
     info = res['info'][()]
     init = res['init']
     
-    # The SAP flux (median-subtracted), WITH TRANSITS
-    t = []
-    f = []
-    for t_, p_ in zip(prc[q]['time'], prc[q]['fpix']):
-      t.extend(t_)
-      f.extend(np.sum(p_, axis = 1))
-    ax[0].plot(t, f - np.nanmedian(f), 'k.', alpha = 0.3)
+    # The SAP flux (median-subtracted)
+    ax[0].plot(time, fsum - np.nanmedian(fsim), 'k.', alpha = 0.3)
     
     # The PLD-detrended SAP flux (blue) and the GP (red)
     ax[1].plot(time, ypld - np.nanmedian(ypld), 'b.', alpha = 0.3)
     ax[1].plot(time, gpmu - np.nanmedian(ypld), 'r-')
   
+    # The fully detrended flux
+    f = ypld - gpmu
+    ax[2].plot(time, f, 'b.', alpha = 0.3)
+    '''
+    
+    time = []; fsum = []; ypld = []; gpmu = []
+    for t_, p_, y_, gp in zip(prc[q]['time'], prc[q]['fpix'], prc[q]['ypld'], prc[q]['gp']):
+      time.extend(t_)
+      fsum.extend(np.sum(p_, axis = 1))
+      ypld.extend(y_)
+      mu, _ = gp.predict(ypld, time)
+      gpmu.extend(mu)
+      
+    # The SAP flux (median-subtracted), with transits
+    ax[0].plot(time, fsum - np.nanmedian(fsum), 'k.', alpha = 0.3)
+    
+    # The PLD-detrended SAP flux (blue) and the GP (red)
+    ax[1].plot(time, ypld - np.nanmedian(ypld), 'b.', alpha = 0.3)
+    ax[1].plot(time, gpmu - np.nanmedian(ypld), 'r-')
+    
     # The fully detrended flux
     f = ypld - gpmu
     ax[2].plot(time, f, 'b.', alpha = 0.3)

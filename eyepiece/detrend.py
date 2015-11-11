@@ -292,17 +292,20 @@ def ComputePLD(input_file = None):
   bounds = [[0., 0.5], [0., 1.], [0., 1.], [0., 1.]]
   res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
   RpRs, bcirc, q1, q2 = res[0]
+  psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                   tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
   
   # Now, finally, compute the PLD flux and errors
   # First, reload the data
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
+  pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   
   for q in inp.quarters:
   
     if len(tdata[q]['time']) == 0:
       continue
     
-    # PLD coeffs
+    # PLD and GP coeffs for this quarter
     c = tdata[q]['dvec'][iPLD:]
     x = tdata[q]['dvec'][:iPLD]
     inp.kernel.pars = x
@@ -313,12 +316,40 @@ def ComputePLD(input_file = None):
     tdata[q]['ypld'] = []
     tdata[q]['gp'] = []
     
+    pdata[q]['pmod'] = []
+    pdata[q]['yerr'] = []
+    pdata[q]['ypld'] = []
+    pdata[q]['gp'] = []
+    
     # Loop over all transits
-    for time, fpix, perr, trni in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr'], tdata[q]['trni']):
+    for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
       
       # Compute the transit model
-      psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
-                       t0 = tN[trni], ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+      tmod = psm(time, 'binned')
+      
+      # Compute the PLD model
+      pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod)
+      
+      # The pixel model
+      tdata[q]['pmod'].append(pmod)
+      
+      # The errors on our PLD-detrended flux
+      tdata[q]['yerr'].append(yerr)
+      
+      # The PLD-detrended, transitless flux
+      # NOTE: This is just for verification purposes, since we used
+      #       a very quick transit optimization to compute this!
+      tdata[q]['ypld'].append(ypld)
+      
+      # The gaussian process object for this transit
+      tdata[q]['gp'].append(george.GP(inp.kernel))
+      tdata[q]['gp'][-1].compute(time, yerr)
+  
+    
+    # Now loop over all chunks in the full (processed) data
+    for time, fpix, perr in zip(pdata[q]['time'], pdata[q]['fpix'], pdata[q]['perr']):
+      
+      # Compute the transit model
       tmod = psm(time, 'binned')
       
       # Compute the PLD model
