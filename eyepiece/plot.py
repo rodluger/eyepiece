@@ -72,6 +72,9 @@ def PlotDetrended(input_file = None):
   FLUX = np.array([], dtype = float)
   TIME = np.array([], dtype = float)
   
+  # The full processed data (for the top plot)
+  prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
+  
   # Loop over all quarters
   for q in inp.quarters:
     
@@ -100,8 +103,13 @@ def PlotDetrended(input_file = None):
     info = res['info'][()]
     init = res['init']
     
-    # The SAP flux (median-subtracted)
-    ax[0].plot(time, fsum - np.nanmedian(fsum), 'k.', alpha = 0.3)
+    # The SAP flux (median-subtracted), WITH TRANSITS
+    t = []
+    f = []
+    for t_, p_ in zip(prc[q]['time'], prc[q]['fpix']):
+      t.extend(t_)
+      f.extend(np.sum(p_, axis = 1))
+    ax[0].plot(t, f - np.nanmedian(f), 'k.', alpha = 0.3)
     
     # The PLD-detrended SAP flux (blue) and the GP (red)
     ax[1].plot(time, ypld - np.nanmedian(ypld), 'b.', alpha = 0.3)
