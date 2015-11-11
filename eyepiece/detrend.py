@@ -345,8 +345,6 @@ def ComputePLD(input_file = None):
       tdata[q]['gp'].append(george.GP(inp.kernel))
       tdata[q]['gp'][-1].compute(time, yerr)
   
-    import pdb; pdb.set_trace()
-    
     # Now loop over all chunks in the full (processed) data
     for time, fpix, perr in zip(pdata[q]['time'], pdata[q]['fpix'], pdata[q]['perr']):
       
@@ -372,7 +370,8 @@ def ComputePLD(input_file = None):
       pdata[q]['gp'][-1].compute(time, yerr)
   
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())
-    
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'prc.npz'), data = pdata, hash = GitHash())
+  
   return True
 
 def GetWhitenedData(input_file = None, folded = True, return_mean = False):
