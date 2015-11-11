@@ -210,9 +210,9 @@ def PlotDetrended(input_file = None):
     axfold.set_visible(False)
   
   # Labels and titles
-  ax[0].set_title('Raw Background Flux', fontsize = 28, fontweight = 'bold', y = 1.1) 
-  ax[1].set_title('PLD-Decorrelated Flux', fontsize = 28, fontweight = 'bold', y = 1.025)  
-  ax[2].set_title('PLD+GP-Decorrelated Flux', fontsize = 28, fontweight = 'bold', y = 1.025) 
+  ax[0].set_title('Raw Median-Subtracted Flux', fontsize = 28, fontweight = 'bold', y = 1.1) 
+  ax[1].set_title('PLD-Decorrelated Background Flux', fontsize = 28, fontweight = 'bold', y = 1.025)  
+  ax[2].set_title('PLD+GP-Decorrelated Background Flux', fontsize = 28, fontweight = 'bold', y = 1.025) 
   ax[-1].set_xlabel('Time (Days)', fontsize = 24)
   [axis.set_ylabel(r'$\Delta$ Counts', fontsize = 24) for axis in ax]
   
