@@ -220,6 +220,9 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
     per = planet.koi_period
     t0 = planet.koi_time0bk
     tdur = planet.koi_duration/24.
+    rhos = planet.koi_srho
+    RpRs = planet.koi_ror
+    b = planet.koi_impact
   
     # Get the transit times
     if not ttvs:
@@ -236,14 +239,17 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
     tN = None
     per = None
     tdur = None
+    rhos = None
+    b = None
+    RpRs = None
   
   hash = GitHash()
   
   # Save
   np.savez_compressed(os.path.join(datadir, str(id), '_data', 'info.npz'), tN = tN, 
-                      per = per, tdur = tdur, hash = hash)
+                      per = per, tdur = tdur, rhos = rhos, b = b, RpRs = RpRs, hash = hash)
 
-  return {'tN': tN, 'per': per, 'tdur': tdur, 'hash': hash}
+  return {'tN': tN, 'per': per, 'tdur': tdur, 'rhos': rhos, 'b': b, 'RpRs': RpRs, 'hash': hash}
 
 def DownloadData(id, dataset, **kwargs):
   '''

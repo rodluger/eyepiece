@@ -47,13 +47,13 @@ def PlotDetrended(input_file = None):
         pl.subplot2grid((48,7), (14,0), colspan=7, rowspan=12),
         pl.subplot2grid((48,7), (28,0), colspan=7, rowspan=12)]
   
-  axzoom = [pl.subplot2grid((48,7), (44,0), rowspan=4),
-            pl.subplot2grid((48,7), (44,1), rowspan=4),
-            pl.subplot2grid((48,7), (44,2), rowspan=4),
-            pl.subplot2grid((48,7), (44,3), rowspan=4),
-            pl.subplot2grid((48,7), (44,4), rowspan=4),
-            pl.subplot2grid((48,7), (44,5), rowspan=4),
-            pl.subplot2grid((48,7), (44,6), rowspan=4)]
+  axzoom = [pl.subplot2grid((48,7), (43,0), rowspan=5),
+            pl.subplot2grid((48,7), (43,1), rowspan=5),
+            pl.subplot2grid((48,7), (43,2), rowspan=5),
+            pl.subplot2grid((48,7), (43,3), rowspan=5),
+            pl.subplot2grid((48,7), (43,4), rowspan=5)]
+  
+  axfold = pl.subplot2grid((48,7), (43,5), rowspan=5, colspan=2)
   
   # Some miscellaneous info
   lt = [None] * (inp.quarters[-1] + 1)
@@ -188,6 +188,13 @@ def PlotDetrended(input_file = None):
     for axz in axzoom[len(chunks):]:
       axz.set_visible(False)
   
+  # Plot the folded transits
+  if type(inp.id) is float:
+    axfolded = PlotTransits(input_file, ax = axfolded)
+    axfolded.set_title('KOI %.2f' % inp.id, fontsize = 22)
+  else:
+    axfolded.set_visible(False)
+  
   # Labels and titles
   ax[0].set_title('Raw Background Flux', fontsize = 28, fontweight = 'bold', y = 1.1) 
   ax[1].set_title('PLD-Decorrelated Flux', fontsize = 28, fontweight = 'bold', y = 1.025)  
@@ -209,7 +216,7 @@ def PlotDetrended(input_file = None):
   
   return fig, ax
 
-def PlotTransits(input_file = None):
+def PlotTransits(input_file = None, ax = None):
   '''
   
   '''
@@ -219,20 +226,30 @@ def PlotTransits(input_file = None):
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
 
   # Have we done this already?
-  if not inp.clobber:
+  if ax is None and not inp.clobber:
     if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'folded.png')):
       return None, None
 
-  if not inp.quiet:
+  if ax is None and not inp.quiet:
     print("Plotting transits...")
 
   # Load the info
   info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir); info.update(inp.info)
   tdur = info['tdur']
-  t, f, e = GetWhitenedData(input_file, folded = True)
+  
+  # Load the whitened data
+  foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'))
+  t = foo['t']
+  f = foo['f']
+  e = foo['e']
 
   # Plot
-  fig, ax = pl.subplots(1, 1, figsize = (14, 6))
+  if ax is None:
+    userax = False
+    fig, ax = pl.subplots(1, 1, figsize = (14, 6))
+  else:
+    userax = True
+    
   xlim = (-inp.padtrn * tdur / 2., inp.padtrn * tdur / 2.)
   fvis = f[np.where((t > xlim[0]) & (t < xlim[1]))]
   minf = np.min(fvis)
@@ -250,11 +267,14 @@ def PlotTransits(input_file = None):
   
   ax.set_xlim(xlim)  
   ax.set_ylim(ylim)
-  ax.set_title('Folded Whitened Transits', fontsize = 24)
-  ax.set_xlabel('Time (days)', fontsize = 22)
-  ax.set_ylabel('Flux', fontsize = 22)
   
-  # Save and return
-  fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', 'folded.png'), bbox_inches = 'tight')
+  if not userax:
+    ax.set_title('Folded Whitened Transits', fontsize = 24)
+    ax.set_xlabel('Time (days)', fontsize = 22)
+    ax.set_ylabel('Flux', fontsize = 22)
   
-  return fig, ax
+  if not userax:
+    fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', 'folded.png'), bbox_inches = 'tight')
+    return fig, ax
+  else:
+    return ax

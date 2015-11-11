@@ -13,6 +13,7 @@ from .utils import Input, GetData
 from . import download, preprocess, detrend, plot, compare
 import os
 import numpy as np
+import matplotlib.pyplot as pl
 
 # Python 2/3 compatibility
 try:
@@ -59,18 +60,19 @@ class Eyepiece(object):
     '''
     
     detrend.Detrend(self.input_file, pool = pool)
+    detrend.ComputePLD(self.input_file)
   
   def Plot(self):
     '''
     
     '''
     
-    plot.PlotDetrended(self.input_file)
-    plot.PlotTransits(self.input_file)
+    plot.PlotDetrended(self.input_file); pl.close()
+    plot.PlotTransits(self.input_file); pl.close()
     
     try:
       np.load(os.path.join(self.inp.datadir, str(self.inp.id), '_data', 'cmp.npz'))
-      compare.PlotComparison(self.input_file)
+      compare.PlotComparison(self.input_file); pl.close()
     except FileNotFoundError:
       # User hasn't run the comparison yet, so no big deal
       pass

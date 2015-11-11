@@ -200,3 +200,26 @@ def Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = 1. * george.ker
     dfluxerr /= crowding
   
   return dflux, dfluxerr
+
+def PLDFlux(c, fpix, perr, tmod = 1., fsum = None):
+  '''
+  
+  '''
+  
+  # SAP flux
+  if fsum is None:
+    fsum = np.sum(fpix, axis = 1)
+  K = len(fsum)
+  
+  # The PLD pixel model
+  pixmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)  
+  
+  # Propagate the errors
+  X = 1. / tmod + pixmod / fsum
+  A = X.reshape(K, 1) * perr - c * perr / fsum.reshape(K, 1)
+  ferr = np.sum(A ** 2, axis = 1) ** 0.5
+  
+  # The detrended transitless flux
+  fpld = fsum / tmod - pixmod
+  
+  return fpld, ferr

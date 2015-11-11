@@ -19,6 +19,7 @@ import itertools
 import numpy as np
 import os
 import george
+import pysyzygy as ps
 
 data = None
 
@@ -203,40 +204,85 @@ def Detrend(input_file = None, pool = None):
     if len(files) == 0:
       continue
 
-    # Grab the highest likelihood run
+    # Grab the highest likelihood run and update the ``trn.npz``
     lnl = np.zeros_like(files, dtype = float)
     for i, f in enumerate(files):
       lnl[i] = float(np.load(f)['lnlike'])
     res = np.load(files[np.argmax(lnl)])
-  
-    # Now detrend the transit data and save to disk
-    gp_arr = []
-    ypld_arr = []
-    yerr_arr = []
-    x = res['x']
-    kernel.pars = x[:iPLD]
-    c = x[iPLD:]
-    for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
-      fsum = np.sum(fpix, axis = 1)
-      K = len(time)
-      pixmod = np.sum(fpix * np.outer(1. / fsum, c), axis = 1)
-      X = 1. + pixmod / fsum
-      B = X.reshape(K, 1) * perr - c * perr / fsum.reshape(K, 1)
-      yerr = np.sum(B ** 2, axis = 1) ** 0.5
-      ypld = fsum - pixmod
-      gp = george.GP(kernel)
-      gp.compute(time, yerr)
-      gp_arr.append(gp)
-      ypld_arr.append(ypld)
-      yerr_arr.append(yerr)
-    
-    # Update our transit file with the detrended data
-    tdata[q].update({'dvec': x})
-    tdata[q].update({'gp': gp_arr})
-    tdata[q].update({'ypld': ypld_arr})
-    tdata[q].update({'yerr': yerr_arr})
+    tdata[q].update({'dvec': res['x']})
     
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())  
+
+def ComputePLD(input_file = None):
+  '''
+
+  '''
+  
+  # Load inputs
+  inp = Input(input_file)
+  detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
+  iPLD = len(inp.kernel.pars)
+  
+  # We're going to whiten the data and fit a simple transit model so we 
+  # can go back and derive the correct PLD errors in-transit.
+  t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
+  
+  # Get some info
+  info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir); info.update(inp.info)
+  per = info['per']
+  rhos = info['rhos']
+  tN = info['tN']
+  
+  # We're just going to solve for RpRs, bcirc, q1 and q2 here
+  def chisq(x):
+    RpRs, bcirc, q1, q2 = x
+    psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                     t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+    tmod = psm(t, 'binned')
+    return np.sum( (t - f / e) ** 2 )
+  
+  # Run the optimizer
+  init = [info['RpRs'], info['b'], 0.25, 0.25]
+  bounds = [[0., 0.5], [0., 1.], [0., 1.], [0., 1.]]
+  res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
+  RpRs, bcirc, q1, q2 = res[0]
+  
+  # Now, finally, compute the PLD flux and errors
+  tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
+  
+  for q in quarters:
+  
+    if len(data[q]['time']) == 0:
+      continue
+    
+    # PLD coeffs
+    c = tdata[q]['dvec'][iPLD:]
+    
+    # Loop over all transits
+    for time, fpix, perr in zip(data[q]['time'], data[q]['fpix'], data[q]['perr']):
+    
+    
+      # TODO!!!
+      #--  *  --
+      # TODO!!!
+  
+      #t0 = tN[?]
+      #ti = ?
+      
+      # TODO!!!
+      #--  *  --
+      # TODO!!!
+    
+      psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                       t0 = t0, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+      tmod = psm(time, 'binned')
+      ypld, yerr = PLDFlux(c, fpix, perr, tmod)
+      
+      tdata[q]['ypld'][ti] = ypld
+      tdata[q]['yerr'][ti] = yerr
+  
+  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())
     
   return True
 
