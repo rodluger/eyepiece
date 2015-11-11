@@ -167,7 +167,10 @@ def Detrend(input_file = None, pool = None):
       # Data is already detrended
       if not inp.quiet:
         print("Using existing detrending info.")
-      return True
+      
+      #DEBUG
+      pass
+      #return True
       
     except ValueError:
       
@@ -220,6 +223,10 @@ def Detrend(input_file = None, pool = None):
     
     tdata[q].update({'info': res['info'][()]})
     pdata[q].update({'info': res['info'][()]})
+    
+    # DEBUG
+    print(res['info'][()])
+    # DEBUG
     
     tdata[q].update({'lnlike': res['lnlike']})
     pdata[q].update({'lnlike': res['lnlike']})
