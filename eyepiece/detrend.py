@@ -234,6 +234,9 @@ def ComputePLD(input_file = None):
   rhos = info['rhos']
   tN = info['tN']
   
+  if not inp.quiet:
+    print("Computing approximate transit model...")
+  
   # We're just going to solve for RpRs, bcirc, q1 and q2 here
   def chisq(x):
     RpRs, bcirc, q1, q2 = x
@@ -253,7 +256,7 @@ def ComputePLD(input_file = None):
   
   for q in inp.quarters:
   
-    if len(data[q]['time']) == 0:
+    if len(tdata[q]['time']) == 0:
       continue
     
     # PLD coeffs
@@ -262,7 +265,7 @@ def ComputePLD(input_file = None):
     inp.kernel.pars = x
     
     # Loop over all transits
-    for time, fpix, perr, trni in zip(data[q]['time'], data[q]['fpix'], data[q]['perr'], data[q]['trni']):
+    for time, fpix, perr, trni in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr'], tdata[q]['trni']):
       
       # Compute the transit model
       psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
