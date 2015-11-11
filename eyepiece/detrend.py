@@ -18,7 +18,6 @@ from scipy.optimize import fmin_l_bfgs_b
 import itertools
 import numpy as np
 import os
-import george
 import pysyzygy as ps
 
 # Python 2/3 compatibility
@@ -308,18 +307,17 @@ def ComputePLD(input_file = None):
     # PLD and GP coeffs for this quarter
     c = tdata[q]['dvec'][iPLD:]
     x = tdata[q]['dvec'][:iPLD]
-    inp.kernel.pars = x
     
     # Reset
     tdata[q]['pmod'] = []
     tdata[q]['yerr'] = []
     tdata[q]['ypld'] = []
-    tdata[q]['gp'] = []
+    tdata[q]['kpars'] = []
     
     pdata[q]['pmod'] = []
     pdata[q]['yerr'] = []
     pdata[q]['ypld'] = []
-    pdata[q]['gp'] = []
+    pdata[q]['kpars'] = []
     
     # Loop over all transits
     for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
@@ -341,10 +339,8 @@ def ComputePLD(input_file = None):
       #       a very quick transit optimization to compute this!
       tdata[q]['ypld'].append(ypld)
       
-      # The gaussian process object for this transit
-      gp = george.GP(inp.kernel)
-      gp.compute(time, yerr)
-      tdata[q]['gp'].append(gp)
+      # The gaussian process kernel params
+      tdata[q]['kpars'].append(x)
   
     # Now loop over all chunks in the full (processed) data
     for time, fpix, perr in zip(pdata[q]['time'], pdata[q]['fpix'], pdata[q]['perr']):
@@ -366,10 +362,8 @@ def ComputePLD(input_file = None):
       #       a very quick transit optimization to compute this!
       pdata[q]['ypld'].append(ypld)
       
-      # The gaussian process object for this transit
-      gp = george.GP(inp.kernel)
-      gp.compute(time, yerr)
-      pdata[q]['gp'].append(gp)
+      # The gaussian process kernel params
+      pdata[q]['kpars'].append(x)
   
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'prc.npz'), data = pdata, hash = GitHash())

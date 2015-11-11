@@ -59,7 +59,7 @@ def EmptyData(quarters):
   for q in quarters:
     foo.update({q: {'time': [], 'cadn': [], 'fpix': [], 'perr': [], 
                     'pdcf': [], 'pdce': [], 'crwd': None, 'dvec': None,
-                    'gp': [], 'pmod': [], 'yerr': [], 'trni': [],
+                    'kpars': [], 'pmod': [], 'yerr': [], 'trni': [],
                     'ypld': []}})
   return foo
 
