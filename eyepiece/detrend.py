@@ -252,23 +252,19 @@ def ComputePLD(input_file = None):
   
   if not inp.quiet:
     print("Computing approximate transit model...")
-  
-  # DEBUG
-  import pdb; pdb.set_trace()
-  
-  
+
   # We're just going to solve for RpRs, bcirc, q1 and q2 here
   def chisq(x):
+    '''
+    
+    '''
+    
     RpRs, bcirc, q1, q2 = x
     psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
                      t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
     tmod = psm(t, 'binned')
-    
-    c = np.sum( (t - f / e) ** 2 )
-    
-    # DEBUG
-    print(c)
-    
+    c = np.sum( ((tmod - f) / e) ** 2 )
+
     return c
   
   # Run the optimizer
@@ -276,9 +272,6 @@ def ComputePLD(input_file = None):
   bounds = [[0., 0.5], [0., 1.], [0., 1.], [0., 1.]]
   res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
   RpRs, bcirc, q1, q2 = res[0]
-  
-  # DEBUG
-  print(res)
   
   # Now, finally, compute the PLD flux and errors
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
@@ -324,9 +317,6 @@ def ComputePLD(input_file = None):
       # The gaussian process object for this transit
       tdata[q]['gp'].append(george.GP(inp.kernel))
       tdata[q]['gp'][-1].compute(time, yerr)
-  
-  # DEBUG!!!
-  quit()
   
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())
     
