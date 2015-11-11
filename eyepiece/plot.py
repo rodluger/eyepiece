@@ -79,7 +79,6 @@ def PlotDetrended(input_file = None):
   # Loop over all quarters
   for q in inp.quarters:
     
-    
     # Load the decorrelated data
     files = [os.path.join(detpath, f) for f in os.listdir(detpath) 
              if f.startswith('%02d.' % q) and f.endswith('.npz')]
@@ -136,7 +135,7 @@ def PlotDetrended(input_file = None):
       ypld = np.append(ypld, y_)
       
       inp.kernel.pars = k_
-      gp = george.gp(inp.kernel)
+      gp = george.GP(inp.kernel)
       gp.compute(t_, e_)
       mu, _ = gp.predict(y_, t_)
       gpmu = np.append(gpmu, mu)
