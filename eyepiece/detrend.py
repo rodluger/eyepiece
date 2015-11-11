@@ -302,20 +302,21 @@ def ComputePLD(input_file = None):
   bounds = [[0., 0.5], [0., 1.], [0., 1.], [0., 1.]]
   res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
   RpRs, bcirc, q1, q2 = res[0]
-  psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
-                   tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
-  tmod = psm(t, 'binned')
-  
-  # DEBUG
-  print(np.median(t), np.std(t))
   
   # Save our quick-and-dirty transit fit
+  psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                   t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+  tmod = psm(t, 'binned')
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'), t = t, tmod = tmod)
   
   # Now, finally, compute the PLD flux and errors
   # First, reload the data
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
+  
+  # Pre-compute the transit model, now on the actual (unfolded) time series
+  psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                   tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
   
   for q in inp.quarters:
   
