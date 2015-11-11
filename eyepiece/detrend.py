@@ -358,6 +358,9 @@ def ComputePLD(input_file = None):
       pdata[q]['pmod'].append(pmod)
       
       # The errors on our PLD-detrended flux
+      
+      import pdb; pdb.set_trace()
+      
       pdata[q]['yerr'].append(yerr)
       
       # The PLD-detrended, transitless flux
