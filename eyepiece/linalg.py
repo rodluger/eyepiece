@@ -221,7 +221,7 @@ def PLDFlux(c, fpix, perr, tmod = 1., fsum = None, crowding = None):
   
   # Correct for crowding
   if crowding is not None:
-    tmod = (tmod - 1.) / crowding + 1.
+    tmod = (tmod - 1.) * crowding + 1.
     
   # The detrended transitless flux
   fpld = fsum / tmod - pixmod
