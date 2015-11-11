@@ -894,6 +894,7 @@ def Preprocess(input_file = None):
         # We're discarding transits that span two chunks
         if len(list(set(jumps).intersection(ti))) == 0 and len(ti) > 0:
           data_trn[q][arr].append(data[q][arr][ti])
+          data_trn[q]['trni'].append(i)
     
     # Add the crowding
     data_new[q]['crwd'] = data[q]['crwd']

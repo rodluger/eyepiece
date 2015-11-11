@@ -12,7 +12,7 @@ detrend.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .utils import Input, FunctionWrapper, GetData, GitHash
 from .preprocess import Preprocess
-from .linalg import LnLike, Whiten
+from .linalg import LnLike, Whiten, PLDFlux
 from .download import DownloadInfo
 from scipy.optimize import fmin_l_bfgs_b
 import itertools
@@ -258,29 +258,34 @@ def ComputePLD(input_file = None):
     
     # PLD coeffs
     c = tdata[q]['dvec'][iPLD:]
+    x = tdata[q]['dvec'][:iPLD]
+    inp.kernel.pars = x
     
     # Loop over all transits
-    for time, fpix, perr in zip(data[q]['time'], data[q]['fpix'], data[q]['perr']):
-    
-    
-      # TODO!!!
-      #--  *  --
-      # TODO!!!
-  
-      #t0 = tN[?]
-      #ti = ?
+    for time, fpix, perr, trni in zip(data[q]['time'], data[q]['fpix'], data[q]['perr'], data[q]['trni']):
       
-      # TODO!!!
-      #--  *  --
-      # TODO!!!
-    
+      # Compute the transit model
       psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
-                       t0 = t0, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+                       t0 = tN[trni], ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
       tmod = psm(time, 'binned')
+      
+      # Compute the PLD model
       ypld, yerr = PLDFlux(c, fpix, perr, tmod)
       
-      tdata[q]['ypld'][ti] = ypld
-      tdata[q]['yerr'][ti] = yerr
+      # The pixel model
+      tdata[q]['pmod'][trni] = pmod
+      
+      # The errors on our PLD-detrended flux
+      tdata[q]['yerr'][trni] = yerr
+      
+      # The PLD-detrended, transitless flux
+      # NOTE: This is just for verification purposes, since we used
+      #       a very quick transit optimization to compute this!
+      tdata[q]['ypld'][trni] = ypld
+      
+      # The gaussian process object for this transit
+      tdata[q]['gp'][trni] = george.GP(inp.kernel)
+      tdata[q]['gp'][trni].compute(time, yerr)
   
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())
     
