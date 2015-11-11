@@ -21,6 +21,12 @@ import os
 import george
 import pysyzygy as ps
 
+# Python 2/3 compatibility
+try:
+  FileNotFoundError
+except:
+  FileNotFoundError = IOError
+
 data = None
 
 def NegLnLike(x, id, q, kernel, debug):
@@ -225,9 +231,19 @@ def ComputePLD(input_file = None):
   
   # We're going to whiten the data and fit a simple transit model so we 
   # can go back and derive the correct PLD errors in-transit.
-  t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
-  
+  if not inp.clobber:
+    try:
+      foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'))
+      t = foo['t']
+      f = foo['f']
+      e = foo['e']
+    except FileNotFoundError:  
+      t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
+      np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
+  else:
+    t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
+    np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
+
   # Get some info
   info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir); info.update(inp.info)
   per = info['per']
