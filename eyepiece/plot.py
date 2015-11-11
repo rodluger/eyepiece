@@ -78,8 +78,7 @@ def PlotDetrended(input_file = None):
   # Loop over all quarters
   for q in inp.quarters:
     
-    # DEPRECATED
-    '''
+    
     # Load the decorrelated data
     files = [os.path.join(detpath, f) for f in os.listdir(detpath) 
              if f.startswith('%02d.' % q) and f.endswith('.npz')]
@@ -93,7 +92,12 @@ def PlotDetrended(input_file = None):
     for i, f in enumerate(files):
       lnl[i] = float(np.load(f)['lnlike'])
     res = np.load(files[np.argmax(lnl)])
-  
+    info = res['info'][()]
+    lnlike = res['lnlike']
+    x = res['x']
+    
+    # DEPRECATED
+    '''
     # Grab the detrending info
     time = res['time']
     fsum = res['fsum']
