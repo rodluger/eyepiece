@@ -204,7 +204,11 @@ def Detrend(input_file = None, pool = None):
     continue
   
   # Identify the highest likelihood run
-  for q in quarters:
+  
+  # DEBUG
+  for q in inp.quarters:
+  
+  #for q in quarters:
   
     files = [os.path.join(detpath, f) for f in os.listdir(detpath) 
              if f.startswith('%02d.' % q) and f.endswith('.npz')]
