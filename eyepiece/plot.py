@@ -13,6 +13,7 @@ from .detrend import GetWhitenedData, GetBadChunks
 import matplotlib.pyplot as pl
 import numpy as np
 import os
+import george
 
 # Python 2/3 compatibility
 try:
