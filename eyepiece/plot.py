@@ -192,7 +192,7 @@ def PlotDetrended(input_file = None):
     axz.plot(TIME[chunk], FLUX[chunk], 'r.')
     
     # Are there transits nearby?
-    idx = np.where(tN > TIME[a] && tN < TIME[b])[0]
+    idx = np.where(tN > TIME[a] & tN < TIME[b])[0]
     for j in idx:
       axz.axvline(tN[j], color = 'r', alpha = 0.5)
     
