@@ -17,7 +17,7 @@ before executing this script with ``mpi``:
 '''
 
 from __future__ import division, print_function, absolute_import, unicode_literals
-import matplotlib as mpl; mpl.use('Agg')
+#import matplotlib as mpl; mpl.use('Agg')
 from eyepiece import Eyepiece
 import para
 import sys
