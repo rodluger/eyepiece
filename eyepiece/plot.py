@@ -137,8 +137,8 @@ def PlotDetrended(input_file = None):
   ltq = ax[0].get_xlim()[0]  
   yp0 = ax[0].get_ylim()[1]
   yp1 = ax[1].get_ylim()[1]
-  yb2 = ax[2].get_ylim()[0]
   yp2 = ax[2].get_ylim()[1]
+  yb2 = ax[2].get_ylim()[0] + 0.05 * (ax[2].get_ylim()[1] - ax[2].get_ylim()[0])
   
   for q in inp.quarters:
     
@@ -181,7 +181,10 @@ def PlotDetrended(input_file = None):
   # Let's identify potentially bad parts of the detrended data
   chunks = GetBadChunks(FLUX, sig_tol = 3., sort = True)
   [ax[2].plot(TIME[chunk], FLUX[chunk], 'r.') for chunk in chunks]
-  [ax[2].annotate("%d\n" % i, (np.median(TIME[chunk]), yb2), ha = 'left', va = 'bottom', fontsize = 14, fontweight = 'bold', color = 'r', bbox = dict(boxstyle = "round", fc = "1.0", ec = 'r')) for i,chunk in enumerate(chunks)]
+  [ax[2].annotate("%d" % (i + 1), (np.median(TIME[chunk]), yb2), 
+                  ha = 'left', va = 'bottom', fontsize = 14, fontweight = 'bold', 
+                  color = 'r', bbox = dict(boxstyle = "round", fc = "1.0", ec = 'r')) 
+                  for i,chunk in enumerate(chunks)]
   
   # Plot the bad chunks as insets
   for i, axz, chunk in zip(range(len(axzoom)), axzoom, chunks):
