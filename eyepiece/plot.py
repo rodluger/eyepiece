@@ -180,8 +180,7 @@ def PlotDetrended(input_file = None):
   
   # Let's identify potentially bad parts of the detrended data
   chunks = GetBadChunks(FLUX, sig_tol = 3., sort = True)
-  [ax[2].plot(TIME[chunk], FLUX[chunk], 'r.') for chunk in chunks]
-  [ax[2].annotate("%d" % (i + 1), (np.median(TIME[chunk]), yb2), 
+  [ax[2].annotate("%d" % (i + 1), (0.5 * (TIME[chunk][0] + TIME[chunk][-1]), yb2), 
                   ha = 'center', va = 'bottom', fontsize = 14, fontweight = 'bold', 
                   color = 'r', bbox = dict(boxstyle = "round", fc = "1.0", ec = 'r')) 
                   for i,chunk in enumerate(chunks)]
