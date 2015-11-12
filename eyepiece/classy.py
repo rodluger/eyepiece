@@ -31,6 +31,19 @@ class Eyepiece(object):
     self.input_file = input_file
     self.inp = Input(self.input_file)
     
+    # Load MPL backend
+    import matplotlib
+    if inp.interactive:
+      # Are we running this interactively? If so, use TkAgg
+      matplotlib.use('TkAgg', warn = False)
+      if matplotlib.get_backend() != 'TkAgg':
+        print("WARNING: Unable to load TkAgg backend. Interactive mode disabled.")
+        inp.interactive = False
+    else:
+      # Let's try to use the Agg backend. Not a big deal if it doesn't work
+      import matplotlib
+      matplotlib.use('Agg', warn = False)
+    
     # Save a copy of the input file (will overwrite!)
     datadir = os.path.join(self.inp.datadir, str(self.inp.id), '_data')
     if not os.path.exists(datadir):
