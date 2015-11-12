@@ -137,6 +137,7 @@ def PlotDetrended(input_file = None):
   ltq = ax[0].get_xlim()[0]  
   yp0 = ax[0].get_ylim()[1]
   yp1 = ax[1].get_ylim()[1]
+  yb2 = ax[2].get_ylim()[0]
   yp2 = ax[2].get_ylim()[1]
   
   for q in inp.quarters:
@@ -178,8 +179,9 @@ def PlotDetrended(input_file = None):
     ltq = lt[q]
   
   # Let's identify potentially bad parts of the detrended data
-  chunks = GetBadChunks(FLUX, sig_tol = 3.)
+  chunks = GetBadChunks(FLUX, sig_tol = 3., sort = True)
   [ax[2].plot(TIME[chunk], FLUX[chunk], 'r.') for chunk in chunks]
+  [ax[2].annotate(i, (np.median(TIME[chunk]), yb2), ha = 'left', va = 'bottom', fontsize = 8, fontweight = 'bold', color = 'r') for i,chunk in enumerate(chunks)]
   
   # Plot the bad chunks as insets
   for i, axz, chunk in zip(range(len(axzoom)), axzoom, chunks):
@@ -188,6 +190,11 @@ def PlotDetrended(input_file = None):
     a, b = chunk[0] - 3 * len(chunk), chunk[-1] + 3 * len(chunk)
     axz.plot(TIME[a:b], FLUX[a:b], 'b.')
     axz.plot(TIME[chunk], FLUX[chunk], 'r.')
+    
+    # Are there transits nearby?
+    idx = np.where(tN > TIME[a] && tN < TIME[b])[0]
+    for j in idx:
+      axz.axvline(tN[j], color = 'r', alpha = 0.5)
     
     # Appearance
     axz.set_title('Bad Chunk #%d' % (i + 1), fontsize = 22, fontweight = 'bold', y = 1.025)
