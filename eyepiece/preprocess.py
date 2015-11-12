@@ -693,11 +693,8 @@ def Preprocess(input_file = None):
   import matplotlib
   if inp.interactive:
     # Are we running this interactively? If so, use TkAgg
-    matplotlib.use('TkAgg', warn = False)
+    matplotlib.use('TkAgg', warn = False, force = True)
     if matplotlib.get_backend() != 'TkAgg':
-    
-      import pdb; pdb.set_trace()
-    
       print("WARNING: Unable to load TkAgg backend. Interactive mode disabled.")
       inp.interactive = False
   else:
