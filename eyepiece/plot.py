@@ -10,7 +10,6 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 from .download import DownloadInfo
 from .utils import Input, GetData
 from .detrend import GetWhitenedData, GetBadChunks
-import matplotlib.pyplot as pl
 import numpy as np
 import os
 import george
@@ -25,6 +24,8 @@ def PlotDetrended(input_file = None):
   '''
   
   '''
+  
+  import matplotlib.pyplot as pl
   
   # Load inputs
   inp = Input(input_file)
@@ -246,6 +247,8 @@ def PlotTransits(input_file = None, ax = None):
   '''
   
   '''
+  
+  import matplotlib.pyplot as pl
   
   # Input file
   inp = Input(input_file)

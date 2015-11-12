@@ -10,11 +10,9 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 from .utils import Input, GetData, GetOutliers, FreedmanDiaconis, FunctionWrapper
 from scipy.optimize import curve_fit, fmin_l_bfgs_b
 from scipy.stats import norm, normaltest
-import matplotlib.mlab as mlab
 import numpy as np
 import os
 import george
-import matplotlib.pyplot as pl
 
 # Python 2/3 compatibility
 try:
@@ -323,6 +321,9 @@ def PlotComparison(input_file = None):
   '''
   
   '''
+  
+  import matplotlib.pyplot as pl
+  import matplotlib.mlab as mlab
   
   # Load inputs
   inp = Input(input_file)
