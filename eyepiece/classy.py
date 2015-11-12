@@ -33,12 +33,12 @@ class Eyepiece(object):
     
     # Load MPL backend
     import matplotlib
-    if inp.interactive:
+    if self.inp.interactive:
       # Are we running this interactively? If so, use TkAgg
       matplotlib.use('TkAgg', warn = False)
       if matplotlib.get_backend() != 'TkAgg':
         print("WARNING: Unable to load TkAgg backend. Interactive mode disabled.")
-        inp.interactive = False
+        self.inp.interactive = False
     else:
       # Let's try to use the Agg backend. Not a big deal if it doesn't work
       import matplotlib
