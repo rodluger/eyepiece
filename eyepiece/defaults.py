@@ -43,7 +43,6 @@ fullscreen = True
 
 # I
 id = 17.01
-info = {}
 interactive = True
 
 # K
@@ -71,6 +70,7 @@ padtrn = 5.0
 pert_sigma = 0.25
 plot_det_info = True
 ppn = 12
+pskwargs = {}
 
 # Q
 quarters = range(18)
@@ -83,6 +83,7 @@ stderr = '/dev/null'
 
 # T
 tbins = 20
+trninfo = {}
 ttvs = False
 
 # W
@@ -129,7 +130,6 @@ class _Docs(object):
     
     # I
     self.id = 'Kepler target ID (KOI number or KIC identifier)'
-    self.info = 'Override the database values for the KOI\'s ``per``, ``tdur`` and the transit times ``tN`` by setting values for those in this dict'
     self.interactive = 'Process data in interactive mode?'
     
     # K
@@ -157,6 +157,7 @@ class _Docs(object):
     self.pert_sigma = 'Perturb the initial conditions by this many sigma'
     self.plot_det_info = 'Plot detrending information?'
     self.ppn = 'Number of processors per node for a ``qsub`` job'
+    self.pskwargs = 'Dictionary of keyword arguments passed to ``pysyzygy`` for transit injection runs'
     
     # Q
     self.quarters = 'List of quarters to process (if data is present)'
@@ -169,6 +170,7 @@ class _Docs(object):
     
     # T
     self.tbins = 'Number of bins when plotting folded transits'
+    self.trninfo = 'Override the database values for the KOI\'s ``per``, ``tdur`` and the transit times ``tN`` by setting values for those in this dict'
     self.ttvs = 'Analyze this system assuming ttvs?'
     
     # W

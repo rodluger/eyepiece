@@ -66,7 +66,7 @@ def EmptyData(quarters):
 def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False, 
                   bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17],
                   aperture = 'optimal', quarters = range(18), quiet = False,
-                  **kwargs):
+                  pskwargs = {}, **kwargs):
   '''
   
   '''
@@ -185,7 +185,7 @@ def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False,
       
   return data
 
-def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.0):
+def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.0, pskwargs = {}, trninfo = {}):
   '''
   
   '''
@@ -200,24 +200,25 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
       rhos = data['rhos'][()]
       b = data['b'][()]
       RpRs = data['RpRs'][()]
-      return {'tN': tN, 'per': per, 'tdur': tdur, 'hash': hash, 'rhos': rhos, 'b': b, 'RpRs': RpRs}
+      foo = {'tN': tN, 'per': per, 'tdur': tdur, 'hash': hash, 'rhos': rhos, 'b': b, 'RpRs': RpRs}
+      foo.update(trninfo)
+      return foo
     except FileNotFoundError:
       pass
   
-  if type(id) is float:
+  # Grab first and last timestamps for this planet
+  data = np.load(os.path.join(datadir, str(id), '_data', 'raw.npz'))['data'][()]
+  tstart = np.inf
+  tend = -np.inf
+  for q in data:
+    if len(data[q]['time']) == 0:
+      continue
+    if data[q]['time'][0] < tstart:
+      tstart = data[q]['time'][0]
+    if data[q]['time'][-1] > tend:
+      tend = data[q]['time'][-1]
   
-    # Grab first and last timestamps for this planet
-    data = np.load(os.path.join(datadir, str(id), '_data', 'raw.npz'))['data'][()]
-
-    tstart = np.inf
-    tend = -np.inf
-    for q in data:
-      if len(data[q]['time']) == 0:
-        continue
-      if data[q]['time'][0] < tstart:
-        tstart = data[q]['time'][0]
-      if data[q]['time'][-1] > tend:
-        tend = data[q]['time'][-1]
+  if type(id) is float:
 
     # Grab info from the database
     planet = get_kplr_obj(id)
@@ -239,13 +240,46 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
     else:
       raise Exception("TTV support not yet implemented.")
   
+  elif pskwargs != {}:
+    
+    # No error handling here -- all params better be present!
+    
+    per = pskwargs['per']
+    rhos = pskwargs['rhos']
+    b = pskwargs.get('b', None)
+    if b is None: b = pskwargs['bcirc']
+    RpRs = pskwargs['RpRs']
+    
+    # Compute transit duration (includes eccentricity correction)
+    ecw = pskwargs['ecw']
+    esw = pskwargs['esw']
+    MpMs = pskwargs['MpMs']
+    ecc = np.sqrt(ecw**2 + esw**2)
+    aRs = ((6.672e-8 * rhos * (1. + MpMs) * 
+          (per * 86400.)**2.) / (3. * np.pi))**(1./3.)
+    inc = np.arccos(b/aRs)
+    becc = b * (1 - ecc**2)/(1 - esw)
+    tdur = per / 2. / np.pi * np.arcsin(((1. + RpRs)**2 - becc**2)**0.5 / (np.sin(inc) * aRs))
+    tdur *= np.sqrt(1. - ecc**2.)/(1. - esw)
+    
+    t0 = pskwargs.get('t0', None)
+    if t0 is None:
+      tN = pskwargs['tN']
+    else:
+      n, r = divmod(tstart - t0, per)
+      if r < (pad * tdur)/2.: 
+        t0 = t0 + n*per
+      else: 
+        t0 = t0 + (n + 1)*per
+      tN = np.arange(t0, tend + per, per)
+  
   else:
-    tN = None
-    per = None
-    tdur = None
-    rhos = None
-    b = None
-    RpRs = None
+    tN = np.array([], dtype = float)
+    per = 0.
+    tdur = 0.
+    rhos = 0.
+    b = 0.
+    RpRs = 0.
   
   hash = GitHash()
   
@@ -253,7 +287,10 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
   np.savez_compressed(os.path.join(datadir, str(id), '_data', 'info.npz'), tN = tN, 
                       per = per, tdur = tdur, rhos = rhos, b = b, RpRs = RpRs, hash = hash)
 
-  return {'tN': tN, 'per': per, 'tdur': tdur, 'rhos': rhos, 'b': b, 'RpRs': RpRs, 'hash': hash}
+  foo = {'tN': tN, 'per': per, 'tdur': tdur, 'rhos': rhos, 'b': b, 'RpRs': RpRs, 'hash': hash}
+  foo.update(trninfo)
+  
+  return foo
 
 def DownloadData(id, dataset, **kwargs):
   '''

@@ -39,7 +39,8 @@ def PlotDetrended(input_file = None):
     print("Plotting detrended flux...")
   
   # Load some info
-  info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir); info.update(inp.info)
+  info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
+                      pskwargs = inp.pskwargs, datadir = inp.datadir)
   tN = info['tN']
   tdur = info['tdur']
   
@@ -190,6 +191,12 @@ def PlotDetrended(input_file = None):
 
     # Expand around them a bit
     a, b = chunk[0] - 3 * len(chunk), chunk[-1] + 3 * len(chunk)
+    
+    if b >= len(TIME) - 1:
+      b = len(TIME) - 1
+    if a < 0:
+      a = 0
+    
     axz.plot(TIME[a:b], FLUX[a:b], 'b.')
     axz.plot(TIME[chunk], FLUX[chunk], 'r.')
     
@@ -208,7 +215,7 @@ def PlotDetrended(input_file = None):
       axz.set_visible(False)
   
   # Plot the folded transits
-  if type(inp.id) is float:
+  if type(inp.id) is float or inp.pskwargs != {}:
     axfold = PlotTransits(input_file, ax = axfold)
     axfold.set_title('Folded Whitened Transits: KOI %.2f' % inp.id, fontsize = 22, fontweight = 'bold', y = 1.025)
   else:
@@ -253,8 +260,14 @@ def PlotTransits(input_file = None, ax = None):
     print("Plotting transits...")
 
   # Load the info
-  info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir); info.update(inp.info)
+  info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
+                      pskwargs = inp.pskwargs, datadir = inp.datadir)
   tdur = info['tdur']
+  tN = info['tN']
+  
+  # Are there any transits?
+  if len(tN) == 0:
+    return None, None
   
   # Load the whitened data
   try:

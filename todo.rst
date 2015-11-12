@@ -6,6 +6,7 @@ TODO
 - Use Rowe's transit times for TTV systems
 - Libralato et al. - K2 PSF photomoetry
 - Fabien Bastien: Flicker can give stellar density within ~ 30%
+- Resolve tension between ``pskwargs`` and ``trninfo`` in ``DownloadInfo()``
 
 TARGETS
 -------

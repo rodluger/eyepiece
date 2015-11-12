@@ -158,10 +158,10 @@ def Detrend(input_file = None, pool = None):
   # Have we already detrended?
   if not inp.clobber:
     try:
-      for q in tdata:
-        if len(tdata[q]['time']) == 0:
+      for q in pdata:
+        if len(pdata[q]['time']) == 0:
           continue
-        if tdata[q]['dvec'] is None:
+        if pdata[q]['dvec'] is None:
           raise ValueError("Detrending vector is ``None``.")
       
       # Data is already detrended
@@ -237,13 +237,14 @@ def ComputePLD(input_file = None):
   iPLD = len(inp.kernel.pars)
   
   # Have we already detrended?
+  pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   if not inp.clobber:
     try:
-      for q in tdata:
-        if len(tdata[q]['time']) == 0:
+      for q in pdata:
+        if len(pdata[q]['time']) == 0:
           continue
-        if len(tdata[q]['pmod']) == 0:
+        if len(pdata[q]['pmod']) == 0:
           raise ValueError("Pixel model list is empty.")
       
       # Data is already detrended
@@ -256,76 +257,80 @@ def ComputePLD(input_file = None):
       # We're going to have to compute
       pass
   
-  # We're going to whiten the data and fit a simple transit model so we 
-  # can go back and derive the correct PLD errors in-transit.
-  if not inp.clobber:
-    try:
-      foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'))
-      t = foo['t']
-      f = foo['f']
-      e = foo['e']
-    except FileNotFoundError:  
-      t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
-      np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
-  else:
-    t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
-    np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
-
   # Get some info
-  info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir); info.update(inp.info)
+  info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
+                      pskwargs = inp.pskwargs, datadir = inp.datadir)
   per = info['per']
   rhos = info['rhos']
   tN = info['tN']
   
-  if not inp.quiet:
-    print("Computing approximate transit model...")
+  # Get whitened transits
+  if len(tN):
+  
+    # We're going to whiten the data and fit a simple transit model so we 
+    # can go back and derive the correct PLD errors in-transit.
+    if not inp.clobber:
+      try:
+        foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'))
+        t = foo['t']
+        f = foo['f']
+        e = foo['e']
+      except FileNotFoundError:  
+        t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
+        np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
+    else:
+      t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
+      np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
+  
+    if not inp.quiet:
+      print("Computing approximate transit model...")
 
-  # We're just going to solve for RpRs, bcirc, q1 and q2 here
-  def chisq(x):
-    '''
+    # We're just going to solve for RpRs, bcirc, q1 and q2 here
+    def chisq(x):
+      '''
     
-    '''
+      '''
     
-    RpRs, bcirc, q1, q2 = x
+      RpRs, bcirc, q1, q2 = x
+      psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                       t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+      tmod = psm(t, 'binned')
+      c = np.sum( ((tmod - f) / e) ** 2 )
+
+      return c
+  
+    # Run the optimizer
+    init = [info['RpRs'], info['b'], 0.25, 0.25]
+    bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]
+    res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
+    RpRs, bcirc, q1, q2 = res[0]
+  
+    # Save our quick-and-dirty transit fit
     psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
                      t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
     tmod = psm(t, 'binned')
-    c = np.sum( ((tmod - f) / e) ** 2 )
+    np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'), t = t, tmod = tmod)
 
-    return c
-  
-  # Run the optimizer
-  init = [info['RpRs'], info['b'], 0.25, 0.25]
-  bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]
-  res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
-  RpRs, bcirc, q1, q2 = res[0]
-  
-  # Save our quick-and-dirty transit fit
-  psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
-                   t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
-  tmod = psm(t, 'binned')
-  np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'), t = t, tmod = tmod)
+    # Pre-compute the transit model, now on the actual (unfolded) time series
+    psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                     tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
   
   # Now, finally, compute the PLD flux and errors
   # First, reload the data
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   
-  # Pre-compute the transit model, now on the actual (unfolded) time series
-  psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
-                   tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
-  
   for q in inp.quarters:
   
-    if len(tdata[q]['time']) == 0:
+    if len(pdata[q]['time']) == 0:
       continue
     
     # PLD and GP coeffs for this quarter
-    c = tdata[q]['dvec'][iPLD:]
-    x = tdata[q]['dvec'][:iPLD]
+    c = pdata[q]['dvec'][iPLD:]
+    x = pdata[q]['dvec'][:iPLD]
     
     # Crowding parameter
-    crwd = tdata[q]['crwd']
+    crwd = pdata[q]['crwd']
     
     # Reset
     tdata[q]['pmod'] = []
@@ -340,7 +345,10 @@ def ComputePLD(input_file = None):
     for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
       
       # Compute the transit model
-      tmod = psm(time, 'binned')
+      if len(tN):
+        tmod = psm(time, 'binned')
+      else:
+        tmod = 1.
       
       # Compute the PLD model
       pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
@@ -360,7 +368,10 @@ def ComputePLD(input_file = None):
     for time, fpix, perr in zip(pdata[q]['time'], pdata[q]['fpix'], pdata[q]['perr']):
       
       # Compute the transit model
-      tmod = psm(time, 'binned')
+      if len(tN):
+        tmod = psm(time, 'binned')
+      else:
+        tmod = 1.
       
       # Compute the PLD model
       pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
@@ -396,7 +407,8 @@ def GetWhitenedData(input_file = None, folded = True, return_mean = False):
   # Load the data
   bkg = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
   prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
-  info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir); info.update(inp.info)
+  info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
+                      pskwargs = inp.pskwargs, datadir = inp.datadir)
   tN = info['tN']
   per = info['per']
 
