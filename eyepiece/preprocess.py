@@ -800,9 +800,12 @@ def Preprocess(input_file = None):
 
     # Bring window to the front and fullscreen it
     if inp.interactive:
-      fig.canvas.manager.window.attributes('-topmost', 1)
-      if inp.fullscreen:
-        fig.canvas.manager.window.attributes('-fullscreen', 1) 
+      try:
+        fig.canvas.manager.window.attributes('-topmost', 1)
+        if inp.fullscreen:
+          fig.canvas.manager.window.attributes('-fullscreen', 1) 
+      except:
+        pass
     
     # Save the figure
     fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', "Q%02d.png" % q), bbox_inches = 'tight')
