@@ -25,6 +25,7 @@ def PlotDetrended(input_file = None):
   
   '''
   
+  import matplotlib as mpl; mpl.use('Agg', warn = False, force = True)
   import matplotlib.pyplot as pl
   
   # Load inputs
@@ -248,6 +249,7 @@ def PlotTransits(input_file = None, ax = None):
   
   '''
   
+  import matplotlib as mpl; mpl.use('Agg', warn = False, force = True)
   import matplotlib.pyplot as pl
   
   # Input file

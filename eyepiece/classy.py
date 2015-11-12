@@ -48,7 +48,8 @@ class Eyepiece(object):
     download.DownloadData(self.inp.id, self.inp.dataset, long_cadence = self.inp.long_cadence, 
                           clobber = self.inp.clobber, datadir = self.inp.datadir, 
                           bad_bits = self.inp.bad_bits, aperture = self.inp.aperture, 
-                          quarters = self.inp.quarters, quiet = self.inp.quiet)
+                          quarters = self.inp.quarters, quiet = self.inp.quiet,
+                          inject = self.inp.inject, trninfo = self.inp.trninfo)
     
     # Preprocess
     preprocess.Preprocess(self.input_file)

@@ -43,6 +43,7 @@ fullscreen = True
 
 # I
 id = 17.01
+inject = None
 interactive = True
 
 # K
@@ -70,7 +71,6 @@ padtrn = 5.0
 pert_sigma = 0.25
 plot_det_info = True
 ppn = 12
-pskwargs = {}
 
 # Q
 quarters = range(18)
@@ -130,6 +130,7 @@ class _Docs(object):
     
     # I
     self.id = 'Kepler target ID (KOI number or KIC identifier)'
+    self.inject = '``None`` or ``dict`` of keyword arguments to be passed to ``pysyzygy`` for transit injection runs'
     self.interactive = 'Process data in interactive mode?'
     
     # K
@@ -157,7 +158,6 @@ class _Docs(object):
     self.pert_sigma = 'Perturb the initial conditions by this many sigma'
     self.plot_det_info = 'Plot detrending information?'
     self.ppn = 'Number of processors per node for a ``qsub`` job'
-    self.pskwargs = 'Dictionary of keyword arguments passed to ``pysyzygy`` for transit injection runs'
     
     # Q
     self.quarters = 'List of quarters to process (if data is present)'

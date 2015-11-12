@@ -14,6 +14,7 @@ from .utils import GitHash
 import kplr
 import os
 import numpy as np
+import pysyzygy as ps
 
 # Python 2/3 compatibility
 try:
@@ -66,7 +67,7 @@ def EmptyData(quarters):
 def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False, 
                   bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17],
                   aperture = 'optimal', quarters = range(18), quiet = False,
-                  pskwargs = {}, **kwargs):
+                  inject = {}, **kwargs):
   '''
   
   '''
@@ -155,6 +156,14 @@ def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False,
     flux = np.array(qdata.field('FLUX'), dtype='float64')
     flux = np.delete(flux, nan_inds, 0)
     fpix = np.array([f[idx] for f in flux], dtype='float64')
+    
+    # Inject transits?
+    if (inject is not None) and (inject != {}) and (inject != False):
+      psm = ps.Transit(**inject)
+      tmod = (psm(time, 'binned') - 1.) * crwd + 1.
+      for n in range(fpix.shape[1]):
+        fpix[:, n] *= tmod 
+    
     perr = np.array([f[idx] for f in qdata.field('FLUX_ERR')], dtype='float64')
     perr = np.delete(perr, nan_inds, 0)
     pdcf = np.delete(pdcf, nan_inds, 0)
@@ -185,7 +194,7 @@ def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False,
       
   return data
 
-def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.0, pskwargs = {}, trninfo = {}):
+def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.0, inject = {}, trninfo = {}):
   '''
   
   '''
@@ -240,20 +249,20 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
     else:
       raise Exception("TTV support not yet implemented.")
   
-  elif pskwargs != {}:
+  elif (inject is not None) and (inject != {}) and (inject != False):
     
     # No error handling here -- all params better be present!
     
-    per = pskwargs['per']
-    rhos = pskwargs['rhos']
-    b = pskwargs.get('b', None)
-    if b is None: b = pskwargs['bcirc']
-    RpRs = pskwargs['RpRs']
+    per = inject['per']
+    rhos = inject['rhos']
+    b = inject.get('b', None)
+    if b is None: b = inject['bcirc']
+    RpRs = inject['RpRs']
     
     # Compute transit duration (includes eccentricity correction)
-    ecw = pskwargs['ecw']
-    esw = pskwargs['esw']
-    MpMs = pskwargs['MpMs']
+    ecw = inject['ecw']
+    esw = inject['esw']
+    MpMs = inject['MpMs']
     ecc = np.sqrt(ecw**2 + esw**2)
     aRs = ((6.672e-8 * rhos * (1. + MpMs) * 
           (per * 86400.)**2.) / (3. * np.pi))**(1./3.)
@@ -262,9 +271,9 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
     tdur = per / 2. / np.pi * np.arcsin(((1. + RpRs)**2 - becc**2)**0.5 / (np.sin(inc) * aRs))
     tdur *= np.sqrt(1. - ecc**2.)/(1. - esw)
     
-    t0 = pskwargs.get('t0', None)
+    t0 = inject.get('t0', None)
     if t0 is None:
-      tN = pskwargs['tN']
+      tN = inject['tN']
     else:
       n, r = divmod(tstart - t0, per)
       if r < (pad * tdur)/2.: 

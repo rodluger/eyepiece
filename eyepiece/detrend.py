@@ -4,9 +4,6 @@
 detrend.py
 ----------
 
-.. todo::
-   - Save ``input.py`` file for each target
-
 '''
 
 from __future__ import division, print_function, absolute_import, unicode_literals
@@ -259,7 +256,7 @@ def ComputePLD(input_file = None):
   
   # Get some info
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
-                      pskwargs = inp.pskwargs, datadir = inp.datadir)
+                      inject = inp.inject, datadir = inp.datadir)
   per = info['per']
   rhos = info['rhos']
   tN = info['tN']
@@ -408,7 +405,7 @@ def GetWhitenedData(input_file = None, folded = True, return_mean = False):
   bkg = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
   prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
-                      pskwargs = inp.pskwargs, datadir = inp.datadir)
+                      inject = inp.inject, datadir = inp.datadir)
   tN = info['tN']
   per = info['per']
 

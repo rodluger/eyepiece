@@ -729,11 +729,11 @@ def Preprocess(input_file = None):
   data = DownloadData(inp.id, inp.dataset, long_cadence = inp.long_cadence, 
                       clobber = inp.clobber, datadir = inp.datadir, 
                       bad_bits = inp.bad_bits, aperture = inp.aperture, 
-                      quarters = inp.quarters, quiet = inp.quiet, pskwargs = 
-                      inp.pskwargs)
+                      quarters = inp.quarters, quiet = inp.quiet, inject = 
+                      inp.inject)
   info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir, 
                       clobber = inp.clobber, ttvs = inp.ttvs, pad = inp.padbkg,
-                      pskwargs = inp.pskwargs, trninfo = inp.trninfo)
+                      inject = inp.inject, trninfo = inp.trninfo)
   tN = info['tN']
   tdur = info['tdur']
   per = info['per']

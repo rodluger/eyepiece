@@ -322,6 +322,7 @@ def PlotComparison(input_file = None):
   
   '''
   
+  import matplotlib as mpl; mpl.use('Agg', warn = False, force = True)
   import matplotlib.pyplot as pl
   import matplotlib.mlab as mlab
   
