@@ -21,7 +21,8 @@ if sys.version_info >= (3,0):
 	prompt = input
 else:
   prompt = raw_input
-  
+
+pl = None
 rcParams = None
 
 # Keyboard shortcuts
@@ -48,7 +49,7 @@ def DisableShortcuts():
 
   '''
   
-  global rcParams
+  global pl, rcParams
   rcParams = dict(pl.rcParams)
     
   pl.rcParams['toolbar'] = 'None'
@@ -71,7 +72,7 @@ def EnableShortcuts():
   
   '''
   
-  global rcParams
+  global pl, rcParams
   
   pl.rcParams.update(rcParams)
 
@@ -167,6 +168,8 @@ class Viewer(object):
   '''
   
   '''
+  
+  global pl
   
   def __init__(self, fig, ax, id, quarter, data, tN, cptbkg, cpttrn, datadir, 
                split_cads = [], cad_tol = 10, min_sz = 300, interactive = True):
@@ -685,7 +688,9 @@ def Preprocess(input_file = None):
   '''
 
   '''
-
+  
+  global pl
+  
   # Load inputs
   inp = Input(input_file)
 
