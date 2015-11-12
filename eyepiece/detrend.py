@@ -296,7 +296,7 @@ def ComputePLD(input_file = None):
   
   # Run the optimizer
   init = [info['RpRs'], info['b'], 0.25, 0.25]
-  bounds = [[0., 0.5], [0., 1.], [0., 1.], [0., 1.]]
+  bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]
   res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
   RpRs, bcirc, q1, q2 = res[0]
   
