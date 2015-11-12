@@ -249,12 +249,7 @@ def ComputePLD(input_file = None):
       # Data is already detrended
       if not inp.quiet:
         print("Using existing PLD info.")
-      
-      # DEBUG DEBUG DEBUG DEBUG DEBUG
-      # !!!
-      pass
-      # !!!
-      #return True
+      return True
       
     except ValueError:
       

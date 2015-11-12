@@ -138,7 +138,7 @@ def PlotDetrended(input_file = None):
   yp0 = ax[0].get_ylim()[1]
   yp1 = ax[1].get_ylim()[1]
   yp2 = ax[2].get_ylim()[1]
-  yb2 = ax[2].get_ylim()[0] + 0.05 * (ax[2].get_ylim()[1] - ax[2].get_ylim()[0])
+  yb2 = ax[2].get_ylim()[0] + 0.025 * (ax[2].get_ylim()[1] - ax[2].get_ylim()[0])
   
   for q in inp.quarters:
     
@@ -182,7 +182,7 @@ def PlotDetrended(input_file = None):
   chunks = GetBadChunks(FLUX, sig_tol = 3., sort = True)
   [ax[2].plot(TIME[chunk], FLUX[chunk], 'r.') for chunk in chunks]
   [ax[2].annotate("%d" % (i + 1), (np.median(TIME[chunk]), yb2), 
-                  ha = 'left', va = 'bottom', fontsize = 14, fontweight = 'bold', 
+                  ha = 'center', va = 'bottom', fontsize = 14, fontweight = 'bold', 
                   color = 'r', bbox = dict(boxstyle = "round", fc = "1.0", ec = 'r')) 
                   for i,chunk in enumerate(chunks)]
   
