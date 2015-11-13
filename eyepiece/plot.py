@@ -9,10 +9,11 @@ plot.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .download import DownloadInfo
 from .utils import Input, GetData
-from .detrend import GetWhitenedData, GetBadChunks
+from .detrend import GetBadChunks
 import numpy as np
 import os
 import george
+import pysyzygy
 
 # Python 2/3 compatibility
 try:
@@ -249,7 +250,7 @@ def PlotDetrended(input_file = None):
   
   return fig, ax
 
-def PlotTransits(input_file = None, ax = None):
+def PlotTransits(input_file = None, ax = None, clobber = False):
   '''
   
   '''
@@ -259,6 +260,8 @@ def PlotTransits(input_file = None, ax = None):
   
   # Input file
   inp = Input(input_file)
+  if clobber:
+    inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
 
   # Have we done this already?
@@ -281,15 +284,57 @@ def PlotTransits(input_file = None, ax = None):
   if len(tN) == 0:
     return None, None
   
-  # Load the whitened data
+  # Get our transit data
+  t = np.array([], dtype = float)
+  f = np.array([], dtype = float)
+  tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
+  
+  # Transit model
+  
   try:
-    foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'))
+    foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'))
+    RpRs = foo['RpRs']
+    b = foo['b']
+    q1 = foo['q1']
+    q2 = foo['q2']
   except FileNotFoundError:
-    raise FileNotFoundError("No detrending information found for this target.")
+    raise FileNotFoundError("Unable to load transit parameters.")
+  
+  psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                   tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+                       
+  # Loop over all quarters                 
+  for q in inp.quarters:
+
+    # Empty?
+    if len(pdata[q]['time']) == 0:
+      continue
+
+    # Info for this quarter
+    crwd = tdata[q]['crwd']
+    c = tdata[q]['dvec'][iPLD:]
+    x = tdata[q]['dvec'][:iPLD]
+    inp.kernel.pars = x
+    gp = george.GP(inp.kernel)
     
-  t = foo['t']
-  f = foo['f']
-  e = foo['e']
+    # Loop over all transits
+    for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
+  
+      # Compute the transit model
+      tmod = psm(time, 'binned')
+  
+      # Compute the PLD model
+      pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
+  
+      # Compute the GP model
+      gp.compute(time, yerr)
+      mu, _ = gp.predict(ypld, time)
+      
+      t = np.append(t, time)
+      
+      # TODO: BUG BUG BUG?
+      # Is this the correct way to whiten the transit flux?
+      f = np.append(f, (ypld - mu + 1) * tmod)
 
   # Plot
   if ax is None:
@@ -312,16 +357,7 @@ def PlotTransits(input_file = None, ax = None):
   idx  = np.digitize(t, bins)
   med = [np.median(f[idx == k]) for k in range(inp.tbins)]
   ax.plot(bins - delta / 2., med, 'ro', alpha = 0.75)
-  
-  # Plot the quick-and-dirty transit model (if available)
-  try:
-    foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'))
-    t = foo['t']
-    tmod = foo['tmod']
-    ax.plot(t, tmod, 'r-', alpha = 0.5)
-  except FileNotFoundError:
-    pass
-    
+      
   ax.set_xlim(xlim)  
   ax.set_ylim(ylim)
   

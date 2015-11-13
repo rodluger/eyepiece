@@ -1,6 +1,7 @@
 TODO
 ----
 
+- Add ``clobber`` override options to all functions
 - Put crowding in ``pysyzygy``
 - ``alt`` subtraction not working on Hyak
 - When user quits out of interactive inspect, cancel qsub job

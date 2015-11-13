@@ -9,7 +9,7 @@ detrend.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .utils import Input, FunctionWrapper, GetData, GitHash
 from .preprocess import Preprocess
-from .linalg import LnLike, Whiten, PLDFlux
+from .linalg import LnLike, PLDFlux
 from .download import DownloadInfo
 from scipy.optimize import fmin_l_bfgs_b
 import itertools
@@ -224,19 +224,21 @@ def Detrend(input_file = None, pool = None):
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'trn.npz'), data = tdata, hash = GitHash())  
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'prc.npz'), data = pdata, hash = GitHash())  
 
-def ComputePLD(input_file = None):
+def ComputePLD(input_file = None, clobber = False):
   '''
 
   '''
   
   # Load inputs
   inp = Input(input_file)
+  if clobber: inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   iPLD = len(inp.kernel.pars)
   
   # Have we already detrended?
   pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
+  
   if not inp.clobber:
     try:
       for q in pdata:
@@ -248,10 +250,7 @@ def ComputePLD(input_file = None):
       # Data is already detrended
       if not inp.quiet:
         print("Using existing PLD info.")
-      
-      # DEBUG
-      pass
-      #return True
+      return True
       
     except ValueError:
       
@@ -267,42 +266,13 @@ def ComputePLD(input_file = None):
   rhos = info['rhos']
   tN = info['tN']
   
-  # Get whitened transits
+  # Optimize transit model
   if len(tN):
-  
-    # We're going to whiten the data and fit a simple transit model so we 
-    # can go back and derive the correct PLD errors in-transit.
-    if not inp.clobber:
-      try:
-        foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'))
-        t = foo['t']
-        f = foo['f']
-        e = foo['e']
-      except FileNotFoundError:  
-        t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
-        np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
-    else:
-      t, f, e = GetWhitenedData(input_file = input_file, folded = True, return_mean = True)
-      np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'white.npz'), t = t, f = f, e = e)
   
     if not inp.quiet:
       print("Computing approximate transit model...")
-
-    # We're just going to solve for RpRs, bcirc, q1 and q2 here
-    def chisq(x):
-      '''
     
-      '''
-    
-      RpRs, bcirc, q1, q2 = x
-      psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
-                       t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
-      tmod = psm(t, 'binned')
-      c = np.sum( ((tmod - f) / e) ** 2 )
-
-      return c
-  
-    # A more robust bust slower method    
+    # This lets us approximately solve for RpRs, bcirc, q1, q2
     def negll(x):
       '''
       
@@ -344,35 +314,22 @@ def ComputePLD(input_file = None):
             
           ll += gp.lnlikelihood(ypld)
 
-      # DEBUG
-      print(ll)
-
       return -ll
   
     # Run the optimizer
     init = [info['RpRs'], info['b'], 0.25, 0.25]
     bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]
-    if inp.topt == 'fast':
-      res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
-    else:
-      res = fmin_l_bfgs_b(negll, init, approx_grad = True, bounds = bounds)
+    res = fmin_l_bfgs_b(negll, init, approx_grad = True, bounds = bounds)
     RpRs, bcirc, q1, q2 = res[0]
-  
-    # Save our quick-and-dirty transit fit
-    psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
-                     t0 = 0., ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
-    tmod = psm(t, 'binned')
-    np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'tmod.npz'), t = t, tmod = tmod)
-
-    # Pre-compute the transit model, now on the actual (unfolded) time series
+    
+    # Save these!
+    np.savez(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'), RpRs = RpRs, bcirc = bcirc, q1 = q1, q2 = q2)
+    
+    # Pre-compute the transit model
     psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
                      tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
   
-  # Now, finally, compute the PLD flux and errors
-  # First, reload the data
-  tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
-  pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
-  
+  # Now, finally, compute the PLD flux and errors  
   for q in inp.quarters:
   
     if len(pdata[q]['time']) == 0:
@@ -444,79 +401,6 @@ def ComputePLD(input_file = None):
   np.savez_compressed(os.path.join(inp.datadir, str(inp.id), '_data', 'prc.npz'), data = pdata, hash = GitHash())
   
   return True
-
-def GetWhitenedData(input_file = None, folded = True, return_mean = False):
-  '''
-  
-  '''
-  
-  # Input file
-  inp = Input(input_file)
-  detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
-  
-  if not inp.quiet:
-    print("Whitening the flux...")
-    
-  # Load the data
-  bkg = GetData(inp.id, data_type = 'bkg', datadir = inp.datadir)
-  prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
-  info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
-                      inject = inp.inject, datadir = inp.datadir,
-                      clobber = inp.clobber, ttvs = inp.ttvs,
-                      pad = inp.padbkg)
-  tN = info['tN']
-  per = info['per']
-
-  if folded and len(tN) == 0:
-    raise Exception("No transits for current target!")
-
-  # Whiten
-  t = np.array([], dtype = float)
-  f = np.array([], dtype = float)
-  e = np.array([], dtype = float)
-  for q in inp.quarters:
-
-    # Load the decorrelated data
-    files = [os.path.join(detpath, file) for file in os.listdir(detpath) 
-             if file.startswith('%02d.' % q) and file.endswith('.npz')]
-    
-    # Is there data this quarter?
-    if len(files) == 0:
-      continue
-
-    # Grab the highest likelihood run
-    lnl = np.zeros_like(files, dtype = float)
-    for i, file in enumerate(files):
-      lnl[i] = float(np.load(file)['lnlike'])
-    x = np.load(files[np.argmax(lnl)])['x']
-    
-    for b_time, b_fpix, b_perr, time, fpix, perr in zip(bkg[q]['time'], bkg[q]['fpix'], bkg[q]['perr'], prc[q]['time'], prc[q]['fpix'], prc[q]['perr']):
-    
-      # Whiten the flux
-      flux, ferr = Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = inp.kernel, crowding = prc[q]['crwd'], return_mean = return_mean)
-    
-      # Fold the time
-      if folded:
-        time -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in time])
-        
-        # Remove tail preceding the very first transit
-        bad = np.where(time < -per / 2.)
-        time = np.delete(time, bad)
-        flux = np.delete(flux, bad)  
-        ferr = np.delete(ferr, bad)    
-    
-      t = np.append(t, time)
-      f = np.append(f, flux)
-      e = np.append(e, ferr)
-  
-  # Sort
-  if folded:
-    idx = np.argsort(t)
-    t = t[idx]
-    f = f[idx]
-    e = e[idx]
-  
-  return t, f, e
 
 def GetBadChunks(f, winsz = 50, sig_tol = 3., sort = False):
   '''
