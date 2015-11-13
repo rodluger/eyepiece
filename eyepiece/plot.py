@@ -9,6 +9,7 @@ plot.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .download import DownloadInfo
 from .utils import Input, GetData
+from .linalg import PLDFlux
 from .detrend import GetBadChunks
 import numpy as np
 import os
