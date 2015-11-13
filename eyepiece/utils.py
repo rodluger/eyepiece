@@ -193,3 +193,18 @@ def SampleKOIs(datadir, N, exclude = ['FALSE POSITIVE']):
     sample = [float(koi.kepoi_name[1:]) for koi in kois]
     
   return sample
+
+def Chunks(l, n):
+  """
+  Yield successive ``n``-sized chunks from ``l``. Merges the
+  last two chunks if the last chunk would be smaller
+  than ``n``.
+  
+  """
+  
+  for i in range(0, len(l), n):
+    if i + 2 * n <= len(l):
+      yield l[i:i+n]
+    else:
+      yield l[i:]
+      break

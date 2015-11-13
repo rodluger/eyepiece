@@ -76,6 +76,12 @@ ppn = 12
 quarters = range(18)
 quiet = False
 
+# R
+rlm = True
+rlm_order = 5
+rlm_size = 300
+rlm_thresh = 0.33
+
 # S
 split_cads = [4472, 6717]
 stdout = '/dev/null'
@@ -162,6 +168,12 @@ class _Docs(object):
     # Q
     self.quarters = 'List of quarters to process (if data is present)'
     self.quiet = 'Suppress output?'
+    
+    # R
+    self.rlm = 'Perform RLM (Robust Linear Model) fit for outlier identification?'
+    self.rlm_order = 'Order of polynomial fit for Robust Linear Model outlier identification'
+    self.rlm_size = 'Size of sub-chunks for Robust Linear Model outlier identification'
+    self.rlm_thresh = 'Weight threshold for outlier removal in the Robust Linear Model'
     
     # S
     self.split_cads = 'Cadences at which to split the data'

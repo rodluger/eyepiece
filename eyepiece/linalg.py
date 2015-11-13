@@ -9,6 +9,8 @@ linalg.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 import numpy as np
 import george
+from .utils import Chunks
+import statsmodels.api as sm
 
 def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True, 
            predict = False, kernel = 1. * george.kernels.Matern32Kernel(1.)):
@@ -227,3 +229,24 @@ def PLDFlux(c, fpix, perr, tmod = 1., fsum = None, crowding = None):
   fpld = fsum / tmod - pixmod
   
   return pixmod, fpld, ferr
+
+def RLM(x, y, order = 5, size = 300, thresh = 0.33):
+  '''
+  Robust Linear Model for outlier identification
+  
+  '''
+  
+  out = np.array([], dtype = bool)
+  
+  for xi, yi in zip(Chunks(x, size), Chunks(y, size)):
+
+    # Matrixify
+    X = np.column_stack([(xi - xi[0]) ** n for n in range(order + 1)])
+
+    # Compute the model
+    resrlm = sm.RLM(yi, X).fit()
+    
+    # Identify the outliers
+    out = np.append(out, resrlm.weights < thresh)
+
+  return np.where(out)[0]

@@ -1,6 +1,8 @@
 TODO
 ----
 
+- Put crowding in ``pysyzygy``
+- ``alt`` subtraction not working on Hyak
 - When user quits out of interactive inspect, cancel qsub job
 - Ethan: robust polynomial fitting to remove outliers!
 - Multi-planet system handling

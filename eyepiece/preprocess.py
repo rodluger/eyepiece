@@ -12,6 +12,7 @@ preprocess.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .utils import Bold, GitHash, Input, GetData
 from .download import DownloadData, DownloadInfo, EmptyData
+from .linalg import RLM
 import numpy as np
 import os
 
@@ -172,7 +173,8 @@ class Viewer(object):
   global pl
   
   def __init__(self, fig, ax, id, quarter, data, tN, cptbkg, cpttrn, datadir, 
-               split_cads = [], cad_tol = 10, min_sz = 300, interactive = True):
+               split_cads = [], cad_tol = 10, min_sz = 300, interactive = True,
+               rlm = [False,0,0,0]):
     self.fig = fig
     self.ax = ax    
     self.cad = data['cadn']
@@ -202,7 +204,7 @@ class Viewer(object):
     # Process the data
     self._jumps = GetJumps(self.time, self.cad, cad_tol = cad_tol, min_sz = min_sz, 
                            split_cads = split_cads)
-
+    
     # Cadences per transit
     self.cptbkg = cptbkg
     self.cpttrn = cpttrn
@@ -217,6 +219,18 @@ class Viewer(object):
       i = np.where(np.abs(self.cad - tc) <= self.cpttrn / 2.)[0]
       self._transits_wide.extend(i) 
       self._transits_wide_tag.extend([j for k in i])
+    
+    # Identify outliers
+    if rlm[0]:
+      t = []
+      f = []
+      j = np.concatenate([[0], self._jumps, [len(self.time) - 1]])
+      j = np.array(j, dtype = int)
+      for a, b in zip(j[:-1], j[1:]):
+        bi = [i for i in range(a, b) if i not in np.array(sorted(self._transits_narrow), dtype = int)]
+        out = RLM(self.time[bi], self.fsum[bi], order = rlm[1], size = rlm[2], thresh = rlm[3])
+        if len(out):
+          self._outliers.extend([np.argmax(self.cad == o) for o in self.cad[bi][out]])
     
     # Interactive features
     if self.interactive:
@@ -781,7 +795,8 @@ def Preprocess(input_file = None):
     fig.subplots_adjust(top=0.95, bottom=0.1, left = 0.075, right = 0.95)   
     sel = Viewer(fig, ax, inp.id, q, data[q], tN, cptbkg, cpttrn, inp.datadir,
                  split_cads = inp.split_cads, cad_tol = cad_tol, 
-                 min_sz = inp.min_sz, interactive = inp.interactive)
+                 min_sz = inp.min_sz, interactive = inp.interactive,
+                 rlm = [inp.rlm, inp.rlm_order, inp.rlm_size, inp.rlm_thresh])
             
     # If user is re-visiting this quarter, update with their selections 
     if len(uj[q]): 
