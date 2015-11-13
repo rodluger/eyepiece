@@ -263,7 +263,8 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   if clobber:
     inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
-
+  iPLD = len(inp.kernel.pars)
+  
   # Have we done this already?
   if ax is None and not inp.clobber:
     if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'folded.png')):
