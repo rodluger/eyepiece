@@ -279,6 +279,8 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
                       pad = inp.padbkg)
   tdur = info['tdur']
   tN = info['tN']
+  per = info['per']
+  rhos = info['rhos']
   
   # Are there any transits?
   if len(tN) == 0:
