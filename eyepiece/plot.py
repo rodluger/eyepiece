@@ -42,7 +42,7 @@ def PlotDetrended(input_file = None):
   
   # Load some info
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
-                      pskwargs = inp.pskwargs, datadir = inp.datadir)
+                      inject = inp.inject, datadir = inp.datadir)
   tN = info['tN']
   tdur = info['tdur']
   
@@ -266,7 +266,7 @@ def PlotTransits(input_file = None, ax = None):
 
   # Load the info
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
-                      pskwargs = inp.pskwargs, datadir = inp.datadir)
+                      inject = inp.inject, datadir = inp.datadir)
   tdur = info['tdur']
   tN = info['tN']
   
