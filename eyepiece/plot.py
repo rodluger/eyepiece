@@ -294,7 +294,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   try:
     foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'))
     RpRs = foo['RpRs']
-    b = foo['b']
+    bcirc = foo['bcirc']
     q1 = foo['q1']
     q2 = foo['q2']
   except FileNotFoundError:

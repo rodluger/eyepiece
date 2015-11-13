@@ -148,6 +148,7 @@ def LnLike(x, time, fpix, perr, fsum = None, tmod = None, lndet = True,
 
 def Whiten(x, b_time, b_fpix, b_perr, time, fpix, perr, kernel = 1. * george.kernels.Matern32Kernel(1.), crowding = None, return_mean = False):
   '''
+  DEPRECATED!
   
   '''
   
