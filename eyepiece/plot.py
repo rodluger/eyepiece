@@ -13,7 +13,7 @@ from .detrend import GetBadChunks
 import numpy as np
 import os
 import george
-import pysyzygy
+import pysyzygy as ps
 
 # Python 2/3 compatibility
 try:
