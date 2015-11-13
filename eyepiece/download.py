@@ -67,7 +67,7 @@ def EmptyData(quarters):
 def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False, 
                   bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17],
                   aperture = 'optimal', quarters = range(18), quiet = False,
-                  inject = {}, ttvs = False, pad = 2.0, inject = {}, trninfo = {}, **kwargs):
+                  inject = {}, ttvs = False, pad = 2.0, trninfo = {}, **kwargs):
   '''
   
   '''
