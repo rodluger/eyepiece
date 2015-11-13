@@ -67,7 +67,7 @@ def EmptyData(quarters):
 def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False, 
                   bad_bits = [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17],
                   aperture = 'optimal', quarters = range(18), quiet = False,
-                  inject = {}, **kwargs):
+                  inject = {}, ttvs = False, pad = 2.0, inject = {}, trninfo = {}, **kwargs):
   '''
   
   '''
@@ -190,7 +190,7 @@ def DownloadKeplerData(id, datadir = '', long_cadence = True, clobber = False,
   np.savez_compressed(os.path.join(datadir, str(id), '_data', 'raw.npz'), data = data, hash = GitHash())
   
   # Download the info so we have it saved on disk
-  DownloadKeplerInfo(id, datadir = datadir, clobber = clobber)
+  DownloadKeplerInfo(id, datadir = datadir, clobber = clobber, ttvs = ttvs, pad = pad, inject = inject, trninfo = trninfo)
       
   return data
 

@@ -730,7 +730,8 @@ def Preprocess(input_file = None):
                       clobber = inp.clobber, datadir = inp.datadir, 
                       bad_bits = inp.bad_bits, aperture = inp.aperture, 
                       quarters = inp.quarters, quiet = inp.quiet, inject = 
-                      inp.inject)
+                      inp.inject, trninfo = inp.trninfo, pad = inp.padbkg,
+                      ttvs = inp.ttvs)
   info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir, 
                       clobber = inp.clobber, ttvs = inp.ttvs, pad = inp.padbkg,
                       inject = inp.inject, trninfo = inp.trninfo)
