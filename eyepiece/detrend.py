@@ -16,6 +16,7 @@ import itertools
 import numpy as np
 import os
 import pysyzygy as ps
+import george
 
 # Python 2/3 compatibility
 try:
