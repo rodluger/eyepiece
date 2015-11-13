@@ -320,7 +320,9 @@ def ComputePLD(input_file = None):
         if len(pdata[q]['time']) == 0:
           continue
     
-        # GP coeffs for this quarter
+        # Info for this quarter
+        crwd = tdata[q]['crwd']
+        c = tdata[q]['dvec'][iPLD:]
         x = tdata[q]['dvec'][:iPLD]
         inp.kernel.pars = x
         gp = george.GP(inp.kernel)
