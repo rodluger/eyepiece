@@ -89,6 +89,7 @@ stderr = '/dev/null'
 
 # T
 tbins = 20
+topt = 'fast'
 trninfo = {}
 ttvs = False
 
@@ -182,6 +183,7 @@ class _Docs(object):
     
     # T
     self.tbins = 'Number of bins when plotting folded transits'
+    self.topt = 'The transit optimization method in preprocessing step: ``fast`` or ``robust``'
     self.trninfo = 'Override the database values for the KOI\'s ``per``, ``tdur`` and the transit times ``tN`` by setting values for those in this dict'
     self.ttvs = 'Analyze this system assuming ttvs?'
     

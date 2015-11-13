@@ -247,7 +247,10 @@ def ComputePLD(input_file = None):
       # Data is already detrended
       if not inp.quiet:
         print("Using existing PLD info.")
-      return True
+      
+      # DEBUG
+      pass
+      #return True
       
     except ValueError:
       
@@ -298,10 +301,58 @@ def ComputePLD(input_file = None):
 
       return c
   
+    # A more robust bust slower method    
+    def negll(x):
+      '''
+      
+      '''
+      
+      RpRs, bcirc, q1, q2 = x
+      psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                       tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+      ll = 0
+      
+      # Loop over all quarters                 
+      for q in inp.quarters:
+  
+        # Empty?
+        if len(pdata[q]['time']) == 0:
+          continue
+    
+        # GP coeffs for this quarter
+        x = tdata[q]['dvec'][:iPLD]
+        inp.kernel.pars = x
+        gp = george.GP(inp.kernel)
+        
+        # Loop over all transits
+        for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
+      
+          # Compute the transit model
+          tmod = psm(time, 'binned')
+      
+          # Compute the PLD model
+          pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
+      
+          # Compute the GP model
+          try:
+            gp.compute(time, yerr)
+          except:
+            return 1.e20
+            
+          ll += gp.lnlikelihood(ypld)
+
+          # DEBUG
+          print(ll)
+
+      return -ll
+  
     # Run the optimizer
     init = [info['RpRs'], info['b'], 0.25, 0.25]
     bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]
-    res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
+    if inp.topt == 'fast':
+      res = fmin_l_bfgs_b(chisq, init, approx_grad = True, bounds = bounds)
+    else:
+      res = fmin_l_bfgs_b(negll, init, approx_grad = True, bounds = bounds)
     RpRs, bcirc, q1, q2 = res[0]
   
     # Save our quick-and-dirty transit fit
