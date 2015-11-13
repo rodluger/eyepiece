@@ -344,8 +344,8 @@ def ComputePLD(input_file = None):
             
           ll += gp.lnlikelihood(ypld)
 
-          # DEBUG
-          print(ll)
+      # DEBUG
+      print(ll)
 
       return -ll
   
