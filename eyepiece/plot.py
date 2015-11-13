@@ -309,7 +309,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   for q in inp.quarters:
 
     # Empty?
-    if len(pdata[q]['time']) == 0:
+    if len(tdata[q]['time']) == 0:
       continue
 
     # Info for this quarter
