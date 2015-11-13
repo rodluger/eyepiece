@@ -219,7 +219,10 @@ def PlotDetrended(input_file = None):
   # Plot the folded transits
   if type(inp.id) is float or inp.inject != {}:
     axfold = PlotTransits(input_file, ax = axfold)
-    axfold.set_title('Folded Whitened Transits: KOI %.2f' % inp.id, fontsize = 22, fontweight = 'bold', y = 1.025)
+    if type(inp.id) is float:
+      axfold.set_title('Folded Whitened Transits: KOI %.2f' % inp.id, fontsize = 22, fontweight = 'bold', y = 1.025)
+    elif type(inp.id) is int:
+      axfold.set_title('Folded Whitened Transits: KIC %d' % inp.id, fontsize = 22, fontweight = 'bold', y = 1.025)
   else:
     axfold.set_visible(False)
   
