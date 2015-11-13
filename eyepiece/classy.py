@@ -49,7 +49,7 @@ class Eyepiece(object):
                           clobber = self.inp.clobber, datadir = self.inp.datadir, 
                           bad_bits = self.inp.bad_bits, aperture = self.inp.aperture, 
                           quarters = self.inp.quarters, quiet = self.inp.quiet,
-                          inject = self.inp.inject, trninfo = self.inp.trninfo, pad = self.inp.badbkg,
+                          inject = self.inp.inject, trninfo = self.inp.trninfo, pad = self.inp.padbkg,
                           ttvs = self.inp.ttvs)
     
     # Preprocess

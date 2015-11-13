@@ -258,7 +258,7 @@ def ComputePLD(input_file = None):
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
                       inject = inp.inject, datadir = inp.datadir,
                       clobber = inp.clobber, ttvs = inp.ttvs,
-                      pad = inp.badbkg)
+                      pad = inp.padbkg)
   per = info['per']
   rhos = info['rhos']
   tN = info['tN']
@@ -409,7 +409,7 @@ def GetWhitenedData(input_file = None, folded = True, return_mean = False):
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
                       inject = inp.inject, datadir = inp.datadir,
                       clobber = inp.clobber, ttvs = inp.ttvs,
-                      pad = inp.badbkg)
+                      pad = inp.padbkg)
   tN = info['tN']
   per = info['per']
 
