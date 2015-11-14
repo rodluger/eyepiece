@@ -375,7 +375,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   ax.plot(bins - delta / 2., med, 'ro', alpha = 0.75)
   
   # Is this a fake transit injection? If so, plot the true model
-  if inp.inject != {}:
+  if inp.inject is not None and inp.inject != {}:
     pskwargs = dict(inp.inject)
     pskwargs.pop('tN', None)
     pskwargs.update({'t0': 0.})
