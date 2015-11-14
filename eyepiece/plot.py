@@ -342,8 +342,8 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
       
         t = np.append(t, time)
       
-        # TODO: BUG BUG BUG?
-        # Is this the correct way to whiten the transit flux?
+        # TODO: Verify that this is in fact the correct way
+        # to whiten the transit!
         f = np.append(f, np.sum(fpix, axis = 1) / (mu + pmod))
 
     # Fold the data
@@ -373,6 +373,15 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   idx  = np.digitize(t, bins)
   med = [np.median(f[idx == k]) for k in range(inp.tbins)]
   ax.plot(bins - delta / 2., med, 'ro', alpha = 0.75)
+  
+  # Is this a fake transit injection? If so, plot the true model
+  if inp.inject != {}:
+    pskwargs = dict(inp.inject)
+    pskwargs.update({'tN': None, 't0': 0.})
+    psm = ps.Transit(**inp.inject)
+    t0 = np.linspace(-inp.padtrn * tdur / 2., inp.padtrn * tdur / 2., 1000)
+    f0 = psm(t0, 'binned')
+    ax.plot(t0, f0, 'r--')
       
   ax.set_xlim(xlim)  
   ax.set_ylim(ylim)
