@@ -5,14 +5,12 @@ TODO
 - Put crowding in ``pysyzygy``
 - ``alt`` subtraction not working on Hyak
 - When user quits out of interactive inspect, cancel qsub job
-- Ethan: robust polynomial fitting to remove outliers!
 - Multi-planet system handling
 - Fit parameters simultaneously; beware overlapping transits
 - Use Rowe's transit times for TTV systems
 - Libralato et al. - K2 PSF photomoetry
 - Fabien Bastien: Flicker can give stellar density within ~ 30%
-- Resolve tension between ``pskwargs`` and ``trninfo`` in ``DownloadInfo()``
-- In ``preprocess``, save the figure AFTER outlier selection!
+- Resolve tension between ``inject`` and ``trninfo`` in ``DownloadInfo()``
 
 TARGETS
 -------

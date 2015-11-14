@@ -575,16 +575,19 @@ class Viewer(object):
     # Next
     elif event.key == NEXT:
       self.info = "next"
+      self.fig.savefig(os.path.join(self.datadir, str(self.id), '_plots', "Q%02d.png" % self.quarter), bbox_inches = 'tight')
       pl.close()
     
     # Previous
     elif event.key == PREV:
       self.info = "prev"
+      self.fig.savefig(os.path.join(self.datadir, str(self.id), '_plots', "Q%02d.png" % self.quarter), bbox_inches = 'tight')
       pl.close()
     
     # Quit
     elif event.key == QUIT:
       self.info = "quit"
+      self.fig.savefig(os.path.join(self.datadir, str(self.id), '_plots', "Q%02d.png" % self.quarter), bbox_inches = 'tight')
       pl.close()
     
     # Padding
@@ -594,6 +597,7 @@ class Viewer(object):
     
     elif event.key == BLND:
       self.info = "blind"
+      self.fig.savefig(os.path.join(self.datadir, str(self.id), '_plots', "Q%02d.png" % self.quarter), bbox_inches = 'tight')
       pl.close()
   
   def on_mouse_release(self, event):
@@ -822,13 +826,12 @@ def Preprocess(input_file = None):
           fig.canvas.manager.window.attributes('-fullscreen', 1) 
       except:
         pass
-    
-    # Save the figure
-    fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', "Q%02d.png" % q), bbox_inches = 'tight')
-    
-    # Show the figure
+
+    # Show/save the figure
     if inp.interactive:
       pl.show()
+    else:
+      fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', "Q%02d.png" % q), bbox_inches = 'tight')
     
     pl.close()
 
