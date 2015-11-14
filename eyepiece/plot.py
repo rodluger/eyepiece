@@ -338,7 +338,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
       
       # TODO: BUG BUG BUG?
       # Is this the correct way to whiten the transit flux?
-      f = np.append(f, (ypld - mu + 1) * tmod)
+      f = np.append(f, np.sum(fpix, axis = 1) / (mu + pmod))
 
   # Fold the data
   t -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in t])
