@@ -290,7 +290,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   if len(tN) == 0:
     return None, None
   
-  if not inp.clobber and os.path.exists(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz'))
+  if not inp.clobber and os.path.exists(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz')):
     foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz'))
     t = foo['t']
     f = foo['f']
