@@ -1,6 +1,8 @@
 TODO
 ----
 
+- Find bug in ``random/input0004.py``
+- Maximum size for bad chunks in detrended plot
 - For usps: ensure that data points don't get included in neighboring transits!
 - Add ``clobber`` override options to all functions
 - Put crowding in ``pysyzygy``
@@ -12,6 +14,11 @@ TODO
 - Libralato et al. - K2 PSF photomoetry
 - Fabien Bastien: Flicker can give stellar density within ~ 30%
 - Resolve tension between ``inject`` and ``trninfo`` in ``DownloadInfo()``
+
+NOTE
+----
+
+- I had to edit the matplotlibrc file to set ``Agg`` as the default backend
 
 TARGETS
 -------

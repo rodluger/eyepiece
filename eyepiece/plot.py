@@ -15,6 +15,7 @@ import numpy as np
 import os
 import george
 import pysyzygy as ps
+import matplotlib.pyplot as pl
 
 # Python 2/3 compatibility
 try:
@@ -27,8 +28,8 @@ def PlotDetrended(input_file = None, clobber = False):
   
   '''
   
-  import matplotlib as mpl; mpl.use('Agg', warn = False, force = True)
-  import matplotlib.pyplot as pl
+  # Try to use Agg for plotting
+  pl.switch_backend('Agg')
   
   # Load inputs
   inp = Input(input_file)
@@ -257,9 +258,9 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   '''
   
   '''
-  
-  import matplotlib as mpl; mpl.use('Agg', warn = False, force = True)
-  import matplotlib.pyplot as pl
+
+  # Try to use Agg for plotting
+  pl.switch_backend('Agg')
   
   # Input file
   inp = Input(input_file)

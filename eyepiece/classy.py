@@ -13,6 +13,7 @@ from .utils import Input, GetData
 from . import download, preprocess, detrend, plot, compare
 import os
 import numpy as np
+import matplotlib.pyplot as pl
 
 # Python 2/3 compatibility
 try:
@@ -67,9 +68,7 @@ class Eyepiece(object):
     '''
     
     '''
-    
-    import matplotlib.pyplot as pl
-    
+
     plot.PlotTransits(self.input_file); pl.close()
     plot.PlotDetrended(self.input_file); pl.close()
     

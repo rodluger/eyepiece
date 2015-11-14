@@ -13,6 +13,7 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 from .utils import Bold, GitHash, Input, GetData
 from .download import DownloadData, DownloadInfo, EmptyData
 from .linalg import RLM
+import matplotlib.pyplot as pl
 import numpy as np
 import os
 
@@ -23,7 +24,6 @@ if sys.version_info >= (3,0):
 else:
   prompt = raw_input
 
-pl = None
 rcParams = None
 
 # Keyboard shortcuts
@@ -50,7 +50,7 @@ def DisableShortcuts():
 
   '''
   
-  global pl, rcParams
+  global rcParams
   rcParams = dict(pl.rcParams)
     
   pl.rcParams['toolbar'] = 'None'
@@ -73,7 +73,7 @@ def EnableShortcuts():
   
   '''
   
-  global pl, rcParams
+  global rcParams
   
   pl.rcParams.update(rcParams)
 
@@ -169,8 +169,6 @@ class Viewer(object):
   '''
   
   '''
-  
-  global pl
   
   def __init__(self, fig, ax, id, quarter, data, tN, cptbkg, cpttrn, datadir, 
                split_cads = [], cad_tol = 10, min_sz = 300, interactive = True,
@@ -707,24 +705,15 @@ def Preprocess(input_file = None):
 
   '''
   
-  global pl
-  
   # Load inputs
   inp = Input(input_file)
 
-  # Load MPL backend
-  import matplotlib
+  # Are we running this interactively? If so, use TkAgg backend
   if inp.interactive:
-    # Are we running this interactively? If so, use TkAgg
-    matplotlib.use('TkAgg', warn = False, force = True)
+    pl.switch_backend('TkAgg')
     if matplotlib.get_backend() != 'TkAgg':
       print("WARNING: Unable to load TkAgg backend. Interactive mode disabled.")
       inp.interactive = False
-  else:
-    # Let's try to use the Agg backend. Not a big deal if it doesn't work
-    import matplotlib
-    matplotlib.use('Agg', warn = False)
-  import matplotlib.pyplot as pl
 
   # Check for a saved version
   if not inp.clobber:

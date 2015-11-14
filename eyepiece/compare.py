@@ -13,6 +13,8 @@ from scipy.stats import norm, normaltest
 import numpy as np
 import os
 import george
+import matplotlib.pyplot as pl
+import matplotlib.mlab as mlab
 
 # Python 2/3 compatibility
 try:
@@ -322,9 +324,8 @@ def PlotComparison(input_file = None):
   
   '''
   
-  import matplotlib as mpl; mpl.use('Agg', warn = False, force = True)
-  import matplotlib.pyplot as pl
-  import matplotlib.mlab as mlab
+  # Try to use Agg for plotting
+  pl.switch_backend('Agg')
   
   # Load inputs
   inp = Input(input_file)
