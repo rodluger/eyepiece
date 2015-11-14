@@ -377,8 +377,9 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   # Is this a fake transit injection? If so, plot the true model
   if inp.inject != {}:
     pskwargs = dict(inp.inject)
-    pskwargs.update({'tN': None, 't0': 0.})
-    psm = ps.Transit(**inp.inject)
+    pskwargs.pop('tN', None)
+    pskwargs.update({'t0': 0.})
+    psm = ps.Transit(**pskwargs)
     t0 = np.linspace(-inp.padtrn * tdur / 2., inp.padtrn * tdur / 2., 1000)
     f0 = psm(t0, 'binned')
     
