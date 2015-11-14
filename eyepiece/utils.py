@@ -160,7 +160,7 @@ def SampleKOIs(datadir, N, exclude = ['FALSE POSITIVE']):
   '''
   
   # Disposition exclusions
-  exclude = np.atleast1d(exclude)
+  exclude = np.atleast_1d(exclude)
   
   # Grab all KOIs
   client = kplr.API()
