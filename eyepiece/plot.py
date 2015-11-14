@@ -340,6 +340,8 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
       # Is this the correct way to whiten the transit flux?
       f = np.append(f, (ypld - mu + 1) * tmod)
 
+  import pdb; pdb.set_trace()
+
   # Plot
   if ax is None:
     userax = False
