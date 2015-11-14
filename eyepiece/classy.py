@@ -70,8 +70,8 @@ class Eyepiece(object):
     
     import matplotlib.pyplot as pl
     
-    plot.PlotDetrended(self.input_file); pl.close()
     plot.PlotTransits(self.input_file); pl.close()
+    plot.PlotDetrended(self.input_file); pl.close()
     
     try:
       np.load(os.path.join(self.inp.datadir, str(self.inp.id), '_data', 'cmp.npz'))

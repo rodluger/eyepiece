@@ -33,7 +33,7 @@ def PlotDetrended(input_file = None, clobber = False):
   # Load inputs
   inp = Input(input_file)
   if clobber:
-    input.clobber = True
+    inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   
   # Have we done this already?
@@ -224,7 +224,7 @@ def PlotDetrended(input_file = None, clobber = False):
   
   # Plot the folded transits
   if type(inp.id) is float or inp.inject != {}:
-    axfold = PlotTransits(input_file, ax = axfold, clobber = inp.clobber)
+    axfold = PlotTransits(input_file, ax = axfold, clobber = False)
     if type(inp.id) is float:
       axfold.set_title('Folded Whitened Transits: KOI %.2f' % inp.id, fontsize = 22, fontweight = 'bold', y = 1.025)
     elif type(inp.id) is int:
@@ -290,59 +290,67 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   if len(tN) == 0:
     return None, None
   
-  # Get our transit data
-  t = np.array([], dtype = float)
-  f = np.array([], dtype = float)
-  tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
+  if not inp.clobber and os.path.exists(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz'))
+    foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz'))
+    t = foo['t']
+    f = foo['f']
+  else:
+    # Get our transit data
+    t = np.array([], dtype = float)
+    f = np.array([], dtype = float)
+    tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   
-  # Transit model
-  try:
-    foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'))
-    RpRs = foo['RpRs']
-    bcirc = foo['bcirc']
-    q1 = foo['q1']
-    q2 = foo['q2']
-  except FileNotFoundError:
-    raise FileNotFoundError("Unable to load transit parameters.")
+    # Transit model
+    try:
+      foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'))
+      RpRs = foo['RpRs']
+      bcirc = foo['bcirc']
+      q1 = foo['q1']
+      q2 = foo['q2']
+    except FileNotFoundError:
+      raise FileNotFoundError("Unable to load transit parameters.")
   
-  psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
-                   tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
+    psm = ps.Transit(per = per, q1 = q1, q2 = q2, RpRs = RpRs, rhos = rhos, 
+                     tN = tN, ecw = 0., esw = 0., bcirc = bcirc, MpMs = 0.)
                        
-  # Loop over all quarters                 
-  for q in inp.quarters:
+    # Loop over all quarters                 
+    for q in inp.quarters:
 
-    # Empty?
-    if len(tdata[q]['time']) == 0:
-      continue
+      # Empty?
+      if len(tdata[q]['time']) == 0:
+        continue
 
-    # Info for this quarter
-    crwd = tdata[q]['crwd']
-    c = tdata[q]['dvec'][iPLD:]
-    x = tdata[q]['dvec'][:iPLD]
-    inp.kernel.pars = x
-    gp = george.GP(inp.kernel)
+      # Info for this quarter
+      crwd = tdata[q]['crwd']
+      c = tdata[q]['dvec'][iPLD:]
+      x = tdata[q]['dvec'][:iPLD]
+      inp.kernel.pars = x
+      gp = george.GP(inp.kernel)
     
-    # Loop over all transits
-    for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
+      # Loop over all transits
+      for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
   
-      # Compute the transit model
-      tmod = psm(time, 'binned')
+        # Compute the transit model
+        tmod = psm(time, 'binned')
   
-      # Compute the PLD model
-      pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
+        # Compute the PLD model
+        pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
   
-      # Compute the GP model
-      gp.compute(time, yerr)
-      mu, _ = gp.predict(ypld, time)
+        # Compute the GP model
+        gp.compute(time, yerr)
+        mu, _ = gp.predict(ypld, time)
       
-      t = np.append(t, time)
+        t = np.append(t, time)
       
-      # TODO: BUG BUG BUG?
-      # Is this the correct way to whiten the transit flux?
-      f = np.append(f, np.sum(fpix, axis = 1) / (mu + pmod))
+        # TODO: BUG BUG BUG?
+        # Is this the correct way to whiten the transit flux?
+        f = np.append(f, np.sum(fpix, axis = 1) / (mu + pmod))
 
-  # Fold the data
-  t -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in t])
+    # Fold the data
+    t -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in t])
+
+  # Save it!
+  np.savez(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz'), t = t, f = f)
 
   # Plot
   if ax is None:
