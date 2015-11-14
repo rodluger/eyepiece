@@ -22,7 +22,7 @@ try:
 except:
   FileNotFoundError = IOError
 
-def PlotDetrended(input_file = None):
+def PlotDetrended(input_file = None, clobber = False):
   '''
   
   '''
@@ -32,6 +32,8 @@ def PlotDetrended(input_file = None):
   
   # Load inputs
   inp = Input(input_file)
+  if clobber:
+    input.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   
   # Have we done this already?
@@ -222,7 +224,7 @@ def PlotDetrended(input_file = None):
   
   # Plot the folded transits
   if type(inp.id) is float or inp.inject != {}:
-    axfold = PlotTransits(input_file, ax = axfold)
+    axfold = PlotTransits(input_file, ax = axfold, clobber = inp.clobber)
     if type(inp.id) is float:
       axfold.set_title('Folded Whitened Transits: KOI %.2f' % inp.id, fontsize = 22, fontweight = 'bold', y = 1.025)
     elif type(inp.id) is int:
@@ -294,7 +296,6 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   
   # Transit model
-  
   try:
     foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'))
     RpRs = foo['RpRs']
