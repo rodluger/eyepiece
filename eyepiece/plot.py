@@ -381,6 +381,9 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
     psm = ps.Transit(**inp.inject)
     t0 = np.linspace(-inp.padtrn * tdur / 2., inp.padtrn * tdur / 2., 1000)
     f0 = psm(t0, 'binned')
+    
+    import pdb; pdb.set_trace()
+    
     ax.plot(t0, f0, 'r--')
       
   ax.set_xlim(xlim)  
