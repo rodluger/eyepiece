@@ -453,7 +453,7 @@ def PlotPolyFolded(input_file = None, clobber = False):
       continue
 
     # Get the crowding (not elegant!)
-    for q in inp.quarters():
+    for q in inp.quarters:
       if len(data[q]['time']) == 0:
         continue
       if ti > data[q]['time'][0] and ti < data[q]['time'][-1]:
