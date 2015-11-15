@@ -456,7 +456,7 @@ def PlotPolyFolded(input_file = None, clobber = False):
     for q in inp.quarters:
       if len(data[q]['time']) == 0:
         continue
-      if ti > data[q]['time'][0] and ti < data[q]['time'][-1]:
+      if (ti > data[q]['time'][0]) and (ti < data[q]['time'][-1]):
         crwd = data[q]['crwd']
         break
 
