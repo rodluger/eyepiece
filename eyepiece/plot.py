@@ -461,11 +461,18 @@ def PlotPolyFolded(input_file = None, clobber = False):
     c = np.polyfit(tc[n][jdx], fc[n][jdx], inp.poly_order)
     pc[n] = fc[n] - np.sum([c[k] * tc[n] ** (inp.poly_order - k) for k in range(inp.poly_order + 1)], axis = 0)
   
-  
   fig, ax = pl.subplots(1, 1, figsize = (14, 6))
   
-  for n in range(len(tN)):
-    ax.plot(tc[n], pc[n], 'b.', alpha = 0.5)
+  tca = np.concatenate(tc)
+  pca = np.concatenate(pc)
+  ax.plot(tca, pca, 'k.', alpha = min(1.0, max(0.05, 375. / len(tca))))
+  
+  # Bin to median
+  bins = np.linspace(-inp.poly_window, inp.poly_window, inp.tbins)
+  delta = bins[1] - bins[0]
+  idx  = np.digitize(tca, bins)
+  med = [np.median(pca[idx == k]) for k in range(inp.tbins)]
+  ax.plot(bins - delta / 2., med, 'ro', alpha = 0.75)
   
   ax.set_title('Folded Polynomial-Detrended Transits', fontsize = 24)
   ax.set_xlabel('Time (days)', fontsize = 22)
