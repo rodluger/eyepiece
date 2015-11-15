@@ -13,6 +13,7 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 from .utils import Bold, GitHash, Input, GetData
 from .download import DownloadData, DownloadInfo, EmptyData
 from .linalg import RLM
+import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
 import os
