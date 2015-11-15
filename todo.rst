@@ -1,7 +1,6 @@
 TODO
 ----
 
-- Maximum size for bad chunks in detrended plot
 - For usps: ensure that data points don't get included in neighboring transits!
 - Add ``clobber`` override options to all functions
 - Put crowding in ``pysyzygy``
@@ -28,6 +27,5 @@ TARGETS
 254.01 - Hot Jupiter, M dwarf
 3284.01 - Earth-size, potentially habitable, M dwarf
 4087.01 - Super-Earth, potentially habitable, early M dwarf
-EPIC 202083838b - Eccentric Warm Neptune orbiting a K2 M Dwarf (Schlieder+2015)
-7869590 - Very variable red giant --> use for crowding tests w/ Russell
+KIC 7869590 - Very variable red giant --> use for crowding tests w/ Russell
 7592.01 - Super Earth beyond HZ of M dwarf; I don't detect it!
