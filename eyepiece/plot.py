@@ -430,7 +430,7 @@ def PlotPolyFolded(input_file = None, clobber = False):
     if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'polyfolded.png')):
       return None, None
   
-  data = eyepiece.utils.GetData(inp.id, datadir = inp.datadir)
+  data = GetData(inp.id, datadir = inp.datadir)
   t = []; [t.extend(foo) for q in inp.quarters for foo in data[q]['time']]; t = np.array(t)
   f = []; [f.extend(np.sum(foo,axis = 1)) for q in inp.quarters for foo in data[q]['fpix']]; f = np.array(f)
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
