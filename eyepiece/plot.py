@@ -155,7 +155,7 @@ def PlotDetrended(input_file = None, clobber = False):
   tmin, tmax = ax[0].get_xlim()
   for ti in tN:
     if ti > tmin and ti < tmax:
-      ax[0].axvline(ti, color = 'r', alpha = 0.05)
+      ax[0].axvline(ti, color = 'r', alpha = 0.1)
   
   for q in inp.quarters:
     
