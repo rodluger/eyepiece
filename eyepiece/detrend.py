@@ -272,6 +272,8 @@ def ComputePLD(input_file = None, clobber = False):
     if not inp.quiet:
       print("Computing approximate transit model...")
     
+    import pdb; pdb.set_trace()
+    
     # This lets us approximately solve for RpRs, bcirc, q1, q2
     def negll(x):
       '''
@@ -315,7 +317,7 @@ def ComputePLD(input_file = None, clobber = False):
           ll += gp.lnlikelihood(ypld)
 
       return -ll
-  
+    
     # Run the optimizer
     init = [info['RpRs'], info['b'], 0.25, 0.25]
     bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]

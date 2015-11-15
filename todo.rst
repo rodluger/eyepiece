@@ -1,7 +1,6 @@
 TODO
 ----
 
-- Find bug in ``random/input0004.py``
 - Maximum size for bad chunks in detrended plot
 - For usps: ensure that data points don't get included in neighboring transits!
 - Add ``clobber`` override options to all functions
