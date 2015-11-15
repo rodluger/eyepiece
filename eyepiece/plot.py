@@ -99,7 +99,7 @@ def PlotDetrended(input_file = None, clobber = False):
     dvec = prc[q]['dvec']
     inp.kernel.pars = dvec[:iPLD]
     gp = george.GP(inp.kernel)
-    
+
     time = np.array([], dtype = float)
     fsum = np.array([], dtype = float)
     ypld = np.array([], dtype = float)
@@ -146,9 +146,16 @@ def PlotDetrended(input_file = None, clobber = False):
       
   ltq = ax[0].get_xlim()[0]  
   yp0 = ax[0].get_ylim()[1]
+  yb0 = ax[0].get_ylim()[0] + 0.025 * (ax[0].get_ylim()[1] - ax[0].get_ylim()[0])
   yp1 = ax[1].get_ylim()[1]
   yp2 = ax[2].get_ylim()[1]
   yb2 = ax[2].get_ylim()[0] + 0.025 * (ax[2].get_ylim()[1] - ax[2].get_ylim()[0])
+  
+  # Highlight the transits
+  tmin, tmax = ax[0].get_xlim()
+  for ti in tN:
+    if ti > tmin and ti < tmax:
+      ax[0].axvline(ti, color = 'r', alpha = 0.05)
   
   for q in inp.quarters:
     
@@ -161,7 +168,11 @@ def PlotDetrended(input_file = None, clobber = False):
     
       # Quarter number
       ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
-    
+      
+      # Crowding
+      crwd = prc[q]['crwd']
+      ax[0].annotate("CRWD: %.3f   " % crwd, (ltw, yb0), ha = 'right', va = 'bottom', fontsize = 8, color ='k')
+      
       if inp.plot_det_info:
         # Best coeff values
         ax[0].annotate("\n   PLD COEFFS", (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
