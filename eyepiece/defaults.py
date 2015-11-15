@@ -70,6 +70,8 @@ padbkg = 2.0
 padtrn = 5.0
 pert_sigma = 0.25
 plot_det_info = True
+poly_order = 10
+poly_window = 2.
 ppn = 12
 
 # Q
@@ -163,6 +165,8 @@ class _Docs(object):
     self.padtrn = 'Padding in units of the transit duration for selecting transits for the transit-only data'
     self.pert_sigma = 'Perturb the initial conditions by this many sigma'
     self.plot_det_info = 'Plot detrending information?'
+    self.poly_order = 'Order of polynomial fit for transit detrending'
+    self.poly_window = 'Window size in days for polynomial transit detrending'
     self.ppn = 'Number of processors per node for a ``qsub`` job'
     
     # Q

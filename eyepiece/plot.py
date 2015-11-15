@@ -411,3 +411,61 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
     return fig, ax
   else:
     return ax
+
+def PlotPolyFolded(input_file = None, clobber = False):
+  '''
+  
+  '''
+  
+  # Try to use Agg for plotting
+  pl.switch_backend('Agg')
+  
+  # Input file
+  inp = Input(input_file)
+  if clobber:
+    inp.clobber = True
+  
+  data = eyepiece.utils.GetData(inp.id, datadir = inp.datadir)
+  t = []; [t.extend(foo) for q in inp.quarters for foo in data[q]['time']]; t = np.array(t)
+  f = []; [f.extend(np.sum(foo,axis = 1)) for q in inp.quarters for foo in data[q]['fpix']]; f = np.array(f)
+  info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
+                        inject = inp.inject, datadir = inp.datadir,
+                        clobber = inp.clobber, ttvs = inp.ttvs,
+                        pad = inp.padbkg)
+  tN = info['tN']
+  tdur = info['tdur']
+
+  tc = [[]] * len(tN)
+  fc = [[]] * len(tN)
+  pc = [[]] * len(tN)
+
+  for n, ti in enumerate(tN):
+ 
+    idx = np.where(np.abs(t - ti) < inp.poly_window)[0]
+  
+    if not len(idx):
+      continue
+
+    tc[n] = t[idx]
+    fc[n] = f[idx]
+    
+    fc[n] /= np.median(fc[n])
+    tc[n] -= ti
+  
+    jdx = np.where(np.abs(tc[n]) > tdur / 2.)
+    c = np.polyfit(tc[n][jdx], fc[n][jdx], inp.poly_order)
+    pc[n] = fc[n] - np.sum([c[k] * tc[n] ** (inp.poly_order - k) for k in range(inp.poly_order + 1)], axis = 0)
+  
+  
+  fig, ax = pl.subplots(1, 1, figsize = (14, 6))
+  
+  for n in range(len(tN)):
+    ax.plot(tc[n], pc[n], 'b.', alpha = 0.5)
+  
+  ax.set_title('Folded Polynomial-Detrended Transits', fontsize = 24)
+  ax.set_xlabel('Time (days)', fontsize = 22)
+  ax.set_ylabel('Flux', fontsize = 22)
+  
+  fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', 'folded.png'), bbox_inches = 'tight')
+  
+  return fig, ax
