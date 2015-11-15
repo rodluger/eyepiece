@@ -402,7 +402,7 @@ def ComputePLD(input_file = None, clobber = False):
   
   return True
 
-def GetBadChunks(f, winsz = 50, sig_tol = 3., sort = False):
+def GetBadChunks(f, winsz = 50, sig_tol = 3., maxsz = 300, sort = False):
   '''
   
   '''
@@ -441,6 +441,9 @@ def GetBadChunks(f, winsz = 50, sig_tol = 3., sort = False):
     # Finally, let's sort the chunks in (decreasing) order of RSS,
     # so that the "worst" chunks are the first ones in the list
     chunks = [c for (r,c) in sorted(zip([-np.sum(f[chunk] ** 2) for chunk in chunks], chunks))]
+  
+  # Delete chunks that are too big. These are likely due to 
+  # entire quarters having larger RMS, and we're not interested in those.
+  chunks = [c for c in chunks if len(c) < maxsz]
 
-  # Return the indices of the "bad" chunks
   return chunks

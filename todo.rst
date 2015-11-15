@@ -1,8 +1,6 @@
 TODO
 ----
 
-- Show where transits occur on detrended plot
-- Print crowding parameter on detrended plot
 - Maximum size for bad chunks in detrended plot
 - For usps: ensure that data points don't get included in neighboring transits!
 - Add ``clobber`` override options to all functions

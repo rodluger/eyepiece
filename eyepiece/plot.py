@@ -155,7 +155,9 @@ def PlotDetrended(input_file = None, clobber = False):
   tmin, tmax = ax[0].get_xlim()
   for ti in tN:
     if ti > tmin and ti < tmax:
-      ax[0].axvline(ti, color = 'r', alpha = 0.1)
+      ax[0].axvline(ti, color = 'r', alpha = 0.2)
+      ax[1].axvline(ti, color = 'r', alpha = 0.2)
+      ax[2].axvline(ti, color = 'r', alpha = 0.2)
   
   for q in inp.quarters:
     
@@ -171,7 +173,7 @@ def PlotDetrended(input_file = None, clobber = False):
       
       # Crowding
       crwd = prc[q]['crwd']
-      ax[0].annotate("CRWD: %.3f     " % crwd, (ltq, yb0), ha = 'right', va = 'bottom', fontsize = 8, color ='k')
+      ax[0].annotate("CRWD: %.3f   " % crwd, (ltq, yb0), ha = 'right', va = 'bottom', fontsize = 8, color ='k')
       
       if inp.plot_det_info:
         # Best coeff values
