@@ -317,8 +317,8 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
     # Transit model
     try:
       foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'))
-      RpRs = 0.027 #foo['RpRs']
-      bcirc = 0.22 #foo['bcirc']
+      RpRs = foo['RpRs']
+      bcirc = foo['bcirc']
       q1 = foo['q1']
       q2 = foo['q2']
     except FileNotFoundError:
