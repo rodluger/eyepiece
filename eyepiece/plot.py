@@ -425,6 +425,11 @@ def PlotPolyFolded(input_file = None, clobber = False):
   if clobber:
     inp.clobber = True
   
+  # Have we done this already?
+  if not inp.clobber:
+    if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'polyfolded.png')):
+      return None, None
+  
   data = eyepiece.utils.GetData(inp.id, datadir = inp.datadir)
   t = []; [t.extend(foo) for q in inp.quarters for foo in data[q]['time']]; t = np.array(t)
   f = []; [f.extend(np.sum(foo,axis = 1)) for q in inp.quarters for foo in data[q]['fpix']]; f = np.array(f)
@@ -466,6 +471,6 @@ def PlotPolyFolded(input_file = None, clobber = False):
   ax.set_xlabel('Time (days)', fontsize = 22)
   ax.set_ylabel('Flux', fontsize = 22)
   
-  fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', 'folded.png'), bbox_inches = 'tight')
+  fig.savefig(os.path.join(inp.datadir, str(inp.id), '_plots', 'polyfolded.png'), bbox_inches = 'tight')
   
   return fig, ax

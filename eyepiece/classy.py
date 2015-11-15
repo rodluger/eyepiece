@@ -55,6 +55,10 @@ class Eyepiece(object):
     
     # Preprocess
     preprocess.Preprocess(self.input_file)
+    
+    # Plot simple transit
+    plot.PlotPolyFolded(self.input_file); pl.close()
+    
   
   def Detrend(self, pool = None):
     '''
