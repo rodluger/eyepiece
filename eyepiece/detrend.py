@@ -272,8 +272,6 @@ def ComputePLD(input_file = None, clobber = False):
     if not inp.quiet:
       print("Computing approximate transit model...")
     
-    import pdb; pdb.set_trace()
-    
     # This lets us approximately solve for RpRs, bcirc, q1, q2
     def negll(x):
       '''
