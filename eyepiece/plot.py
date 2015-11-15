@@ -430,7 +430,7 @@ def PlotPolyFolded(input_file = None, clobber = False):
     if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'polyfolded.png')):
       return None, None
   
-  data = GetData(inp.id, datadir = inp.datadir)
+  data = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   t = []; [t.extend(foo) for q in inp.quarters for foo in data[q]['time']]; t = np.array(t)
   f = []; [f.extend(np.sum(foo,axis = 1)) for q in inp.quarters for foo in data[q]['fpix']]; f = np.array(f)
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
@@ -444,25 +444,44 @@ def PlotPolyFolded(input_file = None, clobber = False):
   fc = [[]] * len(tN)
   pc = [[]] * len(tN)
 
+  # Loop over all transits
   for n, ti in enumerate(tN):
  
+    # Indices within window
     idx = np.where(np.abs(t - ti) < inp.poly_window)[0]
-  
     if not len(idx):
       continue
 
+    # Get the crowding (not elegant!)
+    for q in inp.quarters():
+      if len(data[q]['time']) == 0:
+        continue
+      if ti > data[q]['time'][0] and ti < data[q]['time'][-1]:
+        crwd = data[q]['crwd']
+        break
+
+    # Normalized time and flux arrays
     tc[n] = t[idx]
     fc[n] = f[idx]
-    
-    fc[n] /= np.median(fc[n])
     tc[n] -= ti
   
+    # Mask out the transits
     jdx = np.where(np.abs(tc[n]) > tdur / 2.)
+    
+    # Polynomial fit to background flux
     c = np.polyfit(tc[n][jdx], fc[n][jdx], inp.poly_order)
-    pc[n] = fc[n] - np.sum([c[k] * tc[n] ** (inp.poly_order - k) for k in range(inp.poly_order + 1)], axis = 0)
+    
+    # Polynomial-corrected normalized flux
+    pc[n] = 1. + (fc[n] - np.sum([c[k] * tc[n] ** (inp.poly_order - k) 
+                  for k in range(inp.poly_order + 1)], axis = 0)) / fc[n]
+    
+    # Correct for crowding
+    if crwd is not None:
+      pc[n] = (pc[n] - 1.) / crwd + 1.
   
   fig, ax = pl.subplots(1, 1, figsize = (14, 6))
   
+  # Plot transit points
   tca = np.concatenate(tc)
   pca = np.concatenate(pc)
   ax.plot(tca, pca, 'k.', alpha = min(1.0, max(0.05, 375. / len(tca))))
