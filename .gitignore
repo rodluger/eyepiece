@@ -6,3 +6,5 @@ scripts/input.py
 *.log
 *.pbs
 *.*~
+random/*.py*
+batch/*.py*
