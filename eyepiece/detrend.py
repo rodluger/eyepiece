@@ -301,7 +301,10 @@ def ComputePLD(input_file = None, clobber = False):
         for time, fpix, perr in zip(tdata[q]['time'], tdata[q]['fpix'], tdata[q]['perr']):
       
           # Compute the transit model
-          tmod = psm(time, 'binned')
+          try:
+            tmod = psm(time, 'binned')
+          except:
+            return 1.e20
       
           # Compute the PLD model
           pmod, ypld, yerr = PLDFlux(c, fpix, perr, tmod, crowding = crwd)
