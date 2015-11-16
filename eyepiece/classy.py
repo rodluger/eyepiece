@@ -54,7 +54,10 @@ class Eyepiece(object):
                           ttvs = self.inp.ttvs)
     
     # Preprocess
-    preprocess.Preprocess(self.input_file)
+    success = preprocess.Preprocess(self.input_file)
+    
+    if not success:
+      raise Exception("Preprocessing aborted.")
     
     # Plot simple transit
     plot.PlotPolyFolded(self.input_file); pl.close()

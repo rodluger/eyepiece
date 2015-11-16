@@ -8,11 +8,11 @@ Runs ``eyepiece``. Call this script with ``mpi`` for
 MPI parallelization on Hyak. Note that the raw data must
 be cached prior to submitting the job. Simply run
 
->>> python -c "import eyepiece; eyepiece.Eyepiece()"
+>>> python -c "import eyepiece; eyepiece.Eyepiece('input.py')"
 
 before executing this script with ``mpi``:
 
->>> mpi hyak.py
+>>> mpi hyak.py input.py
 
 '''
 
@@ -25,7 +25,7 @@ import sys
 try:
   inpfile = str(sys.argv[1])
 except:
-  inpfile = None
+  raise ValueError('Please provide a valid input file.')
 
 # Create a ``para`` MPI pool instance
 pool = para.Pool(loadbalance = True)
