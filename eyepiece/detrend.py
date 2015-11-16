@@ -17,6 +17,7 @@ import numpy as np
 import os
 import pysyzygy as ps
 import george
+import random
 
 # Python 2/3 compatibility
 try:
@@ -51,7 +52,7 @@ def NegLnLike(x, id, q, kernel, debug):
     
   return (-ll, -grad_ll)
 
-def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadir):
+def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadir, pld_guess):
   '''
   
   '''
@@ -75,9 +76,28 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
   if qd['time'] == []:
     return None
 
-  # Set our initial guess
+  # Set our initial guess and bounds
   npix = qd['fpix'][0].shape[1]
-  init = np.append(kinit, [np.median(np.sum(qd['fpix'][0], axis = 1))] * npix)
+  
+  if pld_guess == 'random':
+    pld_guess = random.choice(['constant', 'linear'])
+  if pld_guess == 'constant':
+    # Constant (simple) initial guess
+    init = [np.median(np.sum(qd['fpix'][0], axis = 1))] * npix
+  elif pld_guess == 'linear':
+    # Solve the (linear) PLD problem for this quarter
+    t_all = np.array([], dtype = float)
+    y_all = np.array([], dtype = float)
+    fpix = np.array([x for y in qd['fpix'] for x in y])
+    fsum = np.sum(fpix, axis = 1)
+    p0 = np.array([np.median(fsum)] * fpix.shape[1])
+    def pm(y, *x):
+      return np.sum(fpix * np.outer(1. / fsum, x), axis = 1)
+    init, _ = curve_fit(pm, None, fsum, p0 = p0)    
+  else:
+    raise ValueError('Invalid setting for ``pld_guess``.')
+    
+  init = np.append(kinit, init)
   bounds = np.concatenate([kbounds, [[-np.inf, np.inf]] * npix])
 
   # Perturb initial conditions by sigma, and ensure within bounds
@@ -186,7 +206,7 @@ def Detrend(input_file = None, pool = None):
   
   tags = list(itertools.product(range(inp.niter), quarters))
   FW = FunctionWrapper(QuarterDetrend, inp.id, inp.kernel, inp.kinit, inp.pert_sigma, 
-                       inp.kbounds, inp.maxfun, inp.debug, inp.datadir)
+                       inp.kbounds, inp.maxfun, inp.debug, inp.datadir, inp.pld_guess)
   
   # Parallelize?
   if pool is None:

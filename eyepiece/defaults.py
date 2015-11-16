@@ -69,6 +69,7 @@ nodes = 5
 padbkg = 2.0
 padtrn = 5.0
 pert_sigma = 0.25
+pld_guess = 'random'
 plot_det_info = True
 poly_order = 10
 poly_window = 2.
@@ -164,6 +165,7 @@ class _Docs(object):
     self.padbkg = 'Padding in units of the transit duration for masking transits in background data'
     self.padtrn = 'Padding in units of the transit duration for selecting transits for the transit-only data'
     self.pert_sigma = 'Perturb the initial conditions by this many sigma'
+    self.pld_guess = 'How to initialize the PLD solver: ``constant`` (sets all coeffs to the same value), ``linear`` (solves the linear PLD problem as an initial guess), or ``random``'
     self.plot_det_info = 'Plot detrending information?'
     self.poly_order = 'Order of polynomial fit for transit detrending'
     self.poly_window = 'Window size in days for polynomial transit detrending'

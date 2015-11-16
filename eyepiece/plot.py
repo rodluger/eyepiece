@@ -55,6 +55,7 @@ def PlotDetrended(input_file = None, clobber = False):
                       pad = inp.padbkg)
   tN = info['tN']
   tdur = info['tdur']
+  per = info['per']
   
   # The full processed data
   prc = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
@@ -154,13 +155,14 @@ def PlotDetrended(input_file = None, clobber = False):
   yp2 = ax[2].get_ylim()[1]
   yb2 = ax[2].get_ylim()[0] + 0.025 * (ax[2].get_ylim()[1] - ax[2].get_ylim()[0])
   
-  # Highlight the transits
-  tmin, tmax = ax[0].get_xlim()
-  for ti in tN:
-    if ti > tmin and ti < tmax:
-      ax[0].axvline(ti, color = 'r', alpha = 0.2)
-      ax[1].axvline(ti, color = 'r', alpha = 0.2)
-      ax[2].axvline(ti, color = 'r', alpha = 0.2)
+  # Highlight the transits, unless the period is really short
+  if per < 4.0:
+    tmin, tmax = ax[0].get_xlim()
+    for ti in tN:
+      if ti > tmin and ti < tmax:
+        ax[0].axvline(ti, color = 'r', alpha = 0.2)
+        ax[1].axvline(ti, color = 'r', alpha = 0.2)
+        ax[2].axvline(ti, color = 'r', alpha = 0.2)
   
   for q in inp.quarters:
     
@@ -179,9 +181,9 @@ def PlotDetrended(input_file = None, clobber = False):
       ax[0].annotate("CRWD: %.3f   " % crwd, (ltq, yb0), ha = 'right', va = 'bottom', fontsize = 8, color ='k')
       
       if inp.plot_det_info:
-        # Best coeff values
+        # Best coeff values, up to a max of 30
         ax[0].annotate("\n   PLD COEFFS", (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
-        for i, c in enumerate(cc[q][iPLD:]):
+        for i, c in enumerate(cc[q][iPLD:])[:30]:
           ax[0].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
     
         # Best GP param values
