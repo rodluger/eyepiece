@@ -488,14 +488,16 @@ def PlotPolyFolded(input_file = None, clobber = False):
   tca = np.concatenate(tc)
   pca = np.concatenate(pc)
   ax.plot(tca, pca, 'k.', alpha = min(1.0, max(0.05, 375. / len(tca))))
+  xlim = (-inp.padtrn * tdur / 2., inp.padtrn * tdur / 2.)
   
   # Bin to median
-  bins = np.linspace(-inp.poly_window, inp.poly_window, inp.tbins)
+  bins = np.linspace(xlim[0], xlim[1], inp.tbins)
   delta = bins[1] - bins[0]
   idx  = np.digitize(tca, bins)
   med = [np.median(pca[idx == k]) for k in range(inp.tbins)]
   ax.plot(bins - delta / 2., med, 'ro', alpha = 0.75)
   
+  ax.set_xlim(xlim)
   ax.set_title('Folded Polynomial-Detrended Transits', fontsize = 24)
   ax.set_xlabel('Time (days)', fontsize = 22)
   ax.set_ylabel('Flux', fontsize = 22)
