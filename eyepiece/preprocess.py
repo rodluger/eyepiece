@@ -595,6 +595,7 @@ class Viewer(object):
       pl.close()
     
     elif event.key == BLND:
+      self.redraw(preserve_lims = False)
       self.info = "blind"
       self.fig.savefig(os.path.join(self.datadir, str(self.id), '_plots', "Q%02d.png" % self.quarter), bbox_inches = 'tight')
       pl.close()
