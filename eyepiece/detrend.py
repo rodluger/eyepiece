@@ -11,7 +11,7 @@ from .utils import Input, FunctionWrapper, GetData, GitHash
 from .preprocess import Preprocess
 from .linalg import LnLike, PLDFlux
 from .download import DownloadInfo
-from scipy.optimize import fmin_l_bfgs_b
+from scipy.optimize import fmin_l_bfgs_b, curve_fit
 import itertools
 import numpy as np
 import os
