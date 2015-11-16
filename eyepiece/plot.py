@@ -156,7 +156,7 @@ def PlotDetrended(input_file = None, clobber = False):
   yb2 = ax[2].get_ylim()[0] + 0.025 * (ax[2].get_ylim()[1] - ax[2].get_ylim()[0])
   
   # Highlight the transits, unless the period is really short
-  if per < 4.0:
+  if per > 4.0:
     tmin, tmax = ax[0].get_xlim()
     for ti in tN:
       if ti > tmin and ti < tmax:
@@ -170,15 +170,15 @@ def PlotDetrended(input_file = None, clobber = False):
     if lt[q] is None:
       continue
     
-    # If the data spans more than 20 days, plot some info (otherwise, it won't fit!)
-    if lt[q] - ltq > 20:
+    # If the data spans more than 30 days, plot some info (otherwise, it won't fit!)
+    if lt[q] - ltq > 30:
     
       # Quarter number
       ax[0].annotate(q, ((ltq + lt[q]) / 2., yp0), ha='center', va='bottom', fontsize = 24)
       
       # Crowding
       crwd = prc[q]['crwd']
-      ax[0].annotate("CRWD: %.3f   " % crwd, (ltq, yb0), ha = 'right', va = 'bottom', fontsize = 8, color ='k')
+      ax[0].annotate("CRWD: %.3f \ " % crwd, (lt[q], yb0), ha = 'right', va = 'bottom', fontsize = 8, color ='k')
       
       if inp.plot_det_info:
         # Best coeff values, up to a max of 30
