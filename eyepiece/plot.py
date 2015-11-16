@@ -183,7 +183,7 @@ def PlotDetrended(input_file = None, clobber = False):
       if inp.plot_det_info:
         # Best coeff values, up to a max of 30
         ax[0].annotate("\n   PLD COEFFS", (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
-        for i, c in enumerate(cc[q][iPLD:])[:30]:
+        for i, c in enumerate(cc[q][iPLD:][:30]):
           ax[0].annotate("\n" * (i + 2) + "   %.1f" % c, (ltq, yp0), ha='left', va='top', fontsize = 8, color = 'r')
     
         # Best GP param values
