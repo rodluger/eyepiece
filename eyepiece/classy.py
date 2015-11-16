@@ -26,7 +26,7 @@ class Eyepiece(object):
   
   '''
   
-  def __init__(self, input_file = None):
+  def __init__(self, input_file):
   
     # Input file
     self.input_file = input_file
