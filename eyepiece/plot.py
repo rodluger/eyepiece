@@ -16,6 +16,9 @@ import os
 import george
 import pysyzygy as ps
 import matplotlib.pyplot as pl
+import warnings
+warnings.simplefilter('ignore', np.RankWarning)
+warnings.simplefilter("ignore", RuntimeWarning)
 
 # Python 2/3 compatibility
 try:
