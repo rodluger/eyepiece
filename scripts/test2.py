@@ -5,6 +5,8 @@ import george
 import numpy as np
 
 prc = GetData(1612.01, data_type = 'prc', datadir = '/gscratch/vsm/rodluger/lightcurves')
+info = DownloadInfo(1612.01, 'Kepler', datadir = '/gscratch/vsm/rodluger/lightcurves')
+tN = info['tN']
 iPLD = 2
 q = 2
  
@@ -27,4 +29,9 @@ for t_, p_, y_, e_ in zip(prc[q]['time'], prc[q]['fpix'], prc[q]['ypld'], prc[q]
   gpmu = np.append(gpmu, mu)
   
 pl.plot(time, ypld - gpmu, 'b.', alpha = 0.3)
+
+
+for ti in tN:
+  pl.axvline(ti, color = 'r', alpha = 0.25)
+  
 pl.show()
