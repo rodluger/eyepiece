@@ -174,8 +174,6 @@ def Detrend(input_file = None, pool = None, clobber = False):
   
   # Load inputs
   inp = Input(input_file)
-  if clobber:
-    inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   if not os.path.exists(detpath):
     os.makedirs(detpath)
@@ -194,7 +192,7 @@ def Detrend(input_file = None, pool = None, clobber = False):
   pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   
   # Have we already detrended?
-  if not inp.clobber:
+  if not (inp.clobber or clobber):
     try:
       for q in pdata:
         if len(pdata[q]['time']) == 0:
@@ -216,7 +214,7 @@ def Detrend(input_file = None, pool = None, clobber = False):
     print("Detrending...")
 
   # Set up our list of runs
-  if not inp.clobber:
+  if not (inp.clobber or clobber):
     quarters = []
     for q in inp.quarters:
       if tdata[q]['dvec'] is None:
@@ -272,7 +270,6 @@ def ComputePLD(input_file = None, clobber = False):
   
   # Load inputs
   inp = Input(input_file)
-  if clobber: inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   iPLD = len(inp.kernel.pars)
   
@@ -280,7 +277,7 @@ def ComputePLD(input_file = None, clobber = False):
   pdata = GetData(inp.id, data_type = 'prc', datadir = inp.datadir)
   tdata = GetData(inp.id, data_type = 'trn', datadir = inp.datadir)
   
-  if not inp.clobber:
+  if not (inp.clobber or clobber):
     try:
       for q in pdata:
         if len(pdata[q]['time']) == 0:

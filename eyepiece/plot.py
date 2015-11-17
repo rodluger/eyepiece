@@ -36,12 +36,10 @@ def PlotDetrended(input_file = None, clobber = False):
   
   # Load inputs
   inp = Input(input_file)
-  if clobber:
-    inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   
   # Have we done this already?
-  if not inp.clobber:
+  if not (inp.clobber or clobber):
     if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'detrended.png')):
       return None, None
   
@@ -282,13 +280,11 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   
   # Input file
   inp = Input(input_file)
-  if clobber:
-    inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   iPLD = len(inp.kernel.pars)
   
   # Have we done this already?
-  if ax is None and not inp.clobber:
+  if ax is None and not (inp.clobber or clobber):
     if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'folded.png')):
       return None, None
 
@@ -309,7 +305,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   if len(tN) == 0:
     return None, None
   
-  if not inp.clobber and os.path.exists(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz')):
+  if not (inp.clobber or clobber) and os.path.exists(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz')):
     foo = np.load(os.path.join(inp.datadir, str(inp.id), '_data', 'fold.npz'))
     t = foo['t']
     f = foo['f']
@@ -427,11 +423,9 @@ def PlotPolyFolded(input_file = None, clobber = False):
   
   # Input file
   inp = Input(input_file)
-  if clobber:
-    inp.clobber = True
   
   # Have we done this already?
-  if not inp.clobber:
+  if not (inp.clobber or clobber):
     if os.path.exists(os.path.join(inp.datadir, str(inp.id), '_plots', 'polyfolded.png')):
       return None, None
   

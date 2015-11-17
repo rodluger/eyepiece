@@ -702,7 +702,7 @@ class Viewer(object):
   def jumps(self):
     return np.array(sorted(self._jumps), dtype = int)
   
-def Preprocess(input_file = None):
+def Preprocess(input_file = None, clobber = False):
   '''
 
   '''
@@ -718,7 +718,7 @@ def Preprocess(input_file = None):
       inp.interactive = False
 
   # Check for a saved version
-  if not inp.clobber:
+  if not (inp.clobber or clobber):
   
     try:
     
@@ -736,13 +736,13 @@ def Preprocess(input_file = None):
   if not inp.quiet: 
     print("Downloading target data...")
   data = DownloadData(inp.id, inp.dataset, long_cadence = inp.long_cadence, 
-                      clobber = inp.clobber, datadir = inp.datadir, 
+                      clobber = (inp.clobber or clobber), datadir = inp.datadir, 
                       bad_bits = inp.bad_bits, aperture = inp.aperture, 
                       quarters = inp.quarters, quiet = inp.quiet, inject = 
                       inp.inject, trninfo = inp.trninfo, pad = inp.padbkg,
                       ttvs = inp.ttvs)
   info = DownloadInfo(inp.id, inp.dataset, datadir = inp.datadir, 
-                      clobber = inp.clobber, ttvs = inp.ttvs, pad = inp.padbkg,
+                      clobber = (inp.clobber or clobber), ttvs = inp.ttvs, pad = inp.padbkg,
                       inject = inp.inject, trninfo = inp.trninfo)
   tN = info['tN']
   tdur = info['tdur']
