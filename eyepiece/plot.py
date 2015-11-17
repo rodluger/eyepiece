@@ -178,7 +178,7 @@ def PlotDetrended(input_file = None, clobber = False):
       
       # Crowding
       crwd = prc[q]['crwd']
-      ax[0].annotate("CRWD: %.3f \ " % crwd, (lt[q], yb0), ha = 'right', va = 'bottom', fontsize = 8, color ='k')
+      ax[0].annotate("CRWD: %.3f ." % crwd, (lt[q], yb0), ha = 'right', va = 'bottom', fontsize = 8, color ='k')
       
       if inp.plot_det_info:
         # Best coeff values, up to a max of 30
