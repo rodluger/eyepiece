@@ -325,7 +325,10 @@ def ComputePLD(input_file = None, clobber = False):
             tmod = psm(time, 'binned')
           except Exception as e: 
             if inp.debug:
-              print("Transit optimization exception:", str(e))
+              print("Transit optimization exception:", str(e))  
+            
+            import pdb; pdb.set_trace()
+            
             return 1.e20
       
           # Compute the PLD model
@@ -346,11 +349,8 @@ def ComputePLD(input_file = None, clobber = False):
       
       return -ll
     
-    # Run the optimizer. NOTE: We're setting b = 0 on purpose
-    # to improve convergence of the optimizer. If b starts off too high,
-    # optimizer can get stuck at high impact parameter and not find the
-    # global minimum.
-    init = [info['RpRs'], 0.0, 0.25, 0.25]
+    # Run the optimizer.
+    init = [info['RpRs'], info['b'], 0.25, 0.25]
     bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]
     res = fmin_l_bfgs_b(negll, init, approx_grad = True, bounds = bounds)
     RpRs, bcirc, q1, q2 = res[0]
