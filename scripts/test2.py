@@ -1,3 +1,4 @@
+import matplotlib; matplotlib.use('TkAgg')
 import matplotlib.pyplot as pl
 from eyepiece.utils import GetData
 import george
