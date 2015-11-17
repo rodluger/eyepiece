@@ -326,9 +326,6 @@ def ComputePLD(input_file = None, clobber = False):
           except Exception as e: 
             if inp.debug:
               print("Transit optimization exception:", str(e))  
-            
-            import pdb; pdb.set_trace()
-            
             return 1.e20
       
           # Compute the PLD model
@@ -351,7 +348,7 @@ def ComputePLD(input_file = None, clobber = False):
     
     # Run the optimizer.
     init = [info['RpRs'], info['b'], 0.25, 0.25]
-    bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]
+    bounds = [[1.e-4, 0.5], [0., 0.95], [0., 1.], [0., 1.]]
     res = fmin_l_bfgs_b(negll, init, approx_grad = True, bounds = bounds)
     RpRs, bcirc, q1, q2 = res[0]
     
