@@ -111,7 +111,7 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
   # Mask the faintest pixels?
   if maxpix:
     # Get the pixel indices, sorted from brightest to faintest
-    idx = np.argsort(-np.median(fpix, axis = 0))
+    idx = np.argsort(-np.median([x for y in qd['fpix'] for x in y], axis = 0))
     if len(idx) > maxpix:
       maskpix = idx[maxpix:]
   else:
