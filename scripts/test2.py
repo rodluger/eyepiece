@@ -29,7 +29,7 @@ for t_, p_, y_, e_ in zip(prc[q]['time'], prc[q]['fpix'], prc[q]['ypld'], prc[q]
   mu, cov = gp.predict(y_, t_); del cov
   gpmu = np.append(gpmu, mu)
   
-pl.plot(time, ypld - gpmu, 'b.', alpha = 0.3)
+pl.plot(time, ypld, 'b.', alpha = 0.3)
 
 
 for ti in tN:
