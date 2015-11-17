@@ -51,7 +51,7 @@ def PlotDetrended(input_file = None, clobber = False):
   # Load some info
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
                       inject = inp.inject, datadir = inp.datadir,
-                      clobber = inp.clobber, ttvs = inp.ttvs,
+                      clobber = False, ttvs = inp.ttvs,
                       pad = inp.padbkg)
   tN = info['tN']
   tdur = info['tdur']
@@ -298,7 +298,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   # Load the info
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
                       inject = inp.inject, datadir = inp.datadir,
-                      clobber = inp.clobber, ttvs = inp.ttvs,
+                      clobber = False, ttvs = inp.ttvs,
                       pad = inp.padbkg)
   tdur = info['tdur']
   tN = info['tN']
@@ -440,7 +440,7 @@ def PlotPolyFolded(input_file = None, clobber = False):
   f = []; [f.extend(np.sum(foo,axis = 1)) for q in inp.quarters for foo in data[q]['fpix']]; f = np.array(f)
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
                         inject = inp.inject, datadir = inp.datadir,
-                        clobber = inp.clobber, ttvs = inp.ttvs,
+                        clobber = False, ttvs = inp.ttvs,
                         pad = inp.padbkg)
   tN = info['tN']
   tdur = info['tdur']

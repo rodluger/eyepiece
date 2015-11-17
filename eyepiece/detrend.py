@@ -280,7 +280,7 @@ def ComputePLD(input_file = None, clobber = False):
   # Get some info
   info = DownloadInfo(inp.id, inp.dataset, trninfo = inp.trninfo, 
                       inject = inp.inject, datadir = inp.datadir,
-                      clobber = inp.clobber, ttvs = inp.ttvs,
+                      clobber = False, ttvs = inp.ttvs,
                       pad = inp.padbkg)
   per = info['per']
   rhos = info['rhos']
