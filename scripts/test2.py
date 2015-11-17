@@ -1,6 +1,7 @@
 import matplotlib; matplotlib.use('TkAgg')
 import matplotlib.pyplot as pl
 from eyepiece.utils import GetData
+from eyepiece.download import DownloadInfo
 import george
 import numpy as np
 
