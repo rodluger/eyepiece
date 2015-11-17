@@ -323,7 +323,9 @@ def ComputePLD(input_file = None, clobber = False):
           # Compute the transit model
           try:
             tmod = psm(time, 'binned')
-          except:
+          except Exception as e: 
+            if not inp.quiet:
+              print(str(e))
             return 1.e20
       
           # Compute the PLD model
@@ -332,11 +334,16 @@ def ComputePLD(input_file = None, clobber = False):
           # Compute the GP model
           try:
             gp.compute(time, yerr)
-          except:
+          except Exception as e: 
+            if not inp.quiet:
+              print(str(e))
             return 1.e20
             
           ll += gp.lnlikelihood(ypld)
-
+      
+      if inp.debug:
+        print(-ll)
+      
       return -ll
     
     # Run the optimizer
@@ -344,6 +351,9 @@ def ComputePLD(input_file = None, clobber = False):
     bounds = [[1.e-4, 0.5], [0., 1.], [0., 1.], [0., 1.]]
     res = fmin_l_bfgs_b(negll, init, approx_grad = True, bounds = bounds)
     RpRs, bcirc, q1, q2 = res[0]
+    
+    if inp.debug:
+      import pdb; pdb.set_trace()
     
     # Save these!
     np.savez(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'), RpRs = RpRs, bcirc = bcirc, q1 = q1, q2 = q2)
