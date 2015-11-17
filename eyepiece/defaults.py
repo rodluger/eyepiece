@@ -67,7 +67,7 @@ niter = 5
 nodes = 5
 
 # P
-padbkg = 2.0
+padbkg = 3.0
 padtrn = 5.0
 pert_sigma = 0.25
 pld_guess = 'random'

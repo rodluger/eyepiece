@@ -268,7 +268,8 @@ def DownloadKeplerInfo(id, datadir = '', clobber = False, ttvs = False, pad = 2.
           (per * 86400.)**2.) / (3. * np.pi))**(1./3.)
     inc = np.arccos(b/aRs)
     becc = b * (1 - ecc**2)/(1 - esw)
-    tdur = per / 2. / np.pi * np.arcsin(((1. + RpRs)**2 - becc**2)**0.5 / (np.sin(inc) * aRs))
+    # This is the FULL transit duration (Sara Seager's "Exoplanets" pg 58, eqn. 15 in Winn review)
+    tdur = per / np.pi * np.arcsin(((1. + RpRs)**2 - becc**2)**0.5 / (np.sin(inc) * aRs))
     tdur *= np.sqrt(1. - ecc**2.)/(1. - esw)
     
     t0 = inject.get('t0', None)

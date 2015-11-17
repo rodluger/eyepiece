@@ -210,12 +210,14 @@ class Viewer(object):
     
     # Transit indices
     self._transits_narrow = []
+    self._transits_narrow_tag = []
     self._transits_wide = []
     self._transits_wide_tag = []
     for j, tc in enumerate(self.tNc):
-      i = np.where(np.abs(self.cad - tc) <= self.cptbkg / 2.)[0]
+      i = np.where(np.abs(self.cad - tc) <= self.cptbkg / 2. + 1)[0]
       self._transits_narrow.extend(i) 
-      i = np.where(np.abs(self.cad - tc) <= self.cpttrn / 2.)[0]
+      self._transits_narrow_tag.extend([j for k in i])
+      i = np.where(np.abs(self.cad - tc) <= self.cpttrn / 2. + 1)[0]
       self._transits_wide.extend(i) 
       self._transits_wide_tag.extend([j for k in i])
     
@@ -230,6 +232,28 @@ class Viewer(object):
         out = RLM(self.time[bi], self.fsum[bi], order = rlm[1], size = rlm[2], thresh = rlm[3])
         if len(out):
           self._outliers.extend([np.argmax(self.cad == o) for o in self.cad[bi][out]])
+          
+    # Tricky: if there are outliers in _transits_wide, remove the whole transit
+    for o in self._outliers:
+      if o in self._transits_wide:
+      
+        # The transit number (tag)
+        tag = self._transits_wide_tag[np.argmax(self._transits_wide == o)]
+        
+        # Remove points in transits_narrow
+        idx = np.array(self._transits_narrow)[np.where(np.array(self._transits_narrow_tag) == tag)]
+        for i in idx:
+          if i not in self._outliers:
+            self._outliers.extend(idx)
+        
+        # Remove points in transits_wide
+        idx = np.array(self._transits_wide)[np.where(np.array(self._transits_wide_tag) == tag)]
+        for i in idx:
+          if i not in self._outliers:
+            self._outliers.extend(idx)
+        
+    # DEBUG: Verify above.
+    
     
     # Interactive features
     if self.interactive:
@@ -573,18 +597,21 @@ class Viewer(object):
 
     # Next
     elif event.key == NEXT:
+      self.redraw(preserve_lims = False)
       self.info = "next"
       self.fig.savefig(os.path.join(self.datadir, str(self.id), '_plots', "Q%02d.png" % self.quarter), bbox_inches = 'tight')
       pl.close()
     
     # Previous
     elif event.key == PREV:
+      self.redraw(preserve_lims = False)
       self.info = "prev"
       self.fig.savefig(os.path.join(self.datadir, str(self.id), '_plots', "Q%02d.png" % self.quarter), bbox_inches = 'tight')
       pl.close()
     
     # Quit
     elif event.key == QUIT:
+      self.redraw(preserve_lims = False)
       self.info = "quit"
       self.fig.savefig(os.path.join(self.datadir, str(self.id), '_plots', "Q%02d.png" % self.quarter), bbox_inches = 'tight')
       pl.close()

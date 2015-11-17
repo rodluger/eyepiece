@@ -1,9 +1,7 @@
 TODO
 ----
 
-- If outliers span both sides of transit, remove transit.
 - For usps: ensure that data points don't get included in neighboring transits!
-- Add ``clobber`` override options to all functions
 - Put crowding in ``pysyzygy``
 - When user quits out of interactive inspect, cancel qsub job
 - Multi-planet system handling
