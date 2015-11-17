@@ -117,10 +117,6 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
   else:
     maskpix = []
   
-  # DEBUG
-  import pdb; pdb.set_trace()
-  # DEBUG
-  
   # Run the optimizer.
   res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
                       args = (id, q, kernel, debug, maskpix), bounds = bounds,
