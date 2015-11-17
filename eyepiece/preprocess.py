@@ -233,7 +233,7 @@ class Viewer(object):
         if len(out):
           self._outliers.extend([np.argmax(self.cad == o) for o in self.cad[bi][out]])
           
-    # Tricky: if there are outliers in _transits_wide, remove the whole transit
+    # If there are outliers in _transits_wide, remove the whole transit
     for o in self._outliers:
       if o in self._transits_wide:
       
@@ -251,10 +251,7 @@ class Viewer(object):
         for i in idx:
           if i not in self._outliers:
             self._outliers.extend(idx)
-        
-    # DEBUG: Verify above.
-    
-    
+
     # Interactive features
     if self.interactive:
       
