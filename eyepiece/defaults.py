@@ -57,6 +57,7 @@ long_cadence = True
 
 # M
 maxfun = 15000
+maxpix = None
 mem = 40
 min_sz = 300
 
@@ -153,6 +154,7 @@ class _Docs(object):
     
     # M
     self.maxfun = 'Maximum number of ln-like function calls in ``l_bfgs_b``'
+    self.maxpix = '[Experimental] Maximum number of pixels to use in PLD detrending'
     self.mem = 'Memory in GB for PBS jobs'
     self.min_sz = 'Minimum chunk size in cadences when splitting the lightcurve'
     

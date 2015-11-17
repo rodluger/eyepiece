@@ -27,7 +27,7 @@ except:
 
 data = None
 
-def NegLnLike(x, id, q, kernel, debug):
+def NegLnLike(x, id, q, kernel, debug, maskpix):
   '''
   Returns the negative log-likelihood for the model with coefficients ``x``,
   as well as its gradient with respect to ``x``.
@@ -46,13 +46,13 @@ def NegLnLike(x, id, q, kernel, debug):
   
   # Loop over each chunk in this quarter individually
   for time, fpix, perr in zip(dq['time'], dq['fpix'], dq['perr']):
-    res = LnLike(x, time, fpix, perr, kernel = kernel)
+    res = LnLike(x, time, fpix, perr, kernel = kernel, maskpix = maskpix)
     ll += res[0]
     grad_ll += res[1]
     
   return (-ll, -grad_ll)
 
-def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadir, pld_guess):
+def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadir, pld_guess, maxpix):
   '''
   
   '''
@@ -66,6 +66,7 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
   if data is None:
     data = GetData(id, data_type = 'bkg', datadir = datadir)
   detpath = os.path.join(datadir, str(id), '_detrend')
+  iPLD = len(kinit)
   
   # Tags: i is the iteration number; q is the quarter number
   i = tag[0]
@@ -107,15 +108,32 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
     foo = init * (1 + sigma * np.random.randn(len(init)))
   init = foo
   
+  # Mask the faintest pixels?
+  if maxpix:
+    # Get the pixel indices, sorted from brightest to faintest
+    idx = np.argsort(-np.median(fpix, axis = 0))
+    if len(idx) > maxpix:
+      maskpix = idx[maxpix:]
+  else:
+    maskpix = []
+  
+  # DEBUG
+  import pdb; pdb.set_trace()
+  # DEBUG
+  
   # Run the optimizer.
   res = fmin_l_bfgs_b(NegLnLike, init, approx_grad = False,
-                      args = (id, q, kernel, debug), bounds = bounds,
-                      m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = maxfun)
+                      args = (id, q, kernel, debug, maskpix), bounds = bounds,
+                      m = 10, factr = 1.e1, pgtol = 1e-05, maxfun = maxfun)  
 
   # Grab some info
   x = res[0]
   lnlike = -res[1]
   info = res[2]       
+  
+  # Mask the faintest pixels?
+  if maxpix:
+    x[iPLD:][maskpix] = 0
 
   # Compute a GP prediction
   time = np.array([], dtype = float)
@@ -144,7 +162,7 @@ def QuarterDetrend(tag, id, kernel, kinit, sigma, kbounds, maxfun, debug, datadi
 
   return res
 
-def Detrend(input_file = None, pool = None):
+def Detrend(input_file = None, pool = None, clobber = False):
 
   '''
 
@@ -156,6 +174,8 @@ def Detrend(input_file = None, pool = None):
   
   # Load inputs
   inp = Input(input_file)
+  if clobber:
+    inp.clobber = True
   detpath = os.path.join(inp.datadir, str(inp.id), '_detrend')
   if not os.path.exists(detpath):
     os.makedirs(detpath)
@@ -206,7 +226,8 @@ def Detrend(input_file = None, pool = None):
   
   tags = list(itertools.product(range(inp.niter), quarters))
   FW = FunctionWrapper(QuarterDetrend, inp.id, inp.kernel, inp.kinit, inp.pert_sigma, 
-                       inp.kbounds, inp.maxfun, inp.debug, inp.datadir, inp.pld_guess)
+                       inp.kbounds, inp.maxfun, inp.debug, inp.datadir, inp.pld_guess,
+                       inp.maxpix)
   
   # Parallelize?
   if pool is None:
