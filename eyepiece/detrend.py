@@ -355,6 +355,8 @@ def ComputePLD(input_file = None, clobber = False):
     res = fmin_l_bfgs_b(negll, init, approx_grad = True, bounds = bounds)
     RpRs, bcirc, q1, q2 = res[0]
     
+    import pdb; pdb.set_trace()
+    
     # Save these!
     np.savez(os.path.join(inp.datadir, str(inp.id), '_data', 'rbqq.npz'), RpRs = RpRs, bcirc = bcirc, q1 = q1, q2 = q2)
     
