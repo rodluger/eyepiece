@@ -214,10 +214,10 @@ class Viewer(object):
     self._transits_wide = []
     self._transits_wide_tag = []
     for j, tc in enumerate(self.tNc):
-      i = np.where(np.abs(self.cad - tc) <= self.cptbkg / 2. + 1)[0]
+      i = np.where(np.abs(self.cad - tc) <= self.cptbkg / 2.)[0]
       self._transits_narrow.extend(i) 
       self._transits_narrow_tag.extend([j for k in i])
-      i = np.where(np.abs(self.cad - tc) <= self.cpttrn / 2. + 1)[0]
+      i = np.where(np.abs(self.cad - tc) <= self.cpttrn / 2.)[0]
       self._transits_wide.extend(i) 
       self._transits_wide_tag.extend([j for k in i])
     
@@ -775,6 +775,11 @@ def Preprocess(input_file = None, clobber = False):
   data_new = EmptyData(inp.quarters)
   data_trn = EmptyData(inp.quarters)
   data_bkg = EmptyData(inp.quarters)
+
+  # Paranoia check: for very short period planets, the transit window
+  # could span two transits!
+  if (tdur * inp.padtrn >= 0.75 * per):
+    raise ValueError("Transit window spans multiple transits! Please reduce ``padtrn``.")
 
   # Loop over all quarters
   if not inp.quiet: 
