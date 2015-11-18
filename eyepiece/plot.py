@@ -383,6 +383,11 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   maxf = np.max(fvis)
   padf = 0.1 * (maxf - minf)
   ylim = (minf - padf, maxf + padf)
+  
+  
+  # DEBUG
+  ylim = (0.996, 1.004)
+  
   ax.plot(t, f, 'k.', alpha = min(1.0, max(0.05, 375. / len(fvis))))
   
   # Bin to median
