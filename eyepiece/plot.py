@@ -362,7 +362,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
         #f = np.append(f, np.sum(fpix, axis = 1) / (mu + pmod))
         
         # DEBUG
-        f = np.append(f, ypld - mu)
+        f = np.append(f, ypld / mu)
 
     # Fold the data
     t -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in t])
