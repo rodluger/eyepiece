@@ -359,10 +359,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
       
         # TODO: Verify that this is in fact the correct way
         # to whiten the transit!
-        #f = np.append(f, np.sum(fpix, axis = 1) / (mu + pmod))
-        
-        # DEBUG
-        f = np.append(f, pmod/np.median(pmod))
+        f = np.append(f, np.sum(fpix, axis = 1) / (mu + pmod))
 
     # Fold the data
     t -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in t])
