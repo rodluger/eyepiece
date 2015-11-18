@@ -227,11 +227,19 @@ def Detrend(input_file = None, pool = None, clobber = False):
   if pool is None:
     M = map
   else:
-    M = pool.map
+    try:
+      # Let's try to do this asyncronously
+      M = pool.imap_unordered
+    except:
+      M = pool.map
   
   # Run
+  njobs = len(tags)
+  n = 0
   for res in M(FW, tags):
-    continue
+    n += 1
+    if not inp.quiet:
+      print("Completed task %d/%d." % (n, njobs))
   
   # Identify the highest likelihood run
   for q in quarters:
