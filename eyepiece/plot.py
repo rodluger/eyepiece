@@ -386,7 +386,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   
   
   # DEBUG
-  ylim = (0.996, 1.004)
+  ylim = (-0.1, 0.1)
   
   ax.plot(t, f, 'k.', alpha = min(1.0, max(0.05, 375. / len(fvis))))
   
