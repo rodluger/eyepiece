@@ -362,7 +362,7 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
         #f = np.append(f, np.sum(fpix, axis = 1) / (mu + pmod))
         
         # DEBUG
-        f = np.append(f, ypld / mu)
+        f = np.append(f, tmod * (1. + ypld - mu))
 
     # Fold the data
     t -= np.array([tN[np.argmin(np.abs(tN - ti))] for ti in t])
@@ -383,11 +383,6 @@ def PlotTransits(input_file = None, ax = None, clobber = False):
   maxf = np.max(fvis)
   padf = 0.1 * (maxf - minf)
   ylim = (minf - padf, maxf + padf)
-  
-  
-  # DEBUG
-  ylim = (0.9, 1.1)
-  
   ax.plot(t, f, 'k.', alpha = min(1.0, max(0.05, 375. / len(fvis))))
   
   # Bin to median
