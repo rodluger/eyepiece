@@ -12,6 +12,7 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 from .utils import Input, GetData
 from . import download, preprocess, detrend, plot, compare
 import os
+import shutil
 import numpy as np
 import matplotlib.pyplot as pl
 
@@ -36,14 +37,7 @@ class Eyepiece(object):
     datadir = os.path.join(self.inp.datadir, str(self.inp.id), '_data')
     if not os.path.exists(datadir):
       os.makedirs(datadir)
-    with open(os.path.join(datadir, 'input.log'), 'w') as f:
-      for key, val in sorted(zip(self.inp.__dict__.keys(), self.inp.__dict__.values())):
-        if not key.startswith('_'):
-          try:
-            item = '%s: %s' % (key, str(val))
-          except:
-            item = '%s: ???' % (key)
-          print(item, file = f)
+    shutil.copyfile(input_file, os.path.join(datadir, 'input.py'))
     
     # Download the data
     download.DownloadData(self.inp.id, self.inp.dataset, long_cadence = self.inp.long_cadence, 

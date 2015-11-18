@@ -1,18 +1,19 @@
 TODO
 ----
 
-- For usps: ensure that data points don't get included in neighboring transits!
-- Put crowding in ``pysyzygy``
-- When user quits out of interactive inspect, cancel qsub job
-- Multi-planet system handling
-- Fit parameters simultaneously; beware overlapping transits
+- Multi-planet system handling; fit parameters simultaneously; beware overlapping transits
 - Use Rowe's transit times for TTV systems
-- Libralato et al. - K2 PSF photomoetry
-- Fabien Bastien: Flicker can give stellar density within ~ 30%
-- Resolve tension between ``inject`` and ``trninfo`` in ``DownloadInfo()``
+- Resolve tension between ``inject`` and ``trninfo`` in ``DownloadInfo()``?
+- Fix ``pysyzygy`` memory issues. Separate it from plotting routine. Put crowding in ``pysyzygy``
 
-NOTE
-----
+NOTES
+-----
+
+- Libralato et al. - K2 PSF photometry
+- Fabien Bastien: Flicker can give stellar density within ~ 30%
+
+INSTRUCTIONS
+------------
 
 - I had to edit the matplotlibrc file to set ``Agg`` as the default backend
 

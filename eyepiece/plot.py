@@ -9,7 +9,7 @@ plot.py
 from __future__ import division, print_function, absolute_import, unicode_literals
 from .download import DownloadInfo
 from .utils import Input, GetData
-from .linalg import PLDFlux
+from .linalg import PLDFlux, RLM
 from .detrend import GetBadChunks
 import numpy as np
 import os
@@ -492,6 +492,17 @@ def PlotPolyFolded(input_file = None, clobber = False):
   idx  = np.digitize(tca, bins)
   med = [np.median(pca[idx == k]) for k in range(inp.tbins)]
   ax.plot(bins - delta / 2., med, 'ro', alpha = 0.75)
+  
+  # Get reasonable y bounds
+  i = np.argsort(tca)
+  x = tca[i]
+  y = pca[i]
+  out = RLM(x, y, order = 5, size = 300, thresh = 0.33)
+  ynew = np.delete(y, out)
+  ymin = np.min(ynew)
+  ymax = np.max(ynew)
+  yrng = ymax - ymin
+  ax.set_ylim(ymin - 0.1 * yrng, ymax + 0.1 * yrng)
   
   ax.set_xlim(xlim)
   ax.set_title('Folded Polynomial-Detrended Transits', fontsize = 24)
